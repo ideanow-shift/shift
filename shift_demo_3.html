@@ -1412,6 +1412,45 @@
         });
       });
 
+      // ─── Phase 3.5: 6連勤以上になっているスタッフに追加公休を配置 ───
+      currentStaffs.forEach(staff => {
+        const cfg = liveStaffConfig[staff.id] || {};
+        const irr = cfg.irregular || {};
+        const maxConsec = irr.maxConsecEnabled ? irr.maxConsecutive : 6;
+
+        // 連勤チェックして6連勤以上の箇所を検出
+        let streak = 0, streakStart = 1;
+        for (let d = 1; d <= dim + 1; d++) {
+          const closed = isClosed(d);
+          const v = d <= dim ? cs[`${staff.id}-${d}`] : null;
+          const isWork = d <= dim && !closed && v !== "公" && v !== "希" && v !== "有";
+
+          if (isWork) {
+            if (streak === 0) streakStart = d;
+            streak++;
+          } else {
+            if (streak >= maxConsec) {
+              // 連勤中の中間に公休を追加（連勤の真ん中あたり）
+              const midPoint = Math.floor((streakStart + d - 1) / 2);
+              for (let fix = midPoint; fix >= streakStart; fix--) {
+                if (isClosed(fix)) continue;
+                const offCount = currentStaffs.filter(s => {
+                  const sv = cs[`${s.id}-${fix}`];
+                  return sv === "公" || sv === "希";
+                }).length;
+                const remainWork = currentStaffs.length - offCount - 1;
+                const minReq = getMinStaffForDay(fix);
+                if (remainWork >= minReq) {
+                  cs[`${staff.id}-${fix}`] = "公";
+                  break;
+                }
+              }
+            }
+            streak = 0;
+          }
+        }
+      });
+
       // ─── Phase 4: 残りの当月日を勤務スタンプで埋める ───
       currentStaffs.forEach(staff => {
         const cfg = liveStaffConfig[staff.id] || {};
