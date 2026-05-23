@@ -1351,34 +1351,51 @@
           .sort((a, b) => a.key - b.key)
           .map(o => o.s);
 
-        staffOrder.forEach(staff => {
+        staffOrder.forEach((staff, si) => {
           // このスタッフの週内オフ日（既存）
-          const existing = [];
+          const offDays = [];
           for (let d = wk.start; d <= wk.end; d++) {
-            if (isOff(staff.id, d)) existing.push(d);
+            if (isOff(staff.id, d)) offDays.push(d);
           }
-          const need = Math.max(0, TARGET_OFF - existing.length);
+          const need = Math.max(0, TARGET_OFF - offDays.length);
 
           for (let k = 0; k < need; k++) {
             // 候補: 当月内、定休でない、未オフ、容量あり
-            const cands = Object.keys(dayCapacity)
+            const candidates = Object.keys(dayCapacity)
               .map(d => +d)
               .filter(d => !isOff(staff.id, d) && dayCapacity[d] > 0);
-            if (cands.length === 0) break;
+            if (candidates.length === 0) break;
 
             // 既存オフから最も離れた日を選択（連勤分散）
-            let best = null, bestDist = -1;
-            cands.forEach(d => {
-              const dist = existing.length === 0
-                ? 99
-                : Math.min(...existing.map(o => Math.abs(d - o)));
-              if (dist > bestDist) { best = d; bestDist = dist; }
+            let best = null, bestScore = -Infinity;
+            candidates.forEach(d => {
+              // その日に何人すでに休みか数える
+              let offCount = 0;
+              currentStaffs.forEach(s => {
+                const v = getCurrentCellStates()[`${s.id}-${d}`];
+                if (v === "公" || v === "希") offCount++;
+              });
+
+              // この人が休むと出勤が何人になるか
+              const remainWork = currentStaffs.length - offCount - 1;
+
+              // 出勤が1名以下になる日は絶対に選ばない
+              if (remainWork <= 1) return;
+
+              const minDist = offDays.length === 0 ? 999
+                : Math.min(...offDays.map(o => Math.abs(d - o)));
+
+              // staffIndexで分散させる（大きな値で確実に分散）
+              const hash = Math.sin(si * 997 + d * 113) * 10000;
+              const score = minDist * 100 + hash;
+
+              if (score > bestScore) { best = d; bestScore = score; }
             });
 
             if (best !== null) {
               cs[`${staff.id}-${best}`] = "公";
               dayCapacity[best]--;
-              existing.push(best);
+              offDays.push(best);
             }
           }
         });
