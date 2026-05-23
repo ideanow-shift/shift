@@ -1364,6 +1364,15 @@
           for (let k = 0; k < need && candidates.length > 0; k++) {
             let best = null, bestDist = -1;
             candidates.forEach(d => {
+              // その日に既に公休/希望休/有給の人数を数える
+              let offCount = 0;
+              currentStaffs.forEach(s => {
+                const v = getCurrentCellStates()[`${s.id}-${d}`];
+                if (v === "公" || v === "希" || v === "有") offCount++;
+              });
+              // この公休を入れると出勤者が0名になる場合はスキップ
+              if (currentStaffs.length - offCount - 1 <= 0) return;
+
               let minDist = offDays.length === 0 ? 999 : Math.min(...offDays.map(o => Math.abs(d - o)));
               const jitter = Math.sin(si * 17 + d * 31) * 0.4;
               if (minDist + jitter > bestDist) {
