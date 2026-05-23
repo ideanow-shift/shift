@@ -1370,8 +1370,8 @@
                 const v = getCurrentCellStates()[`${s.id}-${d}`];
                 if (v === "公" || v === "希" || v === "有") offCount++;
               });
-              // この公休を入れると出勤者が0名になる場合はスキップ
-              if (currentStaffs.length - offCount - 1 <= 0) return;
+              // この公休を入れると出勤者が1名以下になる場合はスキップ（最低2名確保）
+              if (currentStaffs.length - offCount - 1 <= 1) return;
 
               let minDist = offDays.length === 0 ? 999 : Math.min(...offDays.map(o => Math.abs(d - o)));
               const jitter = Math.sin(si * 17 + d * 31) * 0.4;
