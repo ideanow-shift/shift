@@ -108,6 +108,138 @@
         .status-none { background: #edf2f7; color: #718096; }
 
         .alert-area { margin-top: 15px; padding: 12px; background: #fffaf0; border-left: 4px solid var(--accent); border-radius: 4px; font-size: 12px; display: none; color: #dd6b20; }
+
+        /* モバイル用 UI 要素 (デフォルト非表示) */
+        .mobile-sidebar-toggle { display: none; }
+        .mobile-staff-toggle { display: none; }
+
+        /* ─── タブレット (768〜1023px) ─── */
+        @media (min-width: 768px) and (max-width: 1023px) {
+            body { padding: 14px; }
+            .main-layout { grid-template-columns: 1fr; gap: 14px; }
+            .sidebar { max-height: 420px; overflow-y: auto; }
+            .header h1 { font-size: 20px; }
+        }
+
+        /* ─── スマホ (≤767px) ─── */
+        @media (max-width: 767px) {
+            body { padding: 8px; }
+
+            /* ヘッダー: タイトル小さく、ボタン縦並び */
+            .header {
+                padding: 12px;
+                margin-bottom: 12px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .header h1 { font-size: 18px; }
+            .header > div:last-child {
+                flex-direction: column;
+                gap: 6px;
+                align-items: stretch;
+            }
+            .header > div:last-child > * { width: 100%; }
+            #storeSelector { width: 100%; box-sizing: border-box; }
+            .btn { padding: 12px 16px; min-height: 44px; }
+
+            /* スタンプエリア: 横スクロール */
+            .stamp-box { padding: 12px; }
+            .stamp-list {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                padding-bottom: 6px;
+                -webkit-overflow-scrolling: touch;
+            }
+            .stamp {
+                flex-shrink: 0;
+                padding: 8px 12px;
+                font-size: 12px;
+                min-height: 36px;
+            }
+
+            /* メインレイアウト: 1カラム + サイドバー折りたたみ */
+            .main-layout {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            .mobile-sidebar-toggle {
+                display: block;
+                width: 100%;
+                padding: 12px;
+                background: #f7fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                font-weight: bold;
+                font-size: 14px;
+                color: #4a5568;
+                cursor: pointer;
+                min-height: 44px;
+            }
+            .sidebar.mobile-collapsed { display: none; }
+            .sidebar { padding: 14px; }
+
+            /* カレンダーテーブル */
+            .content-area { padding: 10px; }
+            .table-wrapper { -webkit-overflow-scrolling: touch; }
+            #shiftTable th, #shiftTable td {
+                font-size: 10px;
+                min-width: 32px;
+                padding: 6px 3px;
+            }
+            #shiftTable th:first-child {
+                position: sticky;
+                left: 0;
+                z-index: 3;
+                box-shadow: 2px 0 4px rgba(0,0,0,0.05);
+            }
+            .staff-info-cell {
+                position: sticky;
+                left: 0;
+                z-index: 2;
+                min-width: 130px;
+                max-width: 140px;
+                padding: 6px;
+                box-shadow: 2px 0 4px rgba(0,0,0,0.05);
+            }
+            .staff-name { font-size: 12px; }
+
+            /* スタッフ情報セル: 名前 + 役職のみ表示、それ以降は隠す */
+            .mobile-staff-toggle ~ * { display: none; }
+            tr.expanded .mobile-staff-toggle ~ * { display: block; }
+
+            /* スタッフコントロール（休日/勤務タイプ select）はアコーディオン式 */
+            .staff-controls { display: none; }
+            tr.expanded .staff-controls { display: flex; margin-top: 6px; }
+            .mobile-staff-toggle {
+                display: inline-block;
+                margin-left: 4px;
+                padding: 2px 6px;
+                background: #edf2f7;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 10px;
+                color: #4a5568;
+                transition: transform 0.2s;
+                min-width: 24px;
+                min-height: 24px;
+            }
+            tr.expanded .mobile-staff-toggle { transform: rotate(180deg); }
+
+            /* セルのタップ性 */
+            .cell-clickable { min-height: 32px; }
+
+            /* AIシフト調整 */
+            #aiRequestInput { font-size: 14px; padding: 10px; }
+            #aiAdjustBtn { padding: 14px; font-size: 14px; min-height: 48px; }
+        }
+
+        /* ─── タッチデバイス: ホバーエフェクトを無効化 ─── */
+        @media (hover: none) {
+            .stamp:hover, .btn:hover { transform: none; }
+            .stamp.active:hover { transform: scale(1.05); }
+        }
     </style>
 </head>
 <body>
@@ -144,7 +276,8 @@
 </div>
 
 <div class="main-layout">
-    <div class="sidebar">
+    <button class="mobile-sidebar-toggle" onclick="toggleSidebar(this)">⚙️ 設定・ルールを開く</button>
+    <div class="sidebar mobile-collapsed">
         <!-- 🤖 AI Shift Adjustment (top) -->
         <div>
             <div class="section-title">🤖 AIシフト調整</div>
@@ -744,6 +877,22 @@
     }
 
     // ─────────────────────────────────────────────────────────────
+    // 📱 モバイル: サイドバー開閉 & スタッフ行のアコーディオン
+    // ─────────────────────────────────────────────────────────────
+    function toggleSidebar(btn) {
+        const sidebar = document.querySelector(".sidebar");
+        if (!sidebar) return;
+        const isCollapsed = sidebar.classList.toggle("mobile-collapsed");
+        if (btn) btn.textContent = isCollapsed ? "⚙️ 設定・ルールを開く" : "✕ 設定・ルールを閉じる";
+    }
+
+    function toggleStaffRowExpand(staffId, event) {
+        if (event) event.stopPropagation();
+        const row = document.querySelector(`tr[data-staff-id="${staffId}"]`);
+        if (row) row.classList.toggle("expanded");
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // 👤 スタッフ個別ルール: サイドバーパネルの描画と更新
     //   liveStaffConfig (= staffRules) と双方向同期する。
     // ─────────────────────────────────────────────────────────────
@@ -1058,6 +1207,7 @@
                             <div>
                                 <span class="staff-name">${staff.name}</span>${irregularMark}
                                 <span style="font-size:9px; background:#e2e8f0; padding:1px 4px; border-radius:4px; margin-left:4px;">${staff.rank}</span>
+                                <button class="mobile-staff-toggle" onclick="toggleStaffRowExpand('${staff.id}', event)" title="設定を表示／隠す">▼</button>
                                 <span style="font-size:9px; color:#718096; margin-left:6px;">今月希望休: ${fair.希}日${fair.有 > 0 ? ` / 有給: ${fair.有}日` : ""}</span>
                                 ${workTimeLine}
                                 ${irregularLine}
@@ -1112,247 +1262,129 @@
         renderTable();
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // ⚡ シフト自動生成（暦週ベース v4）
-    //   日曜〜土曜の厳密な暦週ブロックで動作。端数週の合算は行わない。
-    //   - 週ブロックは start/end（月外の日付は1未満や daysInMonth超）と
-    //     activeDays（表示月内の日付のみ）を持つ。
-    //   - 休み合計カウント: start〜end の全日付を参照（前月・翌月の定休日含む）
-    //   - 公休スタンプ配置: activeDays のみ
-    //
-    //   完全週休2日: 各週で最低2日 / 隔週休2日: 各週で最低1日
-    // ─────────────────────────────────────────────────────────────
-    function getWeekBlocks(year, month) {
-        const firstDay = new Date(year, month, 1);
-        const lastDay  = new Date(year, month + 1, 0);
-        const dim = lastDay.getDate();
-        const firstDow = firstDay.getDay();      // 0=日
-        const weekStartOffset = -firstDow;       // 1日が日曜なら 0、月曜なら -1、…
-
-        const blocks = [];
-        let blockStart = weekStartOffset + 1;    // 月内の日付換算（1未満は前月）
-
-        while (blockStart <= dim) {
-            const blockEnd = blockStart + 6;
-            blocks.push({
-                start: blockStart,
-                end:   blockEnd,
-                activeDays: Array.from(
-                    { length: Math.min(blockEnd, dim) - Math.max(blockStart, 1) + 1 },
-                    (_, i) => Math.max(blockStart, 1) + i
-                ),
-            });
-            blockStart += 7;
-        }
-
-        // 月末端数週の合算: 最終ブロックの月内日数 ≤ 4 なら直前ブロックに統合
-        // （end は翌月側に延長され、翌月の定休日も countWeekOff で参照される）
-        if (blocks.length >= 2) {
-            const last = blocks[blocks.length - 1];
-            if (last.activeDays.length <= 4) {
-                const prev = blocks[blocks.length - 2];
-                prev.end = last.end;
-                prev.activeDays = prev.activeDays.concat(last.activeDays);
-                blocks.pop();
-            }
-        }
-        return blocks;
-    }
-
     function generateShift() {
-        if (!currentStore || currentStaffs.length === 0) return;
+      if (!currentStore || currentStaffs.length === 0) return;
+      const cs = getCurrentCellStates();
+      const isTueClosed = currentStore.rule.includes("火曜");
 
-        const isTuesdayClosed = currentStore.rule.includes("火曜") || currentStore.rule.includes("火曜日");
-        const year  = currentYear;
-        const month = currentMonth;
-        const isTuesday = (d) => new Date(year, month, d).getDay() === 2;
+      // 日付から曜日取得（月またぎ対応）
+      function getDow(year, month, day) {
+        return new Date(year, month, day).getDay();
+      }
 
-        const weeks = getWeekBlocks(year, month);
-        console.log("[generateShift] 週ブロック (start/end は月外を含む暦上の日付番号):");
-        weeks.forEach((wk, i) => {
-            console.log(`  第${i+1}週 start=${wk.start} end=${wk.end} active=[${wk.activeDays.join(",")}]`);
-        });
+      // その日が定休日か
+      function isClosed(year, month, day) {
+        return isTueClosed && getDow(year, month, day) === 2;
+      }
 
-        // 最低人数優先で公休を1日に減らした記録（最後にアラート表示）
-        const shortages = [];
+      // staffIdのday日のスタンプを取得（月またぎ対応）
+      function getStamp(staffId, day) {
+        let y = currentYear, m = currentMonth, d = day;
+        const dim = new Date(y, m + 1, 0).getDate();
+        if (d < 1) {
+          m--; if (m < 0) { m = 11; y--; }
+          d = new Date(y, m + 1, 0).getDate() + day;
+        } else if (d > dim) {
+          d = d - dim;
+          m++; if (m > 11) { m = 0; y++; }
+        }
+        const key = `${y}-${m + 1}`;
+        return (allCellStates[key] || {})[`${staffId}-${d}`] || null;
+      }
 
-        // 既存の休みから最も離れた候補日を選ぶ（連勤を分散させる）
-        function pickFarthestDay(candidates, offSet) {
+      // staffIdのday日にスタンプをセット（当月のみ）
+      function setStamp(staffId, day, stamp) {
+        const dim = new Date(currentYear, currentMonth + 1, 0).getDate();
+        if (day < 1 || day > dim) return;
+        cs[`${staffId}-${day}`] = stamp;
+      }
+
+      // 当月の日数
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+      // 当月1日の曜日
+      const firstDow = new Date(currentYear, currentMonth, 1).getDay();
+
+      // 当月の日付を含む週リスト（日〜土）
+      // 第1週の日曜 = 1 - firstDow（負の場合は前月）
+      const weeks = [];
+      let wStart = 1 - firstDow;
+      while (wStart <= daysInMonth) {
+        weeks.push({ start: wStart, end: wStart + 6 });
+        wStart += 7;
+      }
+
+      currentStaffs.forEach((staff, si) => {
+        const cfg = liveStaffConfig[staff.id] || { holidayType: "完全週休2日", workType: "通常" };
+        const workStamp = cfg.workType.includes("時短") ? "時" : "出";
+        const target = 2; // 週2日休み
+
+        // まず当月全日を出勤で埋める
+        for (let d = 1; d <= daysInMonth; d++) {
+          if (isClosed(currentYear, currentMonth, d)) continue;
+          const v = cs[`${staff.id}-${d}`];
+          if (!v || v === "出" || v === "時") {
+            setStamp(staff.id, d, workStamp);
+          }
+        }
+
+        // 週ごとに公休を配置
+        weeks.forEach(wk => {
+          const offDays = [];
+          const candidates = [];
+
+          for (let d = wk.start; d <= wk.end; d++) {
+            // 月またぎを考慮した実際の年月日を計算
+            const actualDate = new Date(currentYear, currentMonth, d);
+            const actualYear  = actualDate.getFullYear();
+            const actualMonth = actualDate.getMonth();
+            const actualDay   = actualDate.getDate();
+
+            // 定休日判定（実際の年月日で判定）
+            const closed = isTueClosed && actualDate.getDay() === 2;
+
+            // スタンプ取得（月またぎ対応済みのgetStampを使用）
+            const stamp = getStamp(staff.id, d);
+            const isOff = closed || stamp === "公" || stamp === "希";
+
+            if (isOff) {
+              offDays.push(d);
+            } else {
+              // 公休配置は当月の日付のみ
+              if (d >= 1 && d <= daysInMonth) candidates.push(d);
+            }
+          }
+
+          const need = Math.max(0, target - offDays.length);
+          // 月内日数が3日以下の端数週はスキップ（前後の週でカバー）
+          const activeDaysInMonth = Array.from({length: wk.end - wk.start + 1}, (_,i) => wk.start + i)
+            .filter(d => d >= 1 && d <= daysInMonth).length;
+          if (need === 0 || candidates.length === 0 || activeDaysInMonth <= 2) return;
+
+          for (let k = 0; k < need && candidates.length > 0; k++) {
             let best = null, bestDist = -1;
             candidates.forEach(d => {
-                let minDist = Infinity;
-                offSet.forEach(off => {
-                    const dist = Math.abs(d - off);
-                    if (dist < minDist) minDist = dist;
-                });
-                if (minDist === Infinity) minDist = 999;
-                if (minDist > bestDist || (minDist === bestDist && Math.random() < 0.5)) {
-                    best = d;
-                    bestDist = minDist;
-                }
-            });
-            return best;
-        }
-
-        currentStaffs.forEach(staff => {
-            const config    = liveStaffConfig[staff.id] || { holidayType: "完全週休2日", workType: "通常" };
-            const isFullOff = config.holidayType.includes("完全");
-            const irr       = config.irregular || {};
-            // イレギュラー設定があれば週休日数を上書き
-            const baseOff   = irr.weeklyOffEnabled
-                              ? Math.max(0, parseInt(irr.weeklyOff, 10) || (isFullOff ? 2 : 1))
-                              : (isFullOff ? 2 : 1);
-            const ignoreMinStaff = !!irr.ignoreMinStaff;
-            const workStamp = config.workType.includes("時短") ? "時" : "出";
-
-            // ステップ① 既存の「公」をクリア（希望休 / 時 / 会 / 研 は維持）
-            for (let d = 1; d <= daysInMonth; d++) {
-                if (getCurrentCellStates()[`${staff.id}-${d}`] === "公") {
-                    delete getCurrentCellStates()[`${staff.id}-${d}`];
-                }
-            }
-
-            // スタッフ単位の「月全体の確定休み Set」を構築。
-            // 距離計算ではこれを参照することで、週境界をまたぐ連続公休（土→日 等）を防ぐ。
-            // 公休を配置するたびにこの Set に追加していく。
-            const staffAllOff = new Set();
-            for (let d = 1; d <= daysInMonth; d++) {
-                if (isTuesdayClosed && isTuesday(d)) { staffAllOff.add(d); continue; }
-                const v = getCurrentCellStates()[`${staff.id}-${d}`];
-                if (v === "希") staffAllOff.add(d);
-            }
-
-            // 週ブロックの休み合計をカウント（start〜end の全日を参照、月外は定休のみ加算）
-            function countWeekOff(wk) {
-                let count = 0;
-                for (let d = wk.start; d <= wk.end; d++) {
-                    if (d >= 1 && d <= daysInMonth) {
-                        if (staffAllOff.has(d)) count++;
-                    } else if (isTuesdayClosed) {
-                        // 月外の日付: 火曜定休店のみ「火曜」を定休としてカウント
-                        if (new Date(year, month, d).getDay() === 2) count++;
-                    }
-                }
-                return count;
-            }
-
-            // ステップ② 各暦週で最低 baseOff を確保
-            //   配置候補は activeDays（表示月内）のみ。
-            //   「公休を入れると最低出勤人数を下回る日」は候補から除外。
-            //   候補が尽きて baseOff に満たない場合は人数確保を優先（shortages に記録）。
-            weeks.forEach((wk, wIdx) => {
-                if (wk.activeDays.length === 0) return;
-
-                const weekOffCount = countWeekOff(wk);
-                const need = Math.max(0, baseOff - weekOffCount);
-                if (need === 0) return;
-
-                const candidates = wk.activeDays.filter(d => !staffAllOff.has(d));
-                let placed = 0;
-
-                for (let k = 0; k < need; k++) {
-                    // 最低出勤人数を割らない安全な候補に絞る
-                    // ※ イレギュラー設定で ignoreMinStaff の場合は人数チェックをスキップ
-                    const safeCandidates = ignoreMinStaff ? candidates.slice() : candidates.filter(d => {
-                        const required = getMinRequired(d);
-                        if (required == null) return true; // 未設定なら制約なし
-                        return countWorkers(d) - 1 >= required;
-                    });
-
-                    if (safeCandidates.length === 0) break; // この週はこれ以上公休を入れられない
-
-                    const pick = pickFarthestDay(safeCandidates, staffAllOff);
-                    getCurrentCellStates()[`${staff.id}-${pick}`] = "公";
-                    staffAllOff.add(pick);
-                    candidates.splice(candidates.indexOf(pick), 1);
-                    placed++;
-                }
-
-                if (placed < need) {
-                    shortages.push({
-                        staff: staff.name,
-                        week: wIdx + 1,
-                        actual: weekOffCount + placed,
-                        baseOff: baseOff,
-                    });
-                }
+              let minDist = offDays.length === 0 ? 999 : Math.min(...offDays.map(o => Math.abs(d - o)));
+              const jitter = Math.sin(si * 17 + d * 31) * 0.4;
+              if (minDist + jitter > bestDist) {
+                best = d;
+                bestDist = minDist + jitter;
+              }
             });
 
-            // ステップ③ 残りの日を勤務スタンプで埋める（既存の特殊スタンプは尊重）
-            for (let d = 1; d <= daysInMonth; d++) {
-                if (isTuesdayClosed && isTuesday(d)) continue;
-                const cellKey = `${staff.id}-${d}`;
-                const v = getCurrentCellStates()[cellKey];
-                if (v === "公" || v === "希" || v === "時" || v === "会" || v === "研") continue;
-                getCurrentCellStates()[cellKey] = workStamp;
+            if (best !== null) {
+              setStamp(staff.id, best, "公");
+              offDays.push(best);
+              candidates.splice(candidates.indexOf(best), 1);
             }
+          }
         });
+      });
 
-        renderTable();
-
-        // ─── 検証ログ ───────────────────────────────────────────
-        console.log("[generateShift] 月末3日間の公休配置状況:");
-        for (let d = Math.max(1, daysInMonth - 2); d <= daysInMonth; d++) {
-            const isClosed = isTuesdayClosed && isTuesday(d);
-            if (isClosed) { console.log(`  ${d}日: (定休)`); continue; }
-            const offN = currentStaffs.filter(s => {
-                const v = getCurrentCellStates()[`${s.id}-${d}`];
-                return v === "公" || v === "希";
-            }).length;
-            console.log(`  ${d}日: 公休/希望休 ${offN}名 / 出勤 ${countWorkers(d)}名 (全${currentStaffs.length}名中)`);
-        }
-
-        console.log("[generateShift] 出勤0名の日:");
-        const zeroWorkDays = [];
-        for (let d = 1; d <= daysInMonth; d++) {
-            if (isTuesdayClosed && isTuesday(d)) continue;
-            if (countWorkers(d) === 0) zeroWorkDays.push(d);
-        }
-        console.log(zeroWorkDays.length === 0 ? "  なし ✓" : `  ⚠️ ${zeroWorkDays.join(", ")}日`);
-
-        console.log("[generateShift] スタッフ別 各週ブロックの休み合計（公+希+定休、月外の定休含む）:");
-        const weekOverflow = [];
-        currentStaffs.forEach(staff => {
-            const counts = weeks.map((wk, i) => {
-                let off = 0;
-                for (let d = wk.start; d <= wk.end; d++) {
-                    if (d >= 1 && d <= daysInMonth) {
-                        if (isTuesdayClosed && isTuesday(d)) { off++; continue; }
-                        const v = getCurrentCellStates()[`${staff.id}-${d}`];
-                        if (v === "公" || v === "希") off++;
-                    } else if (isTuesdayClosed && new Date(year, month, d).getDay() === 2) {
-                        off++;
-                    }
-                }
-                if (i === weeks.length - 1 && off > 2) {
-                    weekOverflow.push(`${staff.name} 最終週=${off}日`);
-                }
-                return `第${i+1}週:${off}日`;
-            });
-            console.log(`  ${staff.name}(${liveStaffConfig[staff.id]?.holidayType || "?"}) → ${counts.join(" / ")}`);
-        });
-        if (weekOverflow.length > 0) {
-            console.warn("[generateShift] ⚠️ 最終週の休み合計が2日を超過:", weekOverflow.join(", "));
-        }
-        // ────────────────────────────────────────────────────────
-
-        const alertBox = document.getElementById("alertBox");
-        alertBox.style.display = "block";
-        let msg = "⚡ 【暦週ベース v4】日曜〜土曜の厳密暦週・端数合算なし。月外日付は定休としてカウントするが配置はしない。";
-        if (shortages.length > 0) {
-            const lines = shortages.map(s =>
-                `⚠️ ${s.staff}（第${s.week}週）: 人数確保のため公休を${s.actual}日に減らしました`
-            );
-            msg += "<br>" + lines.join("<br>");
-        }
-
-        // 6連勤チェック（生成直後に自動実行）
-        const consecIssues = checkConsecutiveWork(6);
-        if (consecIssues.length > 0) {
-            msg += "<br><br>🚨 <b>6連勤以上検出:</b><br>" +
-                consecIssues.map(i => `• ${i.staff}: ${i.start}日〜${i.end}日 (${i.days}連勤)`).join("<br>");
-        }
-        alertBox.innerHTML = msg;
+      renderTable();
+      const ab = document.getElementById("alertBox");
+      ab.style.display = "block";
+      ab.innerHTML = "⚡ シフトを自動生成しました【完全週休2日・月またぎ対応】";
     }
 
     function exportToCSV() {
