@@ -1262,138 +1262,179 @@
         renderTable();
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // ⚡ シフト自動生成（完全クリーン実装）
+    //   絶対ルール: 日曜〜土曜の各週で 定休 + 公 + 希 + 有 = 2日以上
+    //   保証:
+    //     - 各日の出勤者は最低 2 名（minWorkers）
+    //     - 月またぎの週も同ルール（allCellStates で前後月を参照）
+    //     - 再生成しても累積しない（Phase 1 で公をクリア）
+    //   設計:
+    //     Phase 1: 既存の公をクリア
+    //     Phase 2: 週ブロック構築（日〜土）
+    //     Phase 3: 週ごとに「日の容量」を先に確定 → スタッフを順に配置
+    //              （同日集中を構造的に防止）
+    //     Phase 4: 残りを 出/時 で埋める
+    // ─────────────────────────────────────────────────────────────
     function generateShift() {
       if (!currentStore || currentStaffs.length === 0) return;
+
       const cs = getCurrentCellStates();
-      const isTueClosed = currentStore.rule.includes("火曜");
+      const tueClosed = currentStore.rule.includes("火曜");
+      const dim = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const firstDow = new Date(currentYear, currentMonth, 1).getDay();
 
-      // 日付から曜日取得（月またぎ対応）
-      function getDow(year, month, day) {
-        return new Date(year, month, day).getDay();
-      }
+      const TARGET_OFF = 2;     // 週の最低休日数
+      const MIN_WORKERS = 2;    // 日の最低出勤者数
+      const totalStaff = currentStaffs.length;
+      const MAX_OFF_PER_DAY = Math.max(0, totalStaff - MIN_WORKERS);
 
-      // その日が定休日か
-      function isClosed(year, month, day) {
-        return isTueClosed && getDow(year, month, day) === 2;
-      }
-
-      // staffIdのday日のスタンプを取得（月またぎ対応）
-      function getStamp(staffId, day) {
+      // ─── ヘルパー: 月またぎ対応でスタンプ取得 ───
+      function stampOf(staffId, day) {
         let y = currentYear, m = currentMonth, d = day;
-        const dim = new Date(y, m + 1, 0).getDate();
+        const monEnd = new Date(y, m + 1, 0).getDate();
         if (d < 1) {
           m--; if (m < 0) { m = 11; y--; }
           d = new Date(y, m + 1, 0).getDate() + day;
-        } else if (d > dim) {
-          d = d - dim;
+        } else if (d > monEnd) {
+          d -= monEnd;
           m++; if (m > 11) { m = 0; y++; }
         }
-        const key = `${y}-${m + 1}`;
-        return (allCellStates[key] || {})[`${staffId}-${d}`] || null;
+        return (allCellStates[`${y}-${m + 1}`] || {})[`${staffId}-${d}`];
       }
 
-      // staffIdのday日にスタンプをセット（当月のみ）
-      function setStamp(staffId, day, stamp) {
-        const dim = new Date(currentYear, currentMonth + 1, 0).getDate();
-        if (day < 1 || day > dim) return;
-        cs[`${staffId}-${day}`] = stamp;
+      // 定休判定（月またぎ対応）
+      function isClosed(day) {
+        return tueClosed && new Date(currentYear, currentMonth, day).getDay() === 2;
+      }
+      // オフ判定（定休 / 公 / 希 / 有）
+      function isOff(staffId, day) {
+        if (isClosed(day)) return true;
+        const v = stampOf(staffId, day);
+        return v === "公" || v === "希" || v === "有";
       }
 
-      // 当月の日数
-      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      // ─── Phase 1: 当月の既存「公」をクリア ───
+      currentStaffs.forEach(staff => {
+        for (let d = 1; d <= dim; d++) {
+          if (cs[`${staff.id}-${d}`] === "公") delete cs[`${staff.id}-${d}`];
+        }
+      });
 
-      // 当月1日の曜日
-      const firstDow = new Date(currentYear, currentMonth, 1).getDay();
-
-      // 当月の日付を含む週リスト（日〜土）
-      // 第1週の日曜 = 1 - firstDow（負の場合は前月）
+      // ─── Phase 2: 週ブロック構築（日〜土） ───
       const weeks = [];
       let wStart = 1 - firstDow;
-      while (wStart <= daysInMonth) {
+      while (wStart <= dim) {
         weeks.push({ start: wStart, end: wStart + 6 });
         wStart += 7;
       }
 
-      currentStaffs.forEach((staff, si) => {
-        const cfg = liveStaffConfig[staff.id] || { holidayType: "完全週休2日", workType: "通常" };
-        const workStamp = cfg.workType.includes("時短") ? "時" : "出";
-        const target = 2; // 週2日休み
-
-        // まず当月全日を出勤で埋める
-        for (let d = 1; d <= daysInMonth; d++) {
-          if (isClosed(currentYear, currentMonth, d)) continue;
-          const v = cs[`${staff.id}-${d}`];
-          if (!v || v === "出" || v === "時") {
-            setStamp(staff.id, d, workStamp);
-          }
+      // ─── Phase 3: 週ごとに公休配置 ───
+      weeks.forEach((wk, wIdx) => {
+        // この週の「配置候補日」と「日ごとの容量」を計算
+        // 容量 = MAX_OFF_PER_DAY - (現時点でその日に既にオフのスタッフ数)
+        const dayCapacity = {}; // day -> 残り容量
+        for (let d = wk.start; d <= wk.end; d++) {
+          if (d < 1 || d > dim) continue;       // 月外は配置不可
+          if (isClosed(d)) continue;             // 定休日は配置不可
+          let curOff = 0;
+          currentStaffs.forEach(s => {
+            const v = cs[`${s.id}-${d}`];
+            if (v === "公" || v === "希" || v === "有") curOff++;
+          });
+          dayCapacity[d] = MAX_OFF_PER_DAY - curOff;
         }
 
-        // 週ごとに公休を配置
-        weeks.forEach(wk => {
-          const offDays = [];
-          const candidates = [];
+        // スタッフを毎回ランダム順で処理して同日集中を緩和
+        const staffOrder = currentStaffs
+          .map((s, i) => ({ s, key: Math.sin(wIdx * 37 + i * 13) }))
+          .sort((a, b) => a.key - b.key)
+          .map(o => o.s);
 
+        staffOrder.forEach(staff => {
+          // このスタッフの週内オフ日（既存）
+          const existing = [];
           for (let d = wk.start; d <= wk.end; d++) {
-            // 月またぎを考慮した実際の年月日を計算
-            const actualDate = new Date(currentYear, currentMonth, d);
-            const actualYear  = actualDate.getFullYear();
-            const actualMonth = actualDate.getMonth();
-            const actualDay   = actualDate.getDate();
-
-            // 定休日判定（実際の年月日で判定）
-            const closed = isTueClosed && actualDate.getDay() === 2;
-
-            // スタンプ取得（月またぎ対応済みのgetStampを使用）
-            const stamp = getStamp(staff.id, d);
-            const isOff = closed || stamp === "公" || stamp === "希";
-
-            if (isOff) {
-              offDays.push(d);
-            } else {
-              // 公休配置は当月の日付のみ
-              if (d >= 1 && d <= daysInMonth) candidates.push(d);
-            }
+            if (isOff(staff.id, d)) existing.push(d);
           }
+          const need = Math.max(0, TARGET_OFF - existing.length);
 
-          const need = Math.max(0, target - offDays.length);
-          // 月内日数が3日以下の端数週はスキップ（前後の週でカバー）
-          const activeDaysInMonth = Array.from({length: wk.end - wk.start + 1}, (_,i) => wk.start + i)
-            .filter(d => d >= 1 && d <= daysInMonth).length;
-          if (need === 0 || candidates.length === 0 || activeDaysInMonth <= 2) return;
+          for (let k = 0; k < need; k++) {
+            // 候補: 当月内、定休でない、未オフ、容量あり
+            const cands = Object.keys(dayCapacity)
+              .map(d => +d)
+              .filter(d => !isOff(staff.id, d) && dayCapacity[d] > 0);
+            if (cands.length === 0) break;
 
-          for (let k = 0; k < need && candidates.length > 0; k++) {
+            // 既存オフから最も離れた日を選択（連勤分散）
             let best = null, bestDist = -1;
-            candidates.forEach(d => {
-              // その日に既に公休/希望休/有給の人数を数える
-              let offCount = 0;
-              currentStaffs.forEach(s => {
-                const v = getCurrentCellStates()[`${s.id}-${d}`];
-                if (v === "公" || v === "希" || v === "有") offCount++;
-              });
-              // この公休を入れると出勤者が1名以下になる場合はスキップ（最低2名確保）
-              if (currentStaffs.length - offCount - 1 <= 1) return;
-
-              let minDist = offDays.length === 0 ? 999 : Math.min(...offDays.map(o => Math.abs(d - o)));
-              const jitter = Math.sin(si * 17 + d * 31) * 0.4;
-              if (minDist + jitter > bestDist) {
-                best = d;
-                bestDist = minDist + jitter;
-              }
+            cands.forEach(d => {
+              const dist = existing.length === 0
+                ? 99
+                : Math.min(...existing.map(o => Math.abs(d - o)));
+              if (dist > bestDist) { best = d; bestDist = dist; }
             });
 
             if (best !== null) {
-              setStamp(staff.id, best, "公");
-              offDays.push(best);
-              candidates.splice(candidates.indexOf(best), 1);
+              cs[`${staff.id}-${best}`] = "公";
+              dayCapacity[best]--;
+              existing.push(best);
             }
           }
         });
       });
 
+      // ─── Phase 4: 残りの当月日を勤務スタンプで埋める ───
+      currentStaffs.forEach(staff => {
+        const cfg = liveStaffConfig[staff.id] || {};
+        const workStamp = (cfg.workType || "").includes("時短") ? "時" : "出";
+        for (let d = 1; d <= dim; d++) {
+          if (isClosed(d)) continue;
+          const v = cs[`${staff.id}-${d}`];
+          if (!v || v === "出" || v === "時") cs[`${staff.id}-${d}`] = workStamp;
+        }
+      });
+
+      // ─── 検証 ───
+      const violations = [];
+      currentStaffs.forEach(staff => {
+        weeks.forEach((wk, i) => {
+          let off = 0;
+          for (let d = wk.start; d <= wk.end; d++) {
+            if (isOff(staff.id, d)) off++;
+          }
+          if (off < TARGET_OFF) violations.push(`${staff.name}-第${i + 1}週(${off}日)`);
+        });
+      });
+      // 各日の出勤者数チェック
+      const lowDays = [];
+      for (let d = 1; d <= dim; d++) {
+        if (isClosed(d)) continue;
+        let workers = 0;
+        currentStaffs.forEach(s => {
+          const v = cs[`${s.id}-${d}`];
+          if (v !== "公" && v !== "希" && v !== "有") workers++;
+        });
+        if (workers < MIN_WORKERS) lowDays.push(`${d}日(${workers}名)`);
+      }
+
+      console.log(`[generateShift] ${currentYear}年${currentMonth + 1}月 / 総スタッフ${totalStaff}名 / 日最大公休${MAX_OFF_PER_DAY}人 / 週目標${TARGET_OFF}日休み`);
+      if (violations.length === 0 && lowDays.length === 0) {
+        console.log("✅ 全週2日休み・全日最低出勤人数を達成");
+      } else {
+        if (violations.length > 0) console.warn("⚠️ 週休不足:", violations.join(", "));
+        if (lowDays.length > 0) console.warn("⚠️ 出勤者不足:", lowDays.join(", "));
+      }
+
       renderTable();
       const ab = document.getElementById("alertBox");
-      ab.style.display = "block";
-      ab.innerHTML = "⚡ シフトを自動生成しました【完全週休2日・月またぎ対応】";
+      if (ab) {
+        ab.style.display = "block";
+        const ok = violations.length === 0 && lowDays.length === 0;
+        ab.innerHTML = ok
+          ? `⚡ シフト生成完了（${currentYear}年${currentMonth + 1}月）: 全週2日休み・最低${MIN_WORKERS}名出勤を保証`
+          : `⚠️ 生成完了（${currentYear}年${currentMonth + 1}月） — 週休不足${violations.length}件 / 出勤者不足${lowDays.length}日 (Console確認)`;
+      }
     }
 
     function exportToCSV() {
