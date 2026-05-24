@@ -1389,7 +1389,16 @@
             // 候補: 当月内、定休でない、未オフ、容量あり
             const candidates = Object.keys(dayCapacity)
               .map(d => +d)
-              .filter(d => !isOff(staff.id, d) && dayCapacity[d] > 0);
+              .filter(d => {
+                if (!isOff(staff.id, d) && dayCapacity[d] > 0) {
+                  const dow = new Date(currentYear, currentMonth, d).getDay();
+                  const isHol = holidays.includes(d);
+                  // 土日・祝日は自動公休配置不可
+                  if (dow === 0 || dow === 6 || isHol) return false;
+                  return true;
+                }
+                return false;
+              });
             if (candidates.length === 0) break;
 
             // 既存オフから最も離れた日を選択（連勤分散）
@@ -1463,6 +1472,9 @@
               const midPoint = Math.floor((streakStart + d - 1) / 2);
               for (let fix = midPoint; fix >= streakStart; fix--) {
                 if (isClosed(fix)) continue;
+                const fixDow = new Date(currentYear, currentMonth, fix).getDay();
+                const fixIsHol = holidays.includes(fix);
+                if (fixDow === 0 || fixDow === 6 || fixIsHol) continue;
                 const offCount = currentStaffs.filter(s => {
                   const sv = cs[`${s.id}-${fix}`];
                   return sv === "公" || sv === "希";
