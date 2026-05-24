@@ -1410,7 +1410,7 @@
               }
 
               // スコア = 連勤分散 * 100 + 曜日バランス（公休の少ない曜日を優先）* 50 + ランダム
-              const balanceScore = -dowTotalOff * 5000;
+              const balanceScore = -dowTotalOff * 500;
               const hash = Math.sin(si * 997 + d * 113) * 10000;
               const score = minDist * 100 + balanceScore + hash;
 
