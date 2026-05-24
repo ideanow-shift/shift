@@ -1393,12 +1393,26 @@
               const minRequired = getMinStaffForDay(d);
               if (remainWork < minRequired) return;
 
+              // 連勤分散スコア
               const minDist = offDays.length === 0 ? 999
                 : Math.min(...offDays.map(o => Math.abs(d - o)));
 
-              // staffIndexで分散させる（大きな値で確実に分散）
+              // 曜日バランススコア（その曜日の公休が少ない日を優先）
+              const dow = new Date(currentYear, currentMonth, d).getDay();
+              // 全スタッフのその曜日の公休合計
+              let dowTotalOff = 0;
+              for (let dd = 1; dd <= dim; dd++) {
+                if (new Date(currentYear, currentMonth, dd).getDay() === dow) {
+                  currentStaffs.forEach(s => {
+                    if (cs[`${s.id}-${dd}`] === "公" || cs[`${s.id}-${dd}`] === "希") dowTotalOff++;
+                  });
+                }
+              }
+
+              // スコア = 連勤分散 * 100 + 曜日バランス（公休の少ない曜日を優先）* 50 + ランダム
+              const balanceScore = -dowTotalOff * 50;
               const hash = Math.sin(si * 997 + d * 113) * 10000;
-              const score = minDist * 100 + hash;
+              const score = minDist * 100 + balanceScore + hash;
 
               if (score > bestScore) { best = d; bestScore = score; }
             });
