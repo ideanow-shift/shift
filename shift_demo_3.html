@@ -333,20 +333,35 @@
                 <button id="holidayBtn2" class="toggle-btn" disabled>火曜定休</button>
             </div>
 
-            <div class="file-label" style="margin-top: 15px;">最低出勤人数設定</div>
-            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                <span style="font-size: 11px; flex: 1;">平日（月〜金）</span>
+            <div class="file-label" style="margin-top:15px;">最低出勤人数設定</div>
+
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                <span style="font-size:11px; flex:1;">平日（月〜金）</span>
                 <input type="number" id="minStaffWeekday" min="0" placeholder="未設定"
-                       style="width: 56px; padding: 4px 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 12px; text-align: right;"
-                       oninput="updateMinStaff('weekday', this.value)">
-                <span style="font-size: 11px;">名</span>
+                    style="width:56px; padding:4px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;"
+                    oninput="updateMinStaff('weekday', this.value)">
+                <span style="font-size:11px;">名</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 11px; flex: 1;">土日・祝日　</span>
-                <input type="number" id="minStaffWeekend" min="0" placeholder="未設定"
-                       style="width: 56px; padding: 4px 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 12px; text-align: right;"
-                       oninput="updateMinStaff('weekend', this.value)">
-                <span style="font-size: 11px;">名</span>
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                <span style="font-size:11px; flex:1;">土曜日</span>
+                <input type="number" id="minStaffSaturday" min="0" placeholder="未設定"
+                    style="width:56px; padding:4px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;"
+                    oninput="updateMinStaff('saturday', this.value)">
+                <span style="font-size:11px;">名</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                <span style="font-size:11px; flex:1;">日曜日</span>
+                <input type="number" id="minStaffSunday" min="0" placeholder="未設定"
+                    style="width:56px; padding:4px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;"
+                    oninput="updateMinStaff('sunday', this.value)">
+                <span style="font-size:11px;">名</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:11px; flex:1;">祝日</span>
+                <input type="number" id="minStaffHoliday" min="0" placeholder="未設定"
+                    style="width:56px; padding:4px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;"
+                    oninput="updateMinStaff('holiday', this.value)">
+                <span style="font-size:11px;">名</span>
             </div>
 
             <div class="file-label" style="margin-top:15px;">希望休上限設定</div>
@@ -466,7 +481,7 @@
     // staffRules は liveStaffConfig と同一オブジェクトを参照（双方向同期のための別名）
     const staffRules = liveStaffConfig;
     let allCellStates = {}; // { "YYYY-M": { "staffId-day": stamp, ... } } 月ごとに保持
-    let storeMinStaff = {}; // { storeId: { weekday: 4, weekend: 6 } } 店舗ごとの最低出勤人数
+    let storeMinStaff = {}; // { storeId: { weekday: 4, saturday: 6, sunday: 5, holiday: 5 } } 店舗ごとの最低出勤人数
     let storeSettings = {}; // { storeId: { maxKibou: 2 } } 店舗ごとの希望休上限など
     let staffFairnessCount = {}; // { staffId: { 希: 0, 有: 0 } } スタッフごとの希望休/有給 取得数
 
@@ -879,8 +894,10 @@
 
         // 最低出勤人数の設定値を入力欄に復元（前店舗の値は storeMinStaff に保持されたまま）
         const min = storeMinStaff[currentStore.id] || {};
-        document.getElementById("minStaffWeekday").value = (min.weekday != null) ? min.weekday : "";
-        document.getElementById("minStaffWeekend").value = (min.weekend != null) ? min.weekend : "";
+        document.getElementById("minStaffWeekday").value  = min.weekday  ?? "";
+        document.getElementById("minStaffSaturday").value = min.saturday ?? "";
+        document.getElementById("minStaffSunday").value   = min.sunday   ?? "";
+        document.getElementById("minStaffHoliday").value  = min.holiday  ?? "";
 
         // 希望休上限の復元
         document.getElementById("storeMaxKibou").value =
@@ -1146,9 +1163,10 @@
         const min = storeMinStaff[currentStore.id] || {};
         const dayIdx = new Date(currentYear, currentMonth, day).getDay();
         const isHoliday = holidays.includes(day);
-        const isWeekend = (dayIdx === 0 || dayIdx === 6 || isHoliday);
-        const v = isWeekend ? min.weekend : min.weekday;
-        return (v == null || isNaN(v)) ? null : v;
+        if (isHoliday) return min.holiday ?? null;
+        if (dayIdx === 6) return min.saturday ?? null;
+        if (dayIdx === 0) return min.sunday ?? null;
+        return min.weekday ?? null;
     }
 
     function renderTable() {
@@ -1357,10 +1375,11 @@
         if (!currentStore) return 2;
         const min = storeMinStaff[currentStore.id] || {};
         const dayIdx = new Date(currentYear, currentMonth, day).getDay();
-        const isHol = holidays.includes(day);
-        const isWeekend = (dayIdx === 0 || dayIdx === 6 || isHol);
-        const v = isWeekend ? min.weekend : min.weekday;
-        return (v != null && !isNaN(Number(v))) ? Number(v) : 2;
+        const isHoliday = holidays.includes(day);
+        if (isHoliday) return Number(min.holiday ?? 2);
+        if (dayIdx === 6) return Number(min.saturday ?? 2);
+        if (dayIdx === 0) return Number(min.sunday ?? 2);
+        return Number(min.weekday ?? 2);
       }
 
       // ─── ヘルパー: 月またぎ対応でスタンプ取得 ───
@@ -1822,7 +1841,7 @@ ${restrictions.fairness ? "- 希望休・有休の取得はスタッフ間で公
 在籍スタッフ:
 ${staffList}
 
-最低出勤人数: 平日${min.weekday != null ? min.weekday : "未設定"}名 / 土日祝${min.weekend != null ? min.weekend : "未設定"}名
+最低出勤人数: 平日${min.weekday ?? "未設定"}名 / 土曜${min.saturday ?? "未設定"}名 / 日曜${min.sunday ?? "未設定"}名 / 祝日${min.holiday ?? "未設定"}名
 
 今月の希望休/有給 取得状況:
 ${fairnessSummary}
