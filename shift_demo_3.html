@@ -1341,8 +1341,21 @@
         wStart += 7;
       }
 
+      // 月内日数が2日以下の端数週はスキップフラグを立てる
+      // （前月・翌月またぎで月内に1〜2日しかない週）
+      weeks.forEach(wk => {
+        const activeDays = [];
+        for (let d = wk.start; d <= wk.end; d++) {
+          if (d >= 1 && d <= dim && !isClosed(d)) activeDays.push(d);
+        }
+        wk.activeDaysCount = activeDays.length;
+      });
+
       // ─── Phase 3: 週ごとに公休配置 ───
       weeks.forEach((wk, wIdx) => {
+        // 月内有効日が2日以下の端数週は公休配置をスキップ
+        if (wk.activeDaysCount <= 2) return;
+
         // この週の「配置候補日」と「日ごとの容量」を計算
         // 容量 = (totalStaff - 日別最低出勤人数) - (現時点でその日に既にオフのスタッフ数)
         const dayCapacity = {}; // day -> 残り容量
