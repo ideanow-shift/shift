@@ -1158,7 +1158,15 @@
         if (!currentStore) return 0;
         const isTuesdayClosed = currentStore.rule.includes("火曜") || currentStore.rule.includes("火曜日");
         const isTues = new Date(currentYear, currentMonth, day).getDay() === 2;
-        if (isTuesdayClosed && isTues) return 0; // 定休日は0扱い
+        // 定休日でも手動で出勤に変更されている場合はカウントする
+        if (isTuesdayClosed && isTues) {
+            let count = 0;
+            currentStaffs.forEach(s => {
+                const v = getCurrentCellStates()[`${s.id}-${day}`];
+                if (v === "出" || v === "時" || v === "研") count++;
+            });
+            return count;
+        }
 
         let count = 0;
         currentStaffs.forEach(s => {
@@ -1305,7 +1313,15 @@
                     const cellKey = `${staff.id}-${d}`;
 
                     if ((currentStore.rule.includes("火曜") || currentStore.rule.includes("火曜日")) && isTuesday) {
-                        bodyHtml += `<td class="c-fixed-off">定</td>`;
+                        // 定休日でも手動変更可能にする
+                        const currentVal = getCurrentCellStates()[cellKey] || "定";
+                        let cellColorStyle = "background:var(--fixed-holiday-bg); color:var(--fixed-holiday-text);";
+                        if (currentVal === "出") cellColorStyle = "background:#e6f7ff; color:#1890ff;";
+                        if (currentVal === "公") cellColorStyle = "background:var(--holiday-bg); color:var(--holiday-text);";
+                        if (currentVal === "希") cellColorStyle = "background:#f6ffed; color:#52c41a;";
+                        if (currentVal === "有") cellColorStyle = "background:#fff0f6; color:#eb2f96;";
+                        if (currentVal === "研") cellColorStyle = "background:#feffe6; color:#d4b106;";
+                        bodyHtml += `<td class="cell-clickable" style="${cellColorStyle}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
                     } else {
                         const currentVal = getCurrentCellStates()[cellKey] || "-";
                         let cellColorStyle = "";
