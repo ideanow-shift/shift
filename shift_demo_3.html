@@ -1637,12 +1637,16 @@
       // ─── 検証 ───
       const violations = [];
       currentStaffs.forEach(staff => {
+        const cfg = liveStaffConfig[staff.id] || {};
+        const isAlternate = (cfg.holidayType || "").includes("隔週");
+        // 隔週休2日は週によって1日休みが許容される（auto配置と一致）
+        const minWeekly = isAlternate ? 1 : TARGET_OFF;
         weeks.forEach((wk, i) => {
           let off = 0;
           for (let d = wk.start; d <= wk.end; d++) {
             if (isOff(staff.id, d)) off++;
           }
-          if (off < TARGET_OFF) violations.push(`${staff.name}-第${i + 1}週(${off}日)`);
+          if (off < minWeekly) violations.push(`${staff.name}-第${i + 1}週(${off}日)`);
         });
       });
       // 各日の出勤者数チェック
