@@ -1275,7 +1275,7 @@
                         <div class="staff-profile">
                             <div class="staff-avatar">${avatarChar}</div>
                             <div>
-                                <span class="staff-name">${staff.name}</span>${irregularMark}${!staff.hasLicense ? '<span style="font-size:9px; background:#fef3c7; color:#d97706; padding:1px 4px; border-radius:4px; margin-left:4px;">見習</span>' : ""}
+                                <span class="staff-name">${staff.name}</span>${irregularMark}
                                 <span style="font-size:9px; background:#e2e8f0; padding:1px 4px; border-radius:4px; margin-left:4px;">${staff.rank}</span>
                                 <button class="mobile-staff-toggle" onclick="toggleStaffRowExpand('${staff.id}', event)" title="設定を表示／隠す">▼</button>
                                 <span style="font-size:9px; color:#718096; margin-left:6px;">今月希望休: ${fair.希}日${fair.有 > 0 ? ` / 有給: ${fair.有}日` : ""}</span>
