@@ -798,7 +798,10 @@
                 workType:    empTypeIdx !== -1 && (row[empTypeIdx] || "").includes("時短") ? "時短" : "通常",
                 hasLicense: licenseIdx !== -1
                     ? (row[licenseIdx] || "").trim() === "〇"
-                    : true  // 列がない場合はカウント対象とする
+                    : true,  // 列がない場合はカウント対象とする
+                isReceptionPart: empTypeIdx !== -1
+                    ? (row[empTypeIdx] || "").trim() === "レセプションパート"
+                    : false
             });
         });
 
@@ -1164,6 +1167,7 @@
             // 美容師免許なしはカウントしない
             const staffInfo = currentStaffs.find(st => st.id === s.id);
             if (staffInfo && !staffInfo.hasLicense) return;
+            if (staffInfo && staffInfo.isReceptionPart) return;
             count++; // 出 / 時 / 会 / undefined（未入力）はすべて出勤
         });
         return count;
@@ -1438,6 +1442,15 @@
         }
       });
 
+      // レセプションパートは全日公休で埋める
+      currentStaffs.forEach(staff => {
+        if (!staff.isReceptionPart) return;
+        for (let d = 1; d <= dim; d++) {
+          if (isClosed(d)) continue;
+          cs[`${staff.id}-${d}`] = "公";
+        }
+      });
+
       // ─── Phase 2: 週ブロック構築（日〜土） ───
       const weeks = [];
       let wStart = 1 - firstDow;
@@ -1478,6 +1491,7 @@
 
         // スタッフを毎回ランダム順で処理して同日集中を緩和
         const staffOrder = currentStaffs
+          .filter(s => !s.isReceptionPart)
           .map((s, i) => ({ s, key: Math.sin(wIdx * 37 + i * 13) }))
           .sort((a, b) => a.key - b.key)
           .map(o => o.s);
@@ -1738,6 +1752,7 @@
         const issues = [];
 
         currentStaffs.forEach(staff => {
+            if (staff.isReceptionPart) return; // 除外
             // スタッフごとのイレギュラー連勤上限があれば優先（無効ならデフォルト）
             const irr = (liveStaffConfig[staff.id] || {}).irregular || {};
             const threshold = irr.maxConsecEnabled ? irr.maxConsecutive : defaultThreshold;
