@@ -79,6 +79,7 @@
         .st-shor { background: #f9f0ff; color: #722ed1; }
         .st-meet { background: #fff7e6; color: #fa8c16; }
         .st-train { background: #feffe6; color: #d4b106; }
+        .st-paid { background: #fff0f6; color: #eb2f96; }
 
         .content-area {
             background: white; padding: 20px; border-radius: 16px;
@@ -272,6 +273,7 @@
         <div class="stamp st-shor" onclick="selectStamp('時', this)">🕒 時短スタッフ</div>
         <div class="stamp st-meet" onclick="selectStamp('会', this)">🤝 会議中抜け</div>
         <div class="stamp st-train" onclick="selectStamp('研', this)">✨ 研修中抜け</div>
+        <div class="stamp st-paid" onclick="selectStamp('有', this)">💴 有給</div>
     </div>
 </div>
 
@@ -1094,7 +1096,7 @@
         let count = 0;
         currentStaffs.forEach(s => {
             const v = getCurrentCellStates()[`${s.id}-${day}`];
-            if (v === "公" || v === "希") return; // 休みはカウントしない
+            if (v === "公" || v === "希" || v === "有") return; // 休みはカウントしない
             count++; // 出 / 時 / 会 / 研 / undefined（未入力）はすべて出勤
         });
         return count;
@@ -1241,6 +1243,7 @@
                         if (currentVal === "会") cellColorStyle = "background:#fff7e6; color:#fa8c16;";
                         if (currentVal === "研") cellColorStyle = "background:#feffe6; color:#d4b106;";
                         if (currentVal === "出") cellColorStyle = "background:#e6f7ff; color:#1890ff;";
+                        if (currentVal === "有") cellColorStyle = "background:#fff0f6; color:#eb2f96;";
 
                         bodyHtml += `<td class="cell-clickable" style="${cellColorStyle}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
                     }
