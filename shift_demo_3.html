@@ -1501,7 +1501,20 @@
           for (let d = wk.start; d <= wk.end; d++) {
             if (isOff(staff.id, d)) offDays.push(d);
           }
-          const need = Math.max(0, TARGET_OFF - offDays.length);
+
+          // 隔週休2日の場合、週番号で交互に1日・2日を切り替え
+          const cfg = liveStaffConfig[staff.id] || {};
+          const isAlternate = (cfg.holidayType || "").includes("隔週");
+          let weekTarget;
+          if (isAlternate) {
+            // スタッフインデックスでずらして全員が同じ週に
+            // 休みが集中しないようにする
+            weekTarget = (wIdx + si) % 2 === 0 ? 1 : 2;
+          } else {
+            weekTarget = TARGET_OFF; // 完全週休2日は2日固定
+          }
+
+          const need = Math.max(0, weekTarget - offDays.length);
 
           for (let k = 0; k < need; k++) {
             // 候補: 当月内、定休でない、未オフ、容量あり
