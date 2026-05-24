@@ -321,12 +321,6 @@
         <!-- 🏢 Store Rules -->
         <div style="border-top: 1px solid #edf2f7; padding-top: 15px; margin-top: 15px;">
             <div class="section-title">🏢 店舗営業ルール</div>
-            <div class="file-label">本日の営業時間タイプ</div>
-            <div class="toggle-group">
-                <button id="timeBtn1" class="toggle-btn active primary" disabled>① 8:40～17:40</button>
-                <button id="timeBtn2" class="toggle-btn" disabled>② 9:40～18:40</button>
-            </div>
-
             <div class="file-label">この店舗の定休日設定</div>
             <div class="toggle-group">
                 <button id="holidayBtn1" class="toggle-btn active accent" disabled>年中無休</button>
@@ -1216,18 +1210,7 @@
             else if (dayIdx === 6) thClass = "th-sat";
             else if (dayIdx === 0) thClass = "th-sun";
 
-            let timeLabel = "";
-            if (isTuesdayClosed && dayIdx === 2) {
-                timeLabel = "定休";
-            } else {
-                let code = currentStore.weekday;
-                if (isHoliday) code = currentStore.hol;
-                else if (dayIdx === 6) code = currentStore.sat;
-                else if (dayIdx === 0) code = currentStore.sun;
-                timeLabel = code === "2" ? "9:40" : "8:40";
-            }
-
-            headerHtml += `<th class="${thClass}">${d}<br><small style="font-size:9px;">${timeLabel}</small></th>`;
+            headerHtml += `<th class="${thClass}">${d}</th>`;
             subHeaderHtml += `<th class="${thClass}">${dayStr}</th>`;
 
             // 出勤人数行: 定休日は「-」、それ以外は人数。最低人数との比較で色分け
