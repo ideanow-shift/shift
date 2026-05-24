@@ -759,6 +759,7 @@
         const activeIdx = findCol(rawHeaders, "現職");       // ← 在職フィルタ用
         const nameIdx   = findCol(rawHeaders, "氏名");
         const retireIdx = findCol(rawHeaders, "退職日");
+        const licenseIdx = findCol(rawHeaders, "美容師免許取得者", "美容師免許");
 
         // 列が見つからない場合は代表マスタの固定インデックスで補完
         const FIXED = { store: 2, rank: 3, active: 5, name: 7 };
@@ -794,7 +795,10 @@
                 store: store,
                 rank:  rank,
                 holidayType: "完全週休2日",
-                workType:    empTypeIdx !== -1 && (row[empTypeIdx] || "").includes("時短") ? "時短" : "通常"
+                workType:    empTypeIdx !== -1 && (row[empTypeIdx] || "").includes("時短") ? "時短" : "通常",
+                hasLicense: licenseIdx !== -1
+                    ? (row[licenseIdx] || "").trim() === "〇"
+                    : true  // 列がない場合はカウント対象とする
             });
         });
 
@@ -857,6 +861,11 @@
         currentStaffs = staffMaster.filter(s => {
             const sNorm = normalizeStoreName(s.store);
             return sNorm === cNorm || sNorm.includes(cNorm) || cNorm.includes(sNorm);
+        });
+        // 免許あり→免許なしの順にソート
+        currentStaffs.sort((a, b) => {
+            if (a.hasLicense === b.hasLicense) return 0;
+            return a.hasLicense ? -1 : 1;
         });
 
         const defaultIrregular = () => ({
@@ -1152,6 +1161,9 @@
         currentStaffs.forEach(s => {
             const v = getCurrentCellStates()[`${s.id}-${day}`];
             if (v === "公" || v === "希" || v === "有" || v === "研") return; // 休みはカウントしない
+            // 美容師免許なしはカウントしない
+            const staffInfo = currentStaffs.find(st => st.id === s.id);
+            if (staffInfo && !staffInfo.hasLicense) return;
             count++; // 出 / 時 / 会 / undefined（未入力）はすべて出勤
         });
         return count;
@@ -1263,7 +1275,7 @@
                         <div class="staff-profile">
                             <div class="staff-avatar">${avatarChar}</div>
                             <div>
-                                <span class="staff-name">${staff.name}</span>${irregularMark}
+                                <span class="staff-name">${staff.name}</span>${irregularMark}${!staff.hasLicense ? '<span style="font-size:9px; background:#fef3c7; color:#d97706; padding:1px 4px; border-radius:4px; margin-left:4px;">見習</span>' : ""}
                                 <span style="font-size:9px; background:#e2e8f0; padding:1px 4px; border-radius:4px; margin-left:4px;">${staff.rank}</span>
                                 <button class="mobile-staff-toggle" onclick="toggleStaffRowExpand('${staff.id}', event)" title="設定を表示／隠す">▼</button>
                                 <span style="font-size:9px; color:#718096; margin-left:6px;">今月希望休: ${fair.希}日${fair.有 > 0 ? ` / 有給: ${fair.有}日` : ""}</span>
