@@ -848,6 +848,7 @@
                     endTime:     "17:40",
                     maxHoliday:  2,
                     note:        "",
+                    noSunday:    false,
                     irregular:   defaultIrregular(),
                 };
             } else {
@@ -856,6 +857,7 @@
                 if (liveStaffConfig[s.id].note == null)       liveStaffConfig[s.id].note = "";
                 if (liveStaffConfig[s.id].startTime == null)  liveStaffConfig[s.id].startTime = "8:40";
                 if (liveStaffConfig[s.id].endTime == null)    liveStaffConfig[s.id].endTime = "17:40";
+                if (liveStaffConfig[s.id].noSunday == null)   liveStaffConfig[s.id].noSunday = false;
                 if (liveStaffConfig[s.id].irregular == null)  liveStaffConfig[s.id].irregular = defaultIrregular();
             }
         });
@@ -936,6 +938,12 @@
                             <option value="時短" ${workType.includes("時短")?'selected':''}>時短スタッフ</option>
                         </select>
                     </div>
+                    <label style="display:flex; align-items:center; gap:4px; margin-top:4px; font-size:11px; cursor:pointer;">
+                        <input type="checkbox"
+                            ${cfg.noSunday ? 'checked' : ''}
+                            onchange="updateStaffRule('${staff.id}','noSunday', this.checked)">
+                        <span>日曜出勤不可（公休自動配置）</span>
+                    </label>
                     <div data-worktime-row style="overflow: hidden; transition: max-height 0.25s ease, opacity 0.25s ease, margin-top 0.25s ease; max-height: ${isShort ? '60px' : '0'}; opacity: ${isShort ? '1' : '0'}; margin-top: ${isShort ? '6px' : '0'};">
                         <div style="background: #f9f0ff; border: 1px dashed #d6b4fc; border-radius: 6px; padding: 6px 8px; font-size: 11px;">
                             <div style="font-size: 10px; color: #722ed1; font-weight: bold; margin-bottom: 4px;">勤務時間</div>
@@ -1034,6 +1042,10 @@
     function updateStaffRule(staffId, field, value) {
         if (!liveStaffConfig[staffId]) {
             liveStaffConfig[staffId] = { holidayType: "完全週休2日", workType: "通常", startTime: "8:40", endTime: "17:40", maxHoliday: 2, note: "" };
+        }
+        if (field === "noSunday") {
+            liveStaffConfig[staffId][field] = (value === true || value === "true");
+            return;
         }
         if (field === "maxHoliday") {
             const n = parseInt(value, 10);
@@ -1330,6 +1342,18 @@
       currentStaffs.forEach(staff => {
         for (let d = 1; d <= dim; d++) {
           if (cs[`${staff.id}-${d}`] === "公") delete cs[`${staff.id}-${d}`];
+        }
+      });
+
+      // ママスタイリスト等の日曜固定公休を配置
+      currentStaffs.forEach(staff => {
+        const cfg = liveStaffConfig[staff.id] || {};
+        if (!cfg.noSunday) return;
+        for (let d = 1; d <= dim; d++) {
+          const dow = new Date(currentYear, currentMonth, d).getDay();
+          if (dow === 0) { // 日曜日
+            cs[`${staff.id}-${d}`] = "公";
+          }
         }
       });
 
