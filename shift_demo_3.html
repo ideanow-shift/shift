@@ -350,9 +350,22 @@
                        oninput="updateMinStaff('weekend', this.value)">
                 <span style="font-size: 11px;">名</span>
             </div>
+
+            <div class="file-label" style="margin-top:15px;">希望休上限設定</div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:11px; flex:1;">月間希望休上限</span>
+                <input type="number" id="storeMaxKibou" min="0" value="2"
+                    style="width:56px; padding:4px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;"
+                    oninput="updateStoreMaxKibou(this.value)">
+                <span style="font-size:11px;">日まで</span>
+            </div>
         </div>
 
         <div id="alertBox" class="alert-area"></div>
+        <button onclick="showFairnessReport()"
+            style="width:100%; margin-top:8px; padding:8px; background:#f7fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; cursor:pointer;">
+            📊 公平性レポートを表示
+        </button>
 
         <!-- 👤 Staff Individual Rules -->
         <div style="border-top: 1px solid #edf2f7; padding-top: 15px; margin-top: 15px;">
@@ -456,6 +469,7 @@
     const staffRules = liveStaffConfig;
     let allCellStates = {}; // { "YYYY-M": { "staffId-day": stamp, ... } } 月ごとに保持
     let storeMinStaff = {}; // { storeId: { weekday: 4, weekend: 6 } } 店舗ごとの最低出勤人数
+    let storeSettings = {}; // { storeId: { maxKibou: 2 } } 店舗ごとの希望休上限など
     let staffFairnessCount = {}; // { staffId: { 希: 0, 有: 0 } } スタッフごとの希望休/有給 取得数
 
     // ─────────────────────────────────────────────────────────────
@@ -870,6 +884,10 @@
         document.getElementById("minStaffWeekday").value = (min.weekday != null) ? min.weekday : "";
         document.getElementById("minStaffWeekend").value = (min.weekend != null) ? min.weekend : "";
 
+        // 希望休上限の復元
+        document.getElementById("storeMaxKibou").value =
+            (storeSettings[currentStore.id] || {}).maxKibou ?? 2;
+
         renderStaffRulesPanel();
         renderTable();
     }
@@ -956,8 +974,6 @@
                         </div>
                     </div>
                     <div style="display: grid; grid-template-columns: 76px 1fr; gap: 4px 6px; font-size: 11px; align-items: center; margin-top: 6px;">
-                        <span>月間希望休上限</span>
-                        <input type="number" min="0" data-field="maxHoliday" value="${maxHoliday}" onchange="updateStaffRule('${staff.id}','maxHoliday', this.value)" style="font-size: 11px; padding: 2px 4px; border: 1px solid #cbd5e0; border-radius: 4px;">
                         <span>特記事項</span>
                         <input type="text" data-field="note" value="${safeNote}" placeholder="例: 水曜は必ず出勤" onchange="updateStaffRule('${staff.id}','note', this.value)" style="font-size: 11px; padding: 2px 4px; border: 1px solid #cbd5e0; border-radius: 4px;">
                     </div>
@@ -1096,6 +1112,18 @@
             storeMinStaff[currentStore.id][key] = num;
         }
         renderTable();
+    }
+
+    function updateStoreMaxKibou(value) {
+        if (!currentStore) return;
+        if (!storeSettings[currentStore.id]) storeSettings[currentStore.id] = {};
+        const num = parseInt(value, 10);
+        storeSettings[currentStore.id].maxKibou = isNaN(num) ? 2 : num;
+    }
+
+    function getStoreMaxKibou() {
+        if (!currentStore) return 2;
+        return (storeSettings[currentStore.id] || {}).maxKibou ?? 2;
     }
 
     // その日の出勤者数をカウント（出 / 時 / 会 / 研 / 未入力 を出勤としてカウント）
@@ -1269,6 +1297,30 @@
     function clickCell(staffId, day) {
         const cellKey = `${staffId}-${day}`;
         const cs = getCurrentCellStates();
+
+        if (selectedStamp === "希" && cs[cellKey] !== "希") {
+            const staffName = (currentStaffs.find(s => s.id === staffId) || {}).name || staffId;
+            recomputeFairness();
+            const maxKibou = getStoreMaxKibou();
+            const currentCount = (staffFairnessCount[staffId] || {}).希 || 0;
+
+            // 上限チェック
+            if (currentCount >= maxKibou) {
+                alert(`${staffName}さんの希望休は今月${maxKibou}日が上限です。\n現在: ${currentCount}日取得済み`);
+                return;
+            }
+
+            // 公平性チェック（平均との比較）
+            const counts = currentStaffs.map(s =>
+                (staffFairnessCount[s.id] || {}).希 || 0
+            );
+            const avg = counts.reduce((a,b) => a+b, 0) / counts.length;
+            if (currentCount >= avg + 1) {
+                const ok = confirm(`${staffName}さんの希望休取得数(${currentCount+1}日)が\n他スタッフの平均(${avg.toFixed(1)}日)より多くなります。\n承認しますか？`);
+                if (!ok) return;
+            }
+        }
+
         if (cs[cellKey] === selectedStamp) {
             delete cs[cellKey];
         } else {
@@ -1621,6 +1673,30 @@
             if (val === "希") staffFairnessCount[staffId].希++;
             if (val === "有") staffFairnessCount[staffId].有++;
         });
+    }
+
+    function showFairnessReport() {
+        if (!currentStore || currentStaffs.length === 0) return;
+        recomputeFairness();
+        const maxKibou = getStoreMaxKibou();
+        const counts = currentStaffs.map(s => ({
+            name: s.name,
+            kibou: (staffFairnessCount[s.id] || {}).希 || 0,
+            paid:  (staffFairnessCount[s.id] || {}).有 || 0,
+        }));
+        const avg = counts.reduce((a,b) => a + b.kibou, 0) / counts.length;
+
+        let report = `【公平性レポート】${currentStore.name}\n`;
+        report += `希望休上限: ${maxKibou}日 / 平均取得: ${avg.toFixed(1)}日\n`;
+        report += `─────────────────\n`;
+        counts.forEach(c => {
+            const flag = c.kibou > maxKibou ? "⚠️超過" :
+                         c.kibou > avg + 1 ? "△多め" : "✅";
+            report += `${flag} ${c.name}: 希望休${c.kibou}日`;
+            if (c.paid > 0) report += ` / 有給${c.paid}日`;
+            report += `\n`;
+        });
+        alert(report);
     }
 
     // ─────────────────────────────────────────────────────────────
