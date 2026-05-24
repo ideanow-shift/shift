@@ -1740,7 +1740,7 @@
     // 🤖 AIシフト調整: Anthropic API を呼び出して変更案を適用
     // ─────────────────────────────────────────────────────────────
     function resetApiKey() {
-        localStorage.removeItem("anthropic_api_key");
+        localStorage.removeItem("gemini_api_key");
         alert("APIキーを削除しました。次回AI調整時に再入力できます。");
     }
 
@@ -1856,15 +1856,15 @@ ${request}
         }
 
         // APIキー取得（なければプロンプト）
-        let apiKey = localStorage.getItem("anthropic_api_key");
+        let apiKey = localStorage.getItem("gemini_api_key");
         if (!apiKey) {
-            apiKey = prompt("Anthropic API キーを入力してください（sk-ant-... 形式）。\nブラウザの localStorage に保存されます。");
+            apiKey = prompt("Gemini API キーを入力してください（AIza... 形式）。\nブラウザの localStorage に保存されます。");
             if (!apiKey) {
                 alertBox.style.display = "block";
                 alertBox.innerHTML = "❌ APIキーが入力されませんでした。";
                 return;
             }
-            localStorage.setItem("anthropic_api_key", apiKey);
+            localStorage.setItem("gemini_api_key", apiKey);
         }
 
         const restrictions = {
@@ -1882,21 +1882,23 @@ ${request}
         alertBox.innerHTML = "⏳ AIにシフト調整を依頼しています...";
 
         try {
-            const res = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                    "x-api-key": apiKey,
-                    "anthropic-version": "2023-06-01",
-                    "content-type": "application/json",
-                    "anthropic-dangerous-direct-browser-access": "true",
-                },
-                body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 2000,
-                    system: buildAISystemMessage(restrictions),
-                    messages: [{ role: "user", content: buildAIUserMessage(request, restrictions) }],
-                }),
-            });
+            const res = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+                {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: buildAISystemMessage(restrictions) +
+                                      "\n\n" +
+                                      buildAIUserMessage(request, restrictions)
+                            }]
+                        }],
+                        generationConfig: { maxOutputTokens: 2000 }
+                    }),
+                }
+            );
 
             if (!res.ok) {
                 const errText = await res.text();
@@ -1904,7 +1906,7 @@ ${request}
             }
 
             const data = await res.json();
-            const text = (data.content && data.content[0] && data.content[0].text) || "";
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
             // レスポンスから JSON 部分を抽出
             const jsonMatch = text.match(/\{[\s\S]*\}/);
