@@ -1382,40 +1382,38 @@
             // 既存オフから最も離れた日を選択（連勤分散）
             let best = null, bestScore = -Infinity;
             candidates.forEach(d => {
-              // その日に何人すでに休みか数える
               let offCount = 0;
               currentStaffs.forEach(s => {
                 const v = getCurrentCellStates()[`${s.id}-${d}`];
                 if (v === "公" || v === "希") offCount++;
               });
-
-              // この人が休むと出勤が何人になるか
               const remainWork = currentStaffs.length - offCount - 1;
-
-              // 日別最低出勤人数を下回る日は絶対に選ばない
               const minRequired = getMinStaffForDay(d);
               if (remainWork < minRequired) return;
+
+              // 曜日ごとの全スタッフ公休合計（均等化のため）
+              const dow = new Date(currentYear, currentMonth, d).getDay();
+              let dowTotalOff = 0;
+              for (let dd = 1; dd <= dim; dd++) {
+                if (new Date(currentYear, currentMonth, dd).getDay() === dow) {
+                  currentStaffs.forEach(s => {
+                    const v = cs[`${s.id}-${dd}`];
+                    if (v === "公" || v === "希") dowTotalOff++;
+                  });
+                }
+              }
+
+              // 土日は公休を入れにくくする（出勤数を多くするため）
+              const isWeekend = (dow === 0 || dow === 6);
+              const weekendPenalty = isWeekend ? -50000 : 0;
 
               // 連勤分散スコア
               const minDist = offDays.length === 0 ? 999
                 : Math.min(...offDays.map(o => Math.abs(d - o)));
 
-              // 曜日バランススコア（その曜日の公休が少ない日を優先）
-              const dow = new Date(currentYear, currentMonth, d).getDay();
-              // 全スタッフのその曜日の公休合計
-              let dowTotalOff = 0;
-              for (let dd = 1; dd <= dim; dd++) {
-                if (new Date(currentYear, currentMonth, dd).getDay() === dow) {
-                  currentStaffs.forEach(s => {
-                    if (cs[`${s.id}-${dd}`] === "公" || cs[`${s.id}-${dd}`] === "希") dowTotalOff++;
-                  });
-                }
-              }
-
-              // スコア = 連勤分散 * 100 + 曜日バランス（公休の少ない曜日を優先）* 50 + ランダム
-              const balanceScore = -dowTotalOff * 500;
-              const hash = Math.sin(si * 997 + d * 113) * 10000;
-              const score = minDist * 100 + balanceScore + hash;
+              // スコア: 土日ペナルティ最優先 → 曜日均等化 → 連勤分散 → ランダム
+              const hash = Math.sin(si * 997 + d * 113) * 1000;
+              const score = weekendPenalty + (-dowTotalOff * 10000) + minDist * 100 + hash;
 
               if (score > bestScore) { best = d; bestScore = score; }
             });
