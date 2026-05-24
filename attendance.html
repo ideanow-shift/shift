@@ -3,11 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>イディア・ノブ タイムレコーダー（PIN認証）</title>
+<title>IDEA NOV タイムレコーダー</title>
 <style>
-    /* ──────────────────────────────────────────────────────
-       Theme: shift_demo.html (ANTIGRAVITY) + KING OF TIME ライク
-       ────────────────────────────────────────────────────── */
     :root {
         --bg-color: #fcfbf7;
         --card-bg: #ffffff;
@@ -16,25 +13,19 @@
         --text-soft: #a0aec0;
         --border: #edf2f7;
         --border-strong: #cbd5e0;
-
         --kot-green:        #16a34a;
         --kot-green-dark:   #15803d;
         --kot-green-light:  #dcfce7;
         --kot-orange:       #f97316;
         --kot-orange-dark:  #ea580c;
-        --kot-orange-light: #ffedd5;
         --kot-gray:         #e2e8f0;
         --kot-gray-dark:    #cbd5e0;
         --kot-gray-text:    #4a5568;
-
         --danger:           #e53e3e;
-        --danger-light:     #fff5f5;
         --primary:          #52b788;
     }
-
     * { box-sizing: border-box; }
     html, body { height: 100%; }
-
     body {
         font-family: 'Helvetica Neue', Arial, "Hiragino Sans", "Meiryo", sans-serif;
         background-color: var(--bg-color);
@@ -43,15 +34,10 @@
         padding: 20px;
         min-height: 100vh;
         -webkit-font-smoothing: antialiased;
-        text-rendering: optimizeLegibility;
     }
+    .wrapper { max-width: 880px; margin: 0 auto; }
 
-    .wrapper {
-        max-width: 880px;
-        margin: 0 auto;
-    }
-
-    /* ─── ① 日付 + 超特大デジタル時計 ─── */
+    /* 時計 */
     .clock-card {
         background: var(--card-bg);
         padding: 28px 24px 32px;
@@ -61,16 +47,9 @@
         text-align: center;
         margin-bottom: 18px;
     }
-    .clock-date {
-        font-size: 18px;
-        color: var(--text-muted);
-        font-weight: bold;
-        letter-spacing: 0.08em;
-        font-variant-numeric: tabular-nums;
-        margin-bottom: 8px;
-    }
+    .clock-date { font-size: 18px; color: var(--text-muted); font-weight: bold; letter-spacing: 0.08em; margin-bottom: 8px; }
     .clock-time {
-        font-family: 'SF Mono', 'Menlo', 'Consolas', 'Courier New', monospace;
+        font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
         font-size: clamp(72px, 14vw, 132px);
         font-weight: 700;
         line-height: 1;
@@ -79,32 +58,11 @@
         font-variant-numeric: tabular-nums;
         margin: 4px 0 2px;
     }
-    .clock-time .sep {
-        color: var(--kot-green);
-        animation: blink 1.2s steps(2, end) infinite;
-    }
+    .clock-time .sep { color: var(--kot-green); animation: blink 1.2s steps(2,end) infinite; }
     @keyframes blink { 50% { opacity: 0.3; } }
-    .clock-second {
-        font-size: 0.55em;
-        color: var(--kot-green);
-        vertical-align: text-top;
-        margin-left: 0.08em;
-        font-variant-numeric: tabular-nums;
-    }
-    .test-badge {
-        display: inline-block;
-        margin-top: 10px;
-        padding: 4px 14px;
-        background: #fff7e6;
-        color: #d97706;
-        border: 1px solid #fbd38d;
-        border-radius: 999px;
-        font-size: 11px;
-        font-weight: bold;
-        letter-spacing: 0.1em;
-    }
+    .clock-second { font-size: 0.55em; color: var(--kot-green); vertical-align: text-top; margin-left: 0.08em; }
 
-    /* ─── ② 店舗 / スタッフ ─── */
+    /* 店舗・スタッフ選択 */
     .select-card {
         background: var(--card-bg);
         padding: 18px 22px;
@@ -116,374 +74,179 @@
         gap: 14px;
     }
     .select-group { display: flex; flex-direction: column; gap: 6px; }
-    .select-group label {
-        font-size: 12px;
-        font-weight: bold;
-        color: var(--text-muted);
-        letter-spacing: 0.08em;
-    }
+    .select-group label { font-size: 12px; font-weight: bold; color: var(--text-muted); letter-spacing: 0.08em; }
     select {
-        width: 100%;
-        padding: 14px 16px;
-        font-size: 17px;
-        font-weight: bold;
-        color: var(--text-main);
-        background: white;
-        border: 1.5px solid var(--border-strong);
-        border-radius: 12px;
-        cursor: pointer;
-        min-height: 56px;
+        width: 100%; padding: 14px 16px;
+        font-size: 17px; font-weight: bold; color: var(--text-main);
+        background: white; border: 1.5px solid var(--border-strong);
+        border-radius: 12px; cursor: pointer; min-height: 56px;
         appearance: none;
         background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M6 8L0 0h12z' fill='%234a5568'/></svg>");
-        background-repeat: no-repeat;
-        background-position: right 16px center;
-        padding-right: 42px;
+        background-repeat: no-repeat; background-position: right 16px center; padding-right: 42px;
     }
-    select:focus {
-        outline: none;
-        border-color: var(--kot-green);
-        box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18);
-    }
-    select:disabled {
-        background-color: #f7fafc;
-        color: var(--text-soft);
-        cursor: not-allowed;
-    }
+    select:focus { outline: none; border-color: var(--kot-green); box-shadow: 0 0 0 3px rgba(22,163,74,0.18); }
+    select:disabled { background-color: #f7fafc; color: var(--text-soft); cursor: not-allowed; }
 
-    /* ─── ③ 選択中の氏名表示 ─── */
+    /* 氏名表示 */
     .name-card {
-        background: var(--card-bg);
-        padding: 28px 20px;
-        border-radius: 16px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-        margin-bottom: 18px;
-        text-align: center;
-        min-height: 130px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        background: var(--card-bg); padding: 28px 20px;
+        border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        margin-bottom: 18px; text-align: center; min-height: 130px;
+        display: flex; align-items: center; justify-content: center;
         transition: background 0.25s ease;
     }
-    .name-card.active {
-        background: linear-gradient(180deg, #ffffff 0%, #f4fbf7 100%);
-    }
-    .name-prompt {
-        font-size: 18px;
-        color: var(--text-soft);
-        font-weight: bold;
-        letter-spacing: 0.08em;
-    }
-    .name-display {
-        display: none;
-        line-height: 1.1;
-    }
+    .name-card.active { background: linear-gradient(180deg, #ffffff 0%, #f4fbf7 100%); }
+    .name-prompt { font-size: 18px; color: var(--text-soft); font-weight: bold; letter-spacing: 0.08em; }
+    .name-display { display: none; line-height: 1.1; }
     .name-card.active .name-prompt { display: none; }
     .name-card.active .name-display { display: block; }
-    .name-display .name-main {
-        font-size: clamp(38px, 7vw, 64px);
-        font-weight: 800;
-        color: var(--text-main);
-        letter-spacing: 0.05em;
-    }
-    .name-display .name-suffix {
-        font-size: 0.55em;
-        font-weight: 700;
-        color: var(--text-muted);
-        margin-left: 0.2em;
-    }
-    .name-display .name-meta {
-        font-size: 13px;
-        color: var(--text-muted);
-        margin-top: 8px;
-        letter-spacing: 0.05em;
-    }
+    .name-display .name-main { font-size: clamp(38px, 7vw, 64px); font-weight: 800; color: var(--text-main); letter-spacing: 0.05em; }
+    .name-display .name-suffix { font-size: 0.55em; font-weight: 700; color: var(--text-muted); margin-left: 0.2em; }
+    .name-display .name-meta { font-size: 13px; color: var(--text-muted); margin-top: 8px; letter-spacing: 0.05em; }
 
-    /* ─── PIN認証カード ─── */
+    /* PIN認証 */
     .pin-card {
-        background: var(--card-bg);
-        padding: 22px 22px 26px;
-        border-radius: 16px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-        margin-bottom: 18px;
+        background: var(--card-bg); padding: 22px 22px 26px;
+        border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         text-align: center;
-        max-height: 0;
-        overflow: hidden;
-        opacity: 0;
-        padding-top: 0;
-        padding-bottom: 0;
+        max-height: 0; overflow: hidden; opacity: 0;
+        padding-top: 0; padding-bottom: 0;
         transition: max-height 0.35s ease, opacity 0.25s ease,
-                    padding-top 0.3s ease, padding-bottom 0.3s ease,
-                    margin-bottom 0.3s ease;
-        margin: 0 0 0 0;
+                    padding-top 0.3s ease, padding-bottom 0.3s ease, margin-bottom 0.3s ease;
+        margin: 0;
     }
-    .pin-card.visible {
-        max-height: 720px;
-        opacity: 1;
-        padding-top: 22px;
-        padding-bottom: 26px;
-        margin-bottom: 18px;
-    }
-    .pin-prompt {
-        font-size: 16px;
-        font-weight: bold;
-        color: var(--text-muted);
-        letter-spacing: 0.08em;
-        margin-bottom: 14px;
-    }
-    .pin-card.authed .pin-prompt {
-        color: var(--kot-green-dark);
-    }
-    .pin-card.err .pin-prompt {
-        color: var(--danger);
-    }
+    .pin-card.visible { max-height: 720px; opacity: 1; padding-top: 22px; padding-bottom: 26px; margin-bottom: 18px; }
+    .pin-prompt { font-size: 16px; font-weight: bold; color: var(--text-muted); letter-spacing: 0.08em; margin-bottom: 14px; }
+    .pin-card.authed .pin-prompt { color: var(--kot-green-dark); }
+    .pin-card.err    .pin-prompt { color: var(--danger); }
 
-    /* PIN dots */
-    .pin-dots {
-        display: flex;
-        justify-content: center;
-        gap: 18px;
-        margin-bottom: 18px;
-    }
+    .pin-dots { display: flex; justify-content: center; gap: 18px; margin-bottom: 18px; }
     .pin-dot {
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        border: 2.5px solid var(--border-strong);
-        background: transparent;
+        width: 22px; height: 22px; border-radius: 50%;
+        border: 2.5px solid var(--border-strong); background: transparent;
         transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
     }
-    .pin-dot.filled {
-        background: var(--text-main);
-        border-color: var(--text-main);
-        transform: scale(1.08);
-    }
-    .pin-card.authed .pin-dot.filled {
-        background: var(--kot-green);
-        border-color: var(--kot-green);
-    }
-    .pin-card.err .pin-dot {
-        background: var(--danger);
-        border-color: var(--danger);
-        animation: shake 0.45s cubic-bezier(.36,.07,.19,.97);
-    }
+    .pin-dot.filled { background: var(--text-main); border-color: var(--text-main); transform: scale(1.08); }
+    .pin-card.authed .pin-dot.filled { background: var(--kot-green); border-color: var(--kot-green); }
+    .pin-card.err .pin-dot { background: var(--danger); border-color: var(--danger); animation: shake 0.45s cubic-bezier(.36,.07,.19,.97); }
     @keyframes shake {
-        10%, 90% { transform: translateX(-2px); }
-        20%, 80% { transform: translateX(4px); }
-        30%, 50%, 70% { transform: translateX(-8px); }
-        40%, 60% { transform: translateX(8px); }
+        10%,90% { transform: translateX(-2px); } 20%,80% { transform: translateX(4px); }
+        30%,50%,70% { transform: translateX(-8px); } 40%,60% { transform: translateX(8px); }
     }
 
-    /* テンキー */
-    .keypad {
-        max-width: 380px;
-        margin: 0 auto;
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-    }
+    .keypad { max-width: 380px; margin: 0 auto; display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
     .keypad button {
-        font-family: inherit;
-        font-size: 28px;
-        font-weight: 700;
-        height: 72px;
-        border-radius: 14px;
-        border: 1.5px solid var(--border-strong);
-        background: #fcfbf7;
-        color: var(--text-main);
-        cursor: pointer;
+        font-family: inherit; font-size: 28px; font-weight: 700;
+        height: 72px; border-radius: 14px; border: 1.5px solid var(--border-strong);
+        background: #fcfbf7; color: var(--text-main); cursor: pointer;
         transition: transform 0.08s ease, background 0.15s ease, box-shadow 0.18s ease;
-        font-variant-numeric: tabular-nums;
-        letter-spacing: 0.02em;
     }
-    .keypad button:hover {
-        background: var(--kot-gray-light, #f1f5f9);
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    }
-    .keypad button:active {
-        transform: translateY(2px);
-        background: var(--border);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    .keypad button.action {
-        font-size: 16px;
-        background: white;
-        color: var(--text-muted);
-    }
+    .keypad button:hover { background: #f1f5f9; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    .keypad button:active { transform: translateY(2px); background: var(--border); }
+    .keypad button.action { font-size: 16px; background: white; color: var(--text-muted); }
     .keypad button.action.clear { color: var(--danger); }
-    .keypad button.action.back  { color: var(--kot-gray-text); }
 
-    /* 認証成功バッジ */
-    .auth-ok {
-        display: none;
-        margin-top: 6px;
-        font-size: 13px;
-        font-weight: bold;
-        color: var(--kot-green-dark);
-        letter-spacing: 0.08em;
+    /* PINが未設定のスタッフへの案内 */
+    .pin-setup-notice {
+        background: #fffaf0; border: 1.5px solid #fbd38d;
+        border-radius: 10px; padding: 14px 18px;
+        font-size: 14px; color: #c05621; line-height: 1.6;
+        display: none; margin-top: 8px;
     }
+    .pin-setup-notice.show { display: block; }
+
+    .auth-ok { display: none; margin-top: 6px; font-size: 13px; font-weight: bold; color: var(--kot-green-dark); letter-spacing: 0.08em; }
     .pin-card.authed .auth-ok { display: block; }
-    .pin-card.authed .keypad  { display: none; }
+    .pin-card.authed .keypad { display: none; }
 
-    /* ─── ④ 打刻ボタン ─── */
-    .punch-card {
-        background: var(--card-bg);
-        padding: 22px;
-        border-radius: 16px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-        margin-bottom: 18px;
-    }
-    .punch-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 14px;
-    }
+    /* 打刻ボタン */
+    .punch-card { background: var(--card-bg); padding: 22px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 18px; }
+    .punch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .punch-btn {
-        position: relative;
-        padding: 22px 14px;
-        font-size: 22px;
-        font-weight: 800;
-        border-radius: 14px;
-        border: none;
-        cursor: pointer;
+        position: relative; padding: 22px 14px;
+        font-size: 22px; font-weight: 800; border-radius: 14px;
+        border: none; cursor: pointer;
         transition: transform 0.08s ease, box-shadow 0.18s ease, filter 0.18s ease, opacity 0.25s ease;
-        min-height: 110px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        letter-spacing: 0.06em;
-        color: white;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.12);
+        min-height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 6px; letter-spacing: 0.06em; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.12);
     }
-    .punch-btn .icon {
-        font-size: 30px;
-        line-height: 1;
-        text-shadow: none;
-    }
-    .punch-btn:not(:disabled):hover {
-        filter: brightness(1.07);
-        box-shadow: 0 10px 22px rgba(0,0,0,0.12);
-    }
-    .punch-btn:not(:disabled):active {
-        transform: translateY(2px);
-        box-shadow: 0 3px 8px rgba(0,0,0,0.08);
-    }
-    .punch-btn:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-        box-shadow: none;
-        filter: grayscale(0.5);
-    }
-
-    .btn-in    { background: linear-gradient(180deg, #22c55e 0%, var(--kot-green)  70%, var(--kot-green-dark)  100%); }
-    .btn-out   { background: linear-gradient(180deg, #fb923c 0%, var(--kot-orange) 70%, var(--kot-orange-dark) 100%); }
+    .punch-btn .icon { font-size: 30px; line-height: 1; text-shadow: none; }
+    .punch-btn:not(:disabled):hover { filter: brightness(1.07); box-shadow: 0 10px 22px rgba(0,0,0,0.12); }
+    .punch-btn:not(:disabled):active { transform: translateY(2px); box-shadow: 0 3px 8px rgba(0,0,0,0.08); }
+    .punch-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; filter: grayscale(0.5); }
+    .btn-in  { background: linear-gradient(180deg, #22c55e 0%, var(--kot-green) 70%, var(--kot-green-dark) 100%); }
+    .btn-out { background: linear-gradient(180deg, #fb923c 0%, var(--kot-orange) 70%, var(--kot-orange-dark) 100%); }
     .btn-break, .btn-back {
         background: linear-gradient(180deg, #f1f5f9 0%, var(--kot-gray) 70%, var(--kot-gray-dark) 100%);
-        color: var(--kot-gray-text);
-        text-shadow: none;
+        color: var(--kot-gray-text); text-shadow: none;
     }
-    .btn-break .icon, .btn-back .icon { color: var(--kot-gray-text); }
 
-    /* ─── 起動時のメッセージ ─── */
-    .alert {
-        margin-top: 14px;
-        padding: 12px 14px;
-        background: #fffaf0;
-        border-left: 4px solid #fbd38d;
-        border-radius: 6px;
-        font-size: 13px;
-        color: #c05621;
-        display: none;
+    /* 送信中スピナー */
+    .sending-indicator {
+        display: none; text-align: center; padding: 16px;
+        font-size: 14px; color: var(--text-muted); font-weight: bold;
+        letter-spacing: 0.06em;
     }
+    .sending-indicator.show { display: block; }
+    .spinner {
+        display: inline-block; width: 20px; height: 20px;
+        border: 3px solid var(--border); border-top-color: var(--kot-green);
+        border-radius: 50%; animation: spin 0.7s linear infinite;
+        vertical-align: middle; margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* アラート */
+    .alert { margin-top: 14px; padding: 12px 14px; background: #fffaf0; border-left: 4px solid #fbd38d; border-radius: 6px; font-size: 13px; color: #c05621; display: none; }
     .alert.ok  { background: #f0fff4; border-left-color: var(--kot-green); color: var(--kot-green-dark); }
-    .alert.err { background: #fff5f5; border-left-color: #e53e3e;          color: #c53030; }
+    .alert.err { background: #fff5f5; border-left-color: #e53e3e; color: #c53030; }
     .alert.show { display: block; }
 
-    /* ─── 全画面 1秒オーバーレイ ─── */
+    /* オーバーレイ */
     .overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 9999;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        background: rgba(45, 55, 72, 0);
-        backdrop-filter: blur(0px);
-        -webkit-backdrop-filter: blur(0px);
-        opacity: 0;
-        pointer-events: none;
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; align-items: center; justify-content: center; text-align: center;
+        background: rgba(45,55,72,0); backdrop-filter: blur(0px);
+        opacity: 0; pointer-events: none;
         transition: opacity 0.25s ease, background 0.25s ease, backdrop-filter 0.25s ease;
     }
-    .overlay.show {
-        opacity: 1;
-        background: rgba(45, 55, 72, 0.55);
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
-    }
-    .overlay-inner {
-        color: white;
-        padding: 36px 48px;
-        transform: scale(0.94) translateY(8px);
-        transition: transform 0.28s cubic-bezier(.2,.9,.3,1.2);
-    }
+    .overlay.show { opacity: 1; background: rgba(45,55,72,0.55); backdrop-filter: blur(6px); pointer-events: auto; }
+    .overlay-inner { color: white; padding: 36px 48px; transform: scale(0.94) translateY(8px); transition: transform 0.28s cubic-bezier(.2,.9,.3,1.2); }
     .overlay.show .overlay-inner { transform: scale(1) translateY(0); }
-    .overlay-icon {
-        font-size: 64px;
-        color: #68d391;
-        margin-bottom: 8px;
-        filter: drop-shadow(0 2px 8px rgba(104, 211, 145, 0.5));
-    }
-    .overlay-title {
-        font-size: clamp(28px, 5vw, 42px);
-        font-weight: 800;
-        letter-spacing: 0.06em;
-        margin-bottom: 6px;
-    }
-    .overlay-sub {
-        font-size: clamp(15px, 2vw, 19px);
-        color: #cbd5e0;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-    }
-    .overlay-name {
-        font-size: clamp(18px, 2.4vw, 22px);
-        color: #68d391;
-        font-weight: 800;
-        margin-top: 12px;
-        letter-spacing: 0.06em;
-    }
+    .overlay-icon { font-size: 64px; color: #68d391; margin-bottom: 8px; }
+    .overlay-title { font-size: clamp(28px,5vw,42px); font-weight: 800; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .overlay-sub { font-size: clamp(15px,2vw,19px); color: #cbd5e0; font-weight: 600; }
+    .overlay-name { font-size: clamp(18px,2.4vw,22px); color: #68d391; font-weight: 800; margin-top: 12px; letter-spacing: 0.06em; }
 
-    /* ─── Mobile ─── */
+    /* エラーオーバーレイ */
+    .overlay.error .overlay-icon { color: #fc8181; }
+    .overlay.error .overlay-name { color: #fc8181; }
+
     @media (max-width: 640px) {
         body { padding: 10px; }
-        .clock-card { padding: 18px 14px 22px; }
-        .clock-time { font-size: clamp(56px, 18vw, 92px); }
+        .clock-time { font-size: clamp(56px,18vw,92px); }
         .select-card { grid-template-columns: 1fr; padding: 14px; gap: 10px; }
         .name-card { min-height: 100px; padding: 18px 12px; }
         .punch-card { padding: 14px; }
         .punch-grid { gap: 10px; }
         .punch-btn { font-size: 18px; min-height: 96px; }
-        .punch-btn .icon { font-size: 26px; }
         .keypad button { height: 64px; font-size: 24px; }
-        .pin-dot { width: 18px; height: 18px; }
     }
 </style>
 </head>
 <body>
 <div class="wrapper">
 
-    <!-- ① 時計 -->
+    <!-- 時計 -->
     <div class="clock-card">
         <div class="clock-date" id="clockDate">────</div>
         <div class="clock-time">
-            <span id="hh">--</span><span class="sep">:</span><span id="mm">--</span><span class="clock-second"><span class="sep">:</span><span id="ss">--</span></span>
+            <span id="hh">--</span><span class="sep">:</span><span id="mm">--</span>
+            <span class="clock-second"><span class="sep">:</span><span id="ss">--</span></span>
         </div>
-        <span class="test-badge">🧪 TEST MODE — 暗証番号「1234」で認証</span>
     </div>
 
-    <!-- ② 店舗 / 氏名 -->
+    <!-- 店舗・スタッフ選択 -->
     <div class="select-card">
         <div class="select-group">
             <label for="storeSelect">店舗</label>
@@ -500,7 +263,7 @@
     </div>
     <div id="loadAlert" class="alert"></div>
 
-    <!-- ③ 氏名表示 -->
+    <!-- 氏名表示 -->
     <div class="name-card" id="nameCard">
         <div class="name-prompt">▼ 氏名を選択してください ▼</div>
         <div class="name-display">
@@ -512,7 +275,7 @@
         </div>
     </div>
 
-    <!-- ④ PIN認証 -->
+    <!-- PIN認証 -->
     <div class="pin-card" id="pinCard">
         <div class="pin-prompt" id="pinPrompt">🔒 4桁の暗証番号を入力してください</div>
         <div class="pin-dots" id="pinDots">
@@ -522,6 +285,11 @@
             <div class="pin-dot"></div>
         </div>
         <div class="auth-ok">✓ 認証OK — 打刻ボタンを押してください</div>
+        <div class="pin-setup-notice" id="pinSetupNotice">
+            ⚠️ このスタッフのPINが未設定です。<br>
+            社員名簿スプレッドシートのR列（PIN）に4桁の数字を設定してください。<br>
+            設定後、ページを再読込してください。
+        </div>
         <div class="keypad" id="keypad">
             <button onclick="pinAdd('1')">1</button>
             <button onclick="pinAdd('2')">2</button>
@@ -534,11 +302,11 @@
             <button onclick="pinAdd('9')">9</button>
             <button class="action clear" onclick="pinClear()">クリア</button>
             <button onclick="pinAdd('0')">0</button>
-            <button class="action back"  onclick="pinBack()">← 削除</button>
+            <button class="action" onclick="pinBack()">← 削除</button>
         </div>
     </div>
 
-    <!-- ⑤ 打刻ボタン -->
+    <!-- 打刻ボタン -->
     <div class="punch-card">
         <div class="punch-grid">
             <button class="punch-btn btn-in"    id="btnIn"    disabled onclick="punch('clockIn')">
@@ -554,14 +322,17 @@
                 <span class="icon">↩</span><span>休憩終了</span>
             </button>
         </div>
+        <div class="sending-indicator" id="sendingIndicator">
+            <span class="spinner"></span>記録中…
+        </div>
     </div>
 
 </div>
 
-<!-- 全画面 1秒 オーバーレイ -->
+<!-- オーバーレイ -->
 <div class="overlay" id="overlay" aria-hidden="true">
     <div class="overlay-inner">
-        <div class="overlay-icon">✓</div>
+        <div class="overlay-icon" id="overlayIcon">✓</div>
         <div class="overlay-title" id="overlayTitle">お疲れ様でした！</div>
         <div class="overlay-sub"   id="overlaySub">出勤の打刻を記録しました</div>
         <div class="overlay-name"  id="overlayName"></div>
@@ -572,35 +343,31 @@
 "use strict";
 
 // ════════════════════════════════════════════════════════════════════
-// 🛰️ shift_demo.html と同じ GAS エンドポイント
+// 設定
 // ════════════════════════════════════════════════════════════════════
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzPZvcfZpEEN4k8Z3Fqkr1cCX9hRz8tKbCmDb0WYzX_ZSPOb34IwxmO_UBYLGRAJ-Ag/exec";
-
-const SCHEMA_VERSION = "1.0";
-const TEST_MODE = true;
-const TEST_PIN  = "1234";   // ★ テストモード：全スタッフ共通の暗証番号
+// ↑ デプロイ後にURLを差し替えてください
 
 const PUNCH_TYPES = {
     clockIn:    { label: "出勤",     emoji: "📤" },
     clockOut:   { label: "退勤",     emoji: "📥" },
     breakStart: { label: "休憩開始", emoji: "☕" },
-    breakEnd:   { label: "休憩終了", emoji: "↩" },
+    breakEnd:   { label: "休憩終了", emoji: "↩"  },
 };
 
 let storeMaster = [];
-let staffMaster = [];
+let staffMaster = [];   // pin フィールドを含む
 let currentStore = null;
 let currentStaff = null;
 
-// PIN 認証状態
-let enteredPin = "";
-let authStatus = "idle";   // 'idle' | 'authenticated'
-let pinFailCount = 0;       // テスト用：何回間違えたか（コンソール出力のみ）
+let enteredPin  = "";
+let authStatus  = "idle";   // 'idle' | 'authenticated'
+let pinFailCount = 0;
 
 const tabId = generateClientId();
 
 // ════════════════════════════════════════════════════════════════════
-// ⏰ デジタル時計
+// 時計
 // ════════════════════════════════════════════════════════════════════
 function tickClock() {
     const now = new Date();
@@ -616,37 +383,22 @@ setInterval(tickClock, 1000);
 tickClock();
 
 // ════════════════════════════════════════════════════════════════════
-// 🆔 一意な打刻ID（GAS LockService と組み合わせて二重記録防止）
-// ════════════════════════════════════════════════════════════════════
-function generateClientId() {
-    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
-        const r = Math.random() * 16 | 0;
-        const v = c === "x" ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
-
-// ════════════════════════════════════════════════════════════════════
-// 📂 CSV/GAS データ取込（shift_demo と同等のヘッダ解決）
+// マスタデータ読込
 // ════════════════════════════════════════════════════════════════════
 function normalizeHeader(h) {
-    return (h || "")
-        .replace(/[﻿\s"'　]/g, "")
-        .replace(/[（）()【】\[\]]/g, "");
+    return (h || "").replace(/[﻿\s"'　]/g, "").replace(/[（）()【】\[\]]/g, "");
 }
 function findCol(headers, ...cands) {
     const norm = headers.map(normalizeHeader);
-    for (const c of cands) { const i = norm.findIndex(h => h === c);                    if (i !== -1) return i; }
-    for (const c of cands) { const i = norm.findIndex(h => h.startsWith(c) || c.startsWith(h)); if (i !== -1) return i; }
-    for (const c of cands) { const i = norm.findIndex(h => h.includes(c)   || c.includes(h));   if (i !== -1) return i; }
+    for (const c of cands) { const i = norm.findIndex(h => h === c); if (i !== -1) return i; }
+    for (const c of cands) { const i = norm.findIndex(h => h.includes(c) || c.includes(h)); if (i !== -1) return i; }
     return -1;
 }
+
 function importStoreFromRows(rows) {
     if (!rows || rows.length < 2) return false;
     const h = rows[0];
     const nameIdx   = findCol(h, "店舗名", "店舗");
-    const ruleIdx   = findCol(h, "定休日ルール", "定休日");
     const statusIdx = findCol(h, "状況", "ステータス");
     if (nameIdx === -1) return false;
     storeMaster = [];
@@ -657,14 +409,11 @@ function importStoreFromRows(rows) {
             const st = row[statusIdx].trim();
             if (st === "閉店" || st === "休業" || st === "撤退") return;
         }
-        storeMaster.push({
-            id: (storeMaster.length + 1).toString(),
-            name,
-            rule: ruleIdx !== -1 && row[ruleIdx] ? row[ruleIdx].trim() : "年中無休",
-        });
+        storeMaster.push({ id: (storeMaster.length + 1).toString(), name });
     });
     return storeMaster.length > 0;
 }
+
 function importStaffFromRows(rows) {
     if (!rows || rows.length < 2) return false;
     const h = rows[0];
@@ -673,6 +422,10 @@ function importStaffFromRows(rows) {
     const nameIdx   = findCol(h, "氏名");
     const activeIdx = findCol(h, "現職");
     const retireIdx = findCol(h, "退職日");
+    const empIdx    = findCol(h, "雇用形態");
+    const pinIdx    = findCol(h, "PIN");
+    const staffIdIdx= findCol(h, "社員番号");
+
     const FIXED = { store: 2, rank: 3, active: 5, name: 7 };
     const rStore  = storeIdx  !== -1 ? storeIdx  : FIXED.store;
     const rRank   = rankIdx   !== -1 ? rankIdx   : FIXED.rank;
@@ -681,18 +434,24 @@ function importStaffFromRows(rows) {
 
     staffMaster = [];
     rows.slice(1).forEach(row => {
-        const store  = (row[rStore]  || "").trim();
-        const name   = (row[rName]   || "").trim();
-        const rank   = (row[rRank]   || "").trim() || "スタッフ";
-        const active = (row[rActive] || "").trim();
-        const retire = (retireIdx !== -1 ? row[retireIdx] || "" : "").trim();
+        const store   = (row[rStore]  || "").trim();
+        const name    = (row[rName]   || "").trim();
+        const rank    = (row[rRank]   || "").trim() || "スタッフ";
+        const active  = (row[rActive] || "").trim();
+        const retire  = retireIdx !== -1 ? (row[retireIdx] || "").trim() : "";
+        const empType = empIdx    !== -1 ? (row[empIdx]    || "").trim() : "";
+        const pin     = pinIdx    !== -1 ? String(row[pinIdx] || "").trim() : "";
+        const staffId = staffIdIdx !== -1 ? String(row[staffIdIdx] || "").trim() : "";
+
         if (!name || name === "氏名" || /^\d+$/.test(name)) return;
         if (!store || store === "所属店舗") return;
         if (active === "否" || active === "退職" || active === "×" || active === "0") return;
         if (retire && retire !== "" && retire !== "0" && retire !== "-") return;
+
         staffMaster.push({
-            id: (staffMaster.length + 1).toString(),
-            name, store, rank,
+            id: staffId || (staffMaster.length + 1).toString(),
+            name, store, rank, empType,
+            pin,   // ← スプレッドシートから取得したPIN（クライアント照合用）
         });
     });
     return staffMaster.length > 0;
@@ -705,14 +464,11 @@ async function loadFromGAS() {
         if (!res.ok) throw new Error("HTTP " + res.status);
         const data = await res.json();
         if (!data || data.ok === false) throw new Error((data && data.error) || "GAS error");
-        if (!Array.isArray(data.store) || !Array.isArray(data.staff)) {
-            throw new Error("レスポンス形式が想定外（store/staff 配列が欠落）");
-        }
         if (!importStoreFromRows(data.store)) throw new Error("店舗データの解析に失敗");
         if (!importStaffFromRows(data.staff)) throw new Error("社員データの解析に失敗");
         buildStoreSelector();
         alertEl.className = "alert ok show";
-        alertEl.innerHTML = `🛰️ マスタ読込完了：${storeMaster.length}店舗 / ${staffMaster.length}名`;
+        alertEl.innerHTML = `✅ マスタ読込完了：${storeMaster.length}店舗 / ${staffMaster.length}名`;
         setTimeout(() => alertEl.classList.remove("show"), 2500);
     } catch (err) {
         console.error("[GAS] 取得失敗:", err);
@@ -722,7 +478,7 @@ async function loadFromGAS() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// 🎛️ 店舗 / スタッフ
+// 店舗・スタッフ選択
 // ════════════════════════════════════════════════════════════════════
 function buildStoreSelector() {
     const sel = document.getElementById("storeSelect");
@@ -730,12 +486,14 @@ function buildStoreSelector() {
         storeMaster.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
     sel.disabled = false;
 }
+
 function normalizeStoreName(s) {
     return (s || "")
         .replace(/[　 \s\-－・]/g, "")
         .replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
         .toLowerCase();
 }
+
 function onStoreChange() {
     const id = document.getElementById("storeSelect").value;
     currentStore = storeMaster.find(s => s.id === id) || null;
@@ -762,15 +520,15 @@ function onStoreChange() {
     }
     afterIdentityChange();
 }
+
 function onStaffChange() {
     const id = document.getElementById("staffSelect").value;
     currentStaff = staffMaster.find(s => s.id === id) || null;
     afterIdentityChange();
 }
 
-/** 店舗/氏名いずれかが変わった後の総合UI更新 */
 function afterIdentityChange() {
-    resetPinState();           // 認証は氏名変更でリセット
+    resetPinState();
     renderNameDisplay();
     refreshPinCardVisibility();
     updatePunchButtons();
@@ -789,12 +547,23 @@ function renderNameDisplay() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// 🔢 PIN 認証ロジック
+// PIN認証（クライアント側照合）
 // ════════════════════════════════════════════════════════════════════
 function refreshPinCardVisibility() {
     const card = document.getElementById("pinCard");
+    const notice = document.getElementById("pinSetupNotice");
     if (currentStaff) {
         card.classList.add("visible");
+        // PIN未設定スタッフへの案内
+        if (currentStaff.pin === "") {
+            notice.classList.add("show");
+            document.getElementById("keypad").style.opacity = "0.4";
+            document.getElementById("keypad").style.pointerEvents = "none";
+        } else {
+            notice.classList.remove("show");
+            document.getElementById("keypad").style.opacity = "";
+            document.getElementById("keypad").style.pointerEvents = "";
+        }
     } else {
         card.classList.remove("visible");
     }
@@ -802,7 +571,8 @@ function refreshPinCardVisibility() {
 
 function pinAdd(digit) {
     if (!currentStaff) return;
-    if (authStatus === "authenticated") return;       // 認証済みなら無視
+    if (authStatus === "authenticated") return;
+    if (currentStaff.pin === "") return; // PIN未設定は入力不可
     if (enteredPin.length >= 4) return;
     enteredPin += digit;
     renderPinDots();
@@ -822,20 +592,15 @@ function pinClear() {
 }
 
 function renderPinDots() {
-    const dots = document.querySelectorAll("#pinDots .pin-dot");
-    dots.forEach((d, i) => {
+    document.querySelectorAll("#pinDots .pin-dot").forEach((d, i) => {
         if (i < enteredPin.length) d.classList.add("filled");
         else d.classList.remove("filled");
     });
 }
 
 function verifyPin() {
-    // ★ テストモード: 全スタッフ共通で TEST_PIN を許容
-    //   本番化時はここで GAS から取得した staffPinMap[currentStaff.id] と照合する
-    const ok = TEST_MODE
-        ? (enteredPin === TEST_PIN)
-        : false; // 本番用ロジックを実装
-
+    // クライアント側でPINを照合（スプレッドシートから取得済みのPINと比較）
+    const ok = currentStaff.pin !== "" && enteredPin === currentStaff.pin;
     if (ok) {
         authStatus = "authenticated";
         pinFailCount = 0;
@@ -849,8 +614,6 @@ function verifyPin() {
         const card = document.getElementById("pinCard");
         card.classList.add("err");
         document.getElementById("pinPrompt").textContent = `❌ 暗証番号が違います（${pinFailCount}回目）`;
-        console.warn(`[PIN] 認証失敗: staff=${currentStaff && currentStaff.name} (${currentStaff && currentStaff.id}) / 入力=${enteredPin} / 累計失敗=${pinFailCount}`);
-        // 少し待ってクリア（shake アニメ完了後）
         setTimeout(() => {
             enteredPin = "";
             renderPinDots();
@@ -866,14 +629,13 @@ function resetPinState() {
     enteredPin = "";
     authStatus = "idle";
     const card = document.getElementById("pinCard");
-    card.classList.remove("authed");
-    card.classList.remove("err");
+    card.classList.remove("authed", "err");
     document.getElementById("pinPrompt").textContent = "🔒 4桁の暗証番号を入力してください";
     renderPinDots();
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ⏺ 打刻
+// 打刻（GAS POSTへ送信）
 // ════════════════════════════════════════════════════════════════════
 function updatePunchButtons() {
     const enabled = !!(currentStore && currentStaff && authStatus === "authenticated");
@@ -883,30 +645,45 @@ function updatePunchButtons() {
 }
 
 let punchInFlight = false;
-function punch(type) {
+
+async function punch(type) {
     if (punchInFlight) return;
     if (!currentStore || !currentStaff) return;
-    if (authStatus !== "authenticated") return;     // 二重ガード: クリック時にも確認
+    if (authStatus !== "authenticated") return;
     const def = PUNCH_TYPES[type];
     if (!def) return;
 
     punchInFlight = true;
-    const now = new Date();                          // クリック時刻 = 記録時刻
+    setPunchButtonsDisabled(true);
+    document.getElementById("sendingIndicator").classList.add("show");
+
+    const now = new Date();
     const payload = buildPunchPayload(type, def, now);
 
-    if (TEST_MODE) {
-        logPayloadPretty(payload);
-    } else {
-        // 本番: fetch(GAS_API_URL, {method:"POST", body: JSON.stringify(payload)})
-        // GAS 側: LockService.getScriptLock() → PIN照合 → punchId 重複チェック → appendRow → 解放
+    try {
+        const res = await fetch(GAS_API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain" }, // GAS CORS対応のため text/plain
+            body: JSON.stringify(payload),
+            redirect: "follow",
+        });
+        const data = await res.json();
+        if (data.ok) {
+            showOverlay(true, def.label, currentStaff.name);
+        } else {
+            showOverlay(false, def.label, currentStaff.name, data.error || "エラーが発生しました");
+            console.error("[打刻エラー]", data.error);
+        }
+    } catch (err) {
+        showOverlay(false, def.label, currentStaff.name, "通信エラー：" + err.message);
+        console.error("[通信エラー]", err);
+    } finally {
+        document.getElementById("sendingIndicator").classList.remove("show");
+        setTimeout(() => {
+            resetForNextStaff();
+            punchInFlight = false;
+        }, 1500);
     }
-
-    showOverlay(def.label, currentStaff.name);
-
-    setTimeout(() => {
-        resetForNextStaff();
-        punchInFlight = false;
-    }, 1000);
 }
 
 function buildPunchPayload(type, def, dateObj) {
@@ -919,30 +696,26 @@ function buildPunchPayload(type, def, dateObj) {
                      `${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}:${pad(dateObj.getSeconds())}${offStr}`;
     const minuteKey = `${dateObj.getFullYear()}-${pad(dateObj.getMonth()+1)}-${pad(dateObj.getDate())} ` +
                       `${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
-
     return {
-        schemaVersion: SCHEMA_VERSION,
+        schemaVersion: "1.0",
         event: "punch",
-        // 同時打刻重複防止: クライアント発行 UUID + GAS LockService で二重ガード
-        punchId:     generateClientId(),
-        clientTabId: tabId,
-        // PIN 認証情報（生PINは送らない・認証フラグのみ）
+        punchId:       generateClientId(),
+        clientTabId:   tabId,
         auth: {
             method:     "pin",
             verified:   true,
             verifiedAt: dateObj.toISOString(),
-            testMode:   TEST_MODE,
+            testMode:   false,
         },
-        // 何を：
+        // PINはサーバーに送らない（クライアント照合済みフラグのみ）
         punchType:      type,
         punchTypeLabel: def.label,
-        // 誰が：
-        storeId:    currentStore.id,
-        storeName:  currentStore.name,
-        staffId:    currentStaff.id,
-        staffName:  currentStaff.name,
-        staffRank:  currentStaff.rank,
-        // いつ：1分単位の正確なタイムスタンプ
+        storeId:        currentStore.id,
+        storeName:      currentStore.name,
+        staffId:        currentStaff.id,
+        staffName:      currentStaff.name,
+        staffRank:      currentStaff.rank,
+        staffEmpType:   currentStaff.empType,
         recordedAt: {
             iso:       dateObj.toISOString(),
             localIso,
@@ -951,16 +724,16 @@ function buildPunchPayload(type, def, dateObj) {
             tz:        Intl.DateTimeFormat().resolvedOptions().timeZone,
             offsetMin: offMin,
         },
-        client: {
-            ua:      navigator.userAgent,
-            pageUrl: location.href,
-            lang:    navigator.language,
-        },
     };
 }
 
+function setPunchButtonsDisabled(flag) {
+    ["btnIn","btnOut","btnBreak","btnBack"].forEach(id => {
+        document.getElementById(id).disabled = flag;
+    });
+}
+
 function resetForNextStaff() {
-    // 店舗は保持（同じ店舗で次々と打刻するため）
     currentStaff = null;
     const staffSel = document.getElementById("staffSelect");
     if (staffSel) staffSel.value = "";
@@ -972,62 +745,55 @@ function resetForNextStaff() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// 🎬 全画面 1秒メッセージ
+// オーバーレイ
 // ════════════════════════════════════════════════════════════════════
 let overlayTimer = null;
-function showOverlay(punchLabel, staffName) {
+function showOverlay(success, punchLabel, staffName, errMsg) {
     const ov = document.getElementById("overlay");
-    document.getElementById("overlayTitle").textContent = "お疲れ様でした！";
-    document.getElementById("overlaySub").textContent   = `${punchLabel}の打刻を記録しました`;
-    document.getElementById("overlayName").textContent  = `${staffName} 様`;
+    if (success) {
+        ov.classList.remove("error");
+        document.getElementById("overlayIcon").textContent  = "✓";
+        document.getElementById("overlayTitle").textContent = "お疲れ様でした！";
+        document.getElementById("overlaySub").textContent   = `${punchLabel}の打刻を記録しました`;
+        document.getElementById("overlayName").textContent  = `${staffName} 様`;
+    } else {
+        ov.classList.add("error");
+        document.getElementById("overlayIcon").textContent  = "✕";
+        document.getElementById("overlayTitle").textContent = "打刻に失敗しました";
+        document.getElementById("overlaySub").textContent   = errMsg || "もう一度お試しください";
+        document.getElementById("overlayName").textContent  = `${staffName} 様`;
+    }
     ov.classList.add("show");
     ov.setAttribute("aria-hidden", "false");
     if (overlayTimer) clearTimeout(overlayTimer);
     overlayTimer = setTimeout(() => {
-        ov.classList.remove("show");
+        ov.classList.remove("show", "error");
         ov.setAttribute("aria-hidden", "true");
-    }, 1000);
+    }, 1500);
 }
 
 // ════════════════════════════════════════════════════════════════════
-// 📜 コンソール整形ログ
+// ユーティリティ
 // ════════════════════════════════════════════════════════════════════
-function logPayloadPretty(p) {
-    const titleStyle = "background:#16a34a;color:#ffffff;font-weight:bold;padding:4px 12px;border-radius:6px;letter-spacing:0.05em;";
-    const keyStyle   = "color:#718096;";
-    const valStyle   = "color:#2d3748;font-weight:bold;";
-    console.groupCollapsed(
-        `%c【送信データ】%c  ${p.storeName} / ${p.staffName} / ${p.punchTypeLabel} / ${p.recordedAt.minute}`,
-        titleStyle, "color:inherit;"
-    );
-    console.log("%c店舗      %c" + p.storeName + "  (id=" + p.storeId + ")",                       keyStyle, valStyle);
-    console.log("%c氏名      %c" + p.staffName + "  (id=" + p.staffId + " / " + p.staffRank + ")",  keyStyle, valStyle);
-    console.log("%c打刻種別  %c" + p.punchTypeLabel + "  (" + p.punchType + ")",                    keyStyle, valStyle);
-    console.log("%c記録日時  %c" + p.recordedAt.minute + "  [tz=" + p.recordedAt.tz + "]",         keyStyle, valStyle);
-    console.log("%cISO(UTC)  %c" + p.recordedAt.iso,                                                keyStyle, valStyle);
-    console.log("%c打刻ID    %c" + p.punchId,                                                       keyStyle, valStyle);
-    console.log("%c認証      %c" + (p.auth.verified ? "✓ PIN 認証済み" : "未認証"),                 keyStyle, valStyle);
-    console.log("%c--- 完全な送信ペイロード ---", "color:#a0aec0;");
-    console.log(p);
-    console.groupEnd();
+function generateClientId() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === "x" ? r : (r & 0x3 | 0x8)).toString(16);
+    });
 }
-
-// ════════════════════════════════════════════════════════════════════
-// 🧰 utility
-// ════════════════════════════════════════════════════════════════════
 function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
     }[c]));
 }
 
 // ════════════════════════════════════════════════════════════════════
-// 🚀 起動
+// 起動
 // ════════════════════════════════════════════════════════════════════
 window.addEventListener("DOMContentLoaded", () => {
     loadFromGAS();
 });
 </script>
-
 </body>
 </html>
