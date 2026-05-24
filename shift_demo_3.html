@@ -270,10 +270,8 @@
         <div class="stamp st-work active" onclick="selectStamp('出', this)">✅ 出勤</div>
         <div class="stamp st-off" onclick="selectStamp('公', this)">❌ 公休</div>
         <div class="stamp st-req" onclick="selectStamp('希', this)">⭐ 希望休</div>
-        <div class="stamp st-shor" onclick="selectStamp('時', this)">🕒 時短スタッフ</div>
-        <div class="stamp st-meet" onclick="selectStamp('会', this)">🤝 会議中抜け</div>
-        <div class="stamp st-train" onclick="selectStamp('研', this)">✨ 研修中抜け</div>
         <div class="stamp st-paid" onclick="selectStamp('有', this)">💴 有給</div>
+        <div class="stamp st-train" onclick="selectStamp('研', this)">✨ 研修</div>
     </div>
 </div>
 
@@ -1136,8 +1134,8 @@
         let count = 0;
         currentStaffs.forEach(s => {
             const v = getCurrentCellStates()[`${s.id}-${day}`];
-            if (v === "公" || v === "希" || v === "有") return; // 休みはカウントしない
-            count++; // 出 / 時 / 会 / 研 / undefined（未入力）はすべて出勤
+            if (v === "公" || v === "希" || v === "有" || v === "研") return; // 休みはカウントしない
+            count++; // 出 / 時 / 会 / undefined（未入力）はすべて出勤
         });
         return count;
     }
@@ -1387,7 +1385,7 @@
       function isOff(staffId, day) {
         if (isClosed(day)) return true;
         const v = stampOf(staffId, day);
-        return v === "公" || v === "希" || v === "有";
+        return v === "公" || v === "希" || v === "有" || v === "研";
       }
 
       // ─── Phase 1: 当月の既存「公」をクリア ───
