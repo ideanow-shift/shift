@@ -1417,7 +1417,8 @@
               }
 
               // 土日は公休を入れにくくする（出勤数を多くするため）
-              const isWeekend = (dow === 0 || dow === 6);
+              const isHol = holidays.includes(d);
+              const isWeekend = (dow === 0 || dow === 6 || isHol);
               const weekendPenalty = isWeekend ? -50000 : 0;
 
               // 連勤分散スコア
