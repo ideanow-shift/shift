@@ -1509,13 +1509,38 @@
             if (isOff(staff.id, d)) offDays.push(d);
           }
 
-          // 隔週休2日の場合、有効週番号で交互に切り替え
+          // 月間公休目標数を決定
           const cfg = liveStaffConfig[staff.id] || {};
           const isAlternate = (cfg.holidayType || "").includes("隔週");
-          const validWIdx = validWeeks.indexOf(wk);
-          const weekTarget = isAlternate
-            ? ((validWIdx + si) % 2 === 0 ? 1 : 2)
-            : TARGET_OFF;
+          const monthlyTarget = isAlternate ? 6 : null; // nullは週単位で管理
+
+          // 隔週休2日は月全体で6日になるよう週ごとに配分
+          let weekTarget;
+          if (isAlternate) {
+            // 残り週数と残り必要公休数から今週の目標を計算
+            const currentWeekIdx = validWeeks.indexOf(wk);
+            const remainingWeeks = validWeeks.length - currentWeekIdx;
+
+            // 今月これまでに配置した公休数を数える
+            let placedOff = 0;
+            for (let d = 1; d <= dim; d++) {
+              const v = cs[`${staff.id}-${d}`];
+              if (v === "公") placedOff++;
+            }
+            // 既存の希望休・有給も含める
+            for (let d = 1; d <= dim; d++) {
+              const v = stampOf(staff.id, d);
+              if (v === "希" || v === "有") placedOff++;
+            }
+
+            const remainTarget = Math.max(0, monthlyTarget - placedOff);
+            // この週に配置すべき数（残りを残り週数で均等割り）
+            weekTarget = Math.round(remainTarget / remainingWeeks);
+            weekTarget = Math.min(weekTarget, 2); // 最大2日
+            weekTarget = Math.max(weekTarget, 0); // 最小0日
+          } else {
+            weekTarget = TARGET_OFF; // 完全週休2日は週2日固定
+          }
 
           const need = Math.max(0, weekTarget - offDays.length);
 
