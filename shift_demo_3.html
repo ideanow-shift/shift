@@ -1512,6 +1512,7 @@
           // 隔週休2日 = 月6日配置、完全週休2日 = 週2日固定
           const cfg = liveStaffConfig[staff.id] || {};
           const isAlternate = (cfg.holidayType || "").includes("隔週");
+          console.log("staff:", staff.name, "holidayType:", cfg.holidayType, "isAlternate:", isAlternate);
           let weekTarget;
           if (isAlternate) {
             const monthlyTarget = 6;
