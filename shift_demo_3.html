@@ -1619,6 +1619,19 @@
       // ─── Phase 3.5: 6連勤以上になっているスタッフに追加公休を配置 ───
       currentStaffs.forEach(staff => {
         const cfg = liveStaffConfig[staff.id] || {};
+        const holidayType = cfg.holidayType || staff.holidayType || "完全週休2日";
+        const isAlternate = holidayType.includes("隔週");
+
+        // 隔週休2日スタッフは月6日上限チェック
+        if (isAlternate) {
+          let currentOff = 0;
+          for (let d = 1; d <= dim; d++) {
+            const v = cs[`${staff.id}-${d}`];
+            if (v === "公" || v === "希" || v === "有") currentOff++;
+          }
+          if (currentOff >= 6) return; // 既に6日以上なら追加しない
+        }
+
         const irr = cfg.irregular || {};
         const maxConsec = irr.maxConsecEnabled ? irr.maxConsecutive : 6;
 
@@ -1674,15 +1687,25 @@
       const violations = [];
       currentStaffs.forEach(staff => {
         const cfg = liveStaffConfig[staff.id] || {};
-        const isAlternate = (cfg.holidayType || "").includes("隔週");
-        // 隔週休2日は週によって1日休みが許容される（auto配置と一致）
-        const minWeekly = isAlternate ? 1 : TARGET_OFF;
+        const holidayType = cfg.holidayType || staff.holidayType || "完全週休2日";
+        const isAlternate = holidayType.includes("隔週");
+
+        // 隔週休2日は月6日が基準なので週単位の検証をスキップ
+        if (isAlternate) {
+          let monthOff = 0;
+          for (let d = 1; d <= dim; d++) {
+            if (isOff(staff.id, d)) monthOff++;
+          }
+          if (monthOff < 6) violations.push(`${staff.name}-月間公休不足(${monthOff}日)`);
+          return; // 週単位チェックはスキップ
+        }
+
         weeks.forEach((wk, i) => {
           let off = 0;
           for (let d = wk.start; d <= wk.end; d++) {
             if (isOff(staff.id, d)) off++;
           }
-          if (off < minWeekly) violations.push(`${staff.name}-第${i + 1}週(${off}日)`);
+          if (off < TARGET_OFF) violations.push(`${staff.name}-第${i + 1}週(${off}日)`);
         });
       });
       // 各日の出勤者数チェック
