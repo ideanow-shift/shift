@@ -80,7 +80,6 @@
         .st-meet { background: #fff7e6; color: #fa8c16; }
         .st-train { background: #feffe6; color: #d4b106; }
         .st-paid { background: #fff0f6; color: #eb2f96; }
-        .st-must { background: #fff1f0; color: #f5222d; border: 2px solid #f5222d; }
 
         .content-area {
             background: white; padding: 20px; border-radius: 16px;
@@ -273,7 +272,6 @@
         <div class="stamp st-req" onclick="selectStamp('希', this)">⭐ 希望休</div>
         <div class="stamp st-paid" onclick="selectStamp('有', this)">💴 有給</div>
         <div class="stamp st-train" onclick="selectStamp('研', this)">✨ 研修</div>
-        <div class="stamp st-must" onclick="selectStamp('必', this)">🔴 絶対出勤</div>
     </div>
 </div>
 
@@ -323,6 +321,12 @@
         <!-- 🏢 Store Rules -->
         <div style="border-top: 1px solid #edf2f7; padding-top: 15px; margin-top: 15px;">
             <div class="section-title">🏢 店舗営業ルール</div>
+            <div class="file-label">本日の営業時間タイプ</div>
+            <div class="toggle-group">
+                <button id="timeBtn1" class="toggle-btn active primary" disabled>① 8:40～17:40</button>
+                <button id="timeBtn2" class="toggle-btn" disabled>② 9:40～18:40</button>
+            </div>
+
             <div class="file-label">この店舗の定休日設定</div>
             <div class="toggle-group">
                 <button id="holidayBtn1" class="toggle-btn active accent" disabled>年中無休</button>
@@ -875,11 +879,10 @@
             reason: "",
         });
         currentStaffs.forEach(s => {
-            // 既存設定がある場合は保持、ない場合のみ初期化
             if (!liveStaffConfig[s.id]) {
                 liveStaffConfig[s.id] = {
-                    holidayType: s.holidayType || "完全週休2日",
-                    workType:    s.workType    || "通常",
+                    holidayType: s.holidayType,
+                    workType:    s.workType,
                     startTime:   "8:40",
                     endTime:     "17:40",
                     maxHoliday:  2,
@@ -888,7 +891,6 @@
                     irregular:   defaultIrregular(),
                 };
             } else {
-                // 既存設定がある場合は holidayType を上書きしない
                 // 旧形式のエントリにも新フィールドのデフォルトを補う
                 if (liveStaffConfig[s.id].maxHoliday == null) liveStaffConfig[s.id].maxHoliday = 2;
                 if (liveStaffConfig[s.id].note == null)       liveStaffConfig[s.id].note = "";
@@ -1081,7 +1083,6 @@
     }
 
     function updateStaffRule(staffId, field, value) {
-        console.log("updateStaffRule:", staffId, field, value);
         if (!liveStaffConfig[staffId]) {
             liveStaffConfig[staffId] = { holidayType: "完全週休2日", workType: "通常", startTime: "8:40", endTime: "17:40", maxHoliday: 2, note: "" };
         }
@@ -1215,7 +1216,18 @@
             else if (dayIdx === 6) thClass = "th-sat";
             else if (dayIdx === 0) thClass = "th-sun";
 
-            headerHtml += `<th class="${thClass}">${d}</th>`;
+            let timeLabel = "";
+            if (isTuesdayClosed && dayIdx === 2) {
+                timeLabel = "定休";
+            } else {
+                let code = currentStore.weekday;
+                if (isHoliday) code = currentStore.hol;
+                else if (dayIdx === 6) code = currentStore.sat;
+                else if (dayIdx === 0) code = currentStore.sun;
+                timeLabel = code === "2" ? "9:40" : "8:40";
+            }
+
+            headerHtml += `<th class="${thClass}">${d}<br><small style="font-size:9px;">${timeLabel}</small></th>`;
             subHeaderHtml += `<th class="${thClass}">${dayStr}</th>`;
 
             // 出勤人数行: 定休日は「-」、それ以外は人数。最低人数との比較で色分け
@@ -1309,7 +1321,6 @@
                         if (currentVal === "希") cellColorStyle = "background:#f6ffed; color:#52c41a;";
                         if (currentVal === "有") cellColorStyle = "background:#fff0f6; color:#eb2f96;";
                         if (currentVal === "研") cellColorStyle = "background:#feffe6; color:#d4b106;";
-                        if (currentVal === "必") cellColorStyle = "background:#fff1f0; color:#f5222d; font-weight:bold; border: 2px solid #f5222d;";
                         bodyHtml += `<td class="cell-clickable" style="${cellColorStyle}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
                     } else {
                         const currentVal = getCurrentCellStates()[cellKey] || "-";
@@ -1321,7 +1332,6 @@
                         if (currentVal === "研") cellColorStyle = "background:#feffe6; color:#d4b106;";
                         if (currentVal === "出") cellColorStyle = "background:#e6f7ff; color:#1890ff;";
                         if (currentVal === "有") cellColorStyle = "background:#fff0f6; color:#eb2f96;";
-                        if (currentVal === "必") cellColorStyle = "background:#fff1f0; color:#f5222d; font-weight:bold; border: 2px solid #f5222d;";
 
                         bodyHtml += `<td class="cell-clickable" style="${cellColorStyle}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
                     }
@@ -1383,12 +1393,6 @@
     // ─────────────────────────────────────────────────────────────
     function generateShift() {
       if (!currentStore || currentStaffs.length === 0) return;
-
-      console.log("=== スタッフ設定確認 ===");
-      currentStaffs.forEach(s => {
-        const cfg = liveStaffConfig[s.id] || {};
-        console.log(s.name, "holidayType:", cfg.holidayType);
-      });
 
       const cs = getCurrentCellStates();
       const tueClosed = currentStore.rule.includes("火曜");
@@ -1503,12 +1507,7 @@
 
         // スタッフを毎回ランダム順で処理して同日集中を緩和
         const staffOrder = currentStaffs
-          .filter(s => {
-            if (s.isReceptionPart) return false;
-            const cfg2 = liveStaffConfig[s.id] || {};
-            const ht = cfg2.holidayType || s.holidayType || "完全週休2日";
-            return !ht.includes("隔週");
-          })
+          .filter(s => !s.isReceptionPart)
           .map((s, i) => ({ s, key: Math.sin(wIdx * 37 + i * 13) }))
           .sort((a, b) => a.key - b.key)
           .map(o => o.s);
@@ -1519,12 +1518,7 @@
           for (let d = wk.start; d <= wk.end; d++) {
             if (isOff(staff.id, d)) offDays.push(d);
           }
-
-          const cfg = liveStaffConfig[staff.id] || {};
-          const weekTarget = TARGET_OFF; // 全スタッフ週2日統一
-          // 定休日を除いた実質的な公休数でカウント
-          const paidOffDays = offDays.filter(d => !isClosed(d));
-          const need = Math.max(0, weekTarget - paidOffDays.length);
+          const need = Math.max(0, TARGET_OFF - offDays.length);
 
           for (let k = 0; k < need; k++) {
             // 候補: 当月内、定休でない、未オフ、容量あり
@@ -1532,9 +1526,6 @@
               .map(d => +d)
               .filter(d => {
                 if (!isOff(staff.id, d) && dayCapacity[d] > 0) {
-                  // 「必」が設定されている日は公休候補にしない
-                  const v = stampOf(staff.id, d);
-                  if (v === "必") return false;
                   const dow = new Date(currentYear, currentMonth, d).getDay();
                   const isHol = holidays.includes(d);
                   // 土日・祝日は自動公休配置不可
@@ -1594,84 +1585,9 @@
         });
       });
 
-      // ─── Phase 3.2: 隔週休2日スタッフの月6日公休配置 ───
-      currentStaffs.forEach(staff => {
-        if (staff.isReceptionPart) return;
-        const cfg = liveStaffConfig[staff.id] || {};
-        const holidayType = cfg.holidayType || staff.holidayType || "完全週休2日";
-        if (!holidayType.includes("隔週")) return;
-
-        const monthlyTarget = 6;
-        let placedOff = 0;
-        for (let d = 1; d <= dim; d++) {
-          const v = cs[`${staff.id}-${d}`];
-          if (v === "公" || v === "希" || v === "有") placedOff++;
-        }
-        const need = Math.max(0, monthlyTarget - placedOff);
-
-        for (let k = 0; k < need; k++) {
-          const candidates = [];
-          for (let d = 1; d <= dim; d++) {
-            if (isClosed(d)) continue;
-            const dow = new Date(currentYear, currentMonth, d).getDay();
-            const isHol = holidays.includes(d);
-            if (dow === 0 || dow === 6 || isHol) continue;
-            const v = cs[`${staff.id}-${d}`];
-            if (v === "公" || v === "希" || v === "有" || v === "必") continue;
-            const offCount = currentStaffs.filter(s => {
-              const sv = cs[`${s.id}-${d}`];
-              return sv === "公" || sv === "希";
-            }).length;
-            const remainWork = currentStaffs.length - offCount - 1;
-            if (remainWork < getMinStaffForDay(d)) continue;
-            candidates.push(d);
-          }
-          if (candidates.length === 0) break;
-
-          let placed = [];
-          for (let d = 1; d <= dim; d++) {
-            if (cs[`${staff.id}-${d}`] === "公") placed.push(d);
-          }
-
-          let best = null, bestScore = -Infinity;
-          candidates.forEach(d => {
-            const dow = new Date(currentYear, currentMonth, d).getDay();
-            let dowOff = 0;
-            for (let dd = 1; dd <= dim; dd++) {
-              if (new Date(currentYear, currentMonth, dd).getDay() === dow) {
-                if (cs[`${staff.id}-${dd}`] === "公") dowOff++;
-              }
-            }
-            const minDist = placed.length === 0 ? 999
-              : Math.min(...placed.map(o => Math.abs(d - o)));
-            const hash = Math.sin(staff.id * 997 + d * 113) * 1000;
-            const score = -dowOff * 5000 + minDist * 100 + hash;
-            if (score > bestScore) { best = d; bestScore = score; }
-          });
-
-          if (best !== null) {
-            cs[`${staff.id}-${best}`] = "公";
-            placedOff++;
-          }
-        }
-      });
-
       // ─── Phase 3.5: 6連勤以上になっているスタッフに追加公休を配置 ───
       currentStaffs.forEach(staff => {
         const cfg = liveStaffConfig[staff.id] || {};
-        const holidayType = cfg.holidayType || staff.holidayType || "完全週休2日";
-        const isAlternate = holidayType.includes("隔週");
-
-        // 隔週休2日スタッフは月6日上限チェック
-        if (isAlternate) {
-          let currentOff = 0;
-          for (let d = 1; d <= dim; d++) {
-            const v = cs[`${staff.id}-${d}`];
-            if (v === "公" || v === "希" || v === "有") currentOff++;
-          }
-          if (currentOff >= 6) return; // 既に6日以上なら追加しない
-        }
-
         const irr = cfg.irregular || {};
         const maxConsec = irr.maxConsecEnabled ? irr.maxConsecutive : 6;
 
@@ -1718,7 +1634,6 @@
         for (let d = 1; d <= dim; d++) {
           if (isClosed(d)) continue;
           const v = cs[`${staff.id}-${d}`];
-          // 「必」スタンプ（絶対出勤日）は上書きしない
           if (!v || v === "出" || v === "時") cs[`${staff.id}-${d}`] = workStamp;
         }
       });
@@ -1726,14 +1641,12 @@
       // ─── 検証 ───
       const violations = [];
       currentStaffs.forEach(staff => {
-        const minWeekly = TARGET_OFF; // 全スタッフ週2日統一
-
         weeks.forEach((wk, i) => {
           let off = 0;
           for (let d = wk.start; d <= wk.end; d++) {
             if (isOff(staff.id, d)) off++;
           }
-          if (off < minWeekly) violations.push(`${staff.name}-第${i + 1}週(${off}日)`);
+          if (off < TARGET_OFF) violations.push(`${staff.name}-第${i + 1}週(${off}日)`);
         });
       });
       // 各日の出勤者数チェック
@@ -1789,7 +1702,6 @@
                     // 時短スタッフの出勤日: 勤務時間を付記
                     val = `時${timeRange}`;
                 }
-                if (val === "必") val = "出勤(必須)";
                 csvContent += val + ",";
             }
             csvContent += "\n";
