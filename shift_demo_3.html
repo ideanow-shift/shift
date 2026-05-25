@@ -1212,8 +1212,9 @@
             else if (dayIdx === 6) thClass = "th-sat";
             else if (dayIdx === 0) thClass = "th-sun";
 
-            headerHtml += `<th class="${thClass}">${d}</th>`;
-            subHeaderHtml += `<th class="${thClass}">${dayStr}</th>`;
+            const sundayBorder = dayIdx === 0 ? 'border-left: 3px solid #f6ad55;' : '';
+            headerHtml += `<th class="${thClass}" style="${sundayBorder}">${d}</th>`;
+            subHeaderHtml += `<th class="${thClass}" style="${sundayBorder}">${dayStr}</th>`;
 
             // 出勤人数行: 定休日は「-」、それ以外は人数。最低人数との比較で色分け
             let countCellStyle = "font-size:10px; padding:4px;";
@@ -1233,7 +1234,7 @@
                     countCellStyle += "background:#fee2e2; color:#dc2626; font-weight:bold;";
                 }
             }
-            countHeaderHtml += `<th style="${countCellStyle}">${countCellText}</th>`;
+            countHeaderHtml += `<th style="${countCellStyle} ${sundayBorder}">${countCellText}</th>`;
         }
         thead.innerHTML = headerHtml + "</tr>" + subHeaderHtml + "</tr>" + countHeaderHtml + "</tr>";
 
@@ -1296,6 +1297,8 @@
                     const dateObj = new Date(currentYear, currentMonth, d);
                     const isTuesday = dateObj.getDay() === 2;
                     const cellKey = `${staff.id}-${d}`;
+                    const cellSundayBorder = (new Date(currentYear, currentMonth, d).getDay() === 0)
+                        ? 'border-left: 3px solid #f6ad55;' : '';
 
                     if ((currentStore.rule.includes("火曜") || currentStore.rule.includes("火曜日")) && isTuesday) {
                         // 定休日でも手動変更可能にする
@@ -1307,7 +1310,7 @@
                         if (currentVal === "有") cellColorStyle = "background:#fff0f6; color:#eb2f96;";
                         if (currentVal === "研") cellColorStyle = "background:#feffe6; color:#d4b106;";
                         if (currentVal === "必") cellColorStyle = "background:#fff1f0; color:#f5222d; font-weight:bold; border: 2px solid #f5222d;";
-                        bodyHtml += `<td class="cell-clickable" style="${cellColorStyle}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
+                        bodyHtml += `<td class="cell-clickable" style="${cellColorStyle} ${cellSundayBorder}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
                     } else {
                         const currentVal = getCurrentCellStates()[cellKey] || "-";
                         let cellColorStyle = "";
@@ -1320,7 +1323,7 @@
                         if (currentVal === "有") cellColorStyle = "background:#fff0f6; color:#eb2f96;";
                         if (currentVal === "必") cellColorStyle = "background:#fff1f0; color:#f5222d; font-weight:bold; border: 2px solid #f5222d;";
 
-                        bodyHtml += `<td class="cell-clickable" style="${cellColorStyle}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
+                        bodyHtml += `<td class="cell-clickable" style="${cellColorStyle} ${cellSundayBorder}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
                     }
                 }
                 bodyHtml += `</tr>`;
