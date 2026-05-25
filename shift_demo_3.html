@@ -1506,7 +1506,12 @@
 
         // スタッフを毎回ランダム順で処理して同日集中を緩和
         const staffOrder = currentStaffs
-          .filter(s => !s.isReceptionPart)
+          .filter(s => {
+            if (s.isReceptionPart) return false;
+            const cfg2 = liveStaffConfig[s.id] || {};
+            const ht = cfg2.holidayType || s.holidayType || "完全週休2日";
+            return !ht.includes("隔週");
+          })
           .map((s, i) => ({ s, key: Math.sin(wIdx * 37 + i * 13) }))
           .sort((a, b) => a.key - b.key)
           .map(o => o.s);
@@ -1518,34 +1523,7 @@
             if (isOff(staff.id, d)) offDays.push(d);
           }
 
-          // 隔週休2日 = 月6日配置、完全週休2日 = 週2日固定
-          const cfg = liveStaffConfig[staff.id] || {};
-          const holidayType = cfg.holidayType || staff.holidayType || "完全週休2日";
-          const isAlternate = holidayType.includes("隔週");
-          console.log("staff:", staff.name, "holidayType:", holidayType, "isAlternate:", isAlternate);
-          let weekTarget;
-          if (isAlternate) {
-            const monthlyTarget = 6;
-            const currentWeekIdx = validWeeks.indexOf(wk);
-            const remainingWeeks = validWeeks.length - currentWeekIdx;
-            // 今月これまでに配置した公休数を数える
-            let placedOff = 0;
-            for (let d = 1; d <= dim; d++) {
-              const v = cs[`${staff.id}-${d}`];
-              if (v === "公") placedOff++;
-            }
-            // 既存の希望休・有給も含める
-            for (let d = 1; d <= dim; d++) {
-              const v = stampOf(staff.id, d);
-              if (v === "希" || v === "有") placedOff++;
-            }
-            const remainTarget = Math.max(0, monthlyTarget - placedOff);
-            weekTarget = Math.min(Math.round(remainTarget / remainingWeeks), 2);
-            weekTarget = Math.max(weekTarget, 0);
-          } else {
-            weekTarget = TARGET_OFF; // 完全週休2日は週2日固定
-          }
-
+          const weekTarget = TARGET_OFF;
           const need = Math.max(0, weekTarget - offDays.length);
 
           for (let k = 0; k < need; k++) {
@@ -1614,6 +1592,68 @@
             }
           }
         });
+      });
+
+      // ─── Phase 3.2: 隔週休2日スタッフの月6日公休配置 ───
+      currentStaffs.forEach(staff => {
+        if (staff.isReceptionPart) return;
+        const cfg = liveStaffConfig[staff.id] || {};
+        const holidayType = cfg.holidayType || staff.holidayType || "完全週休2日";
+        if (!holidayType.includes("隔週")) return;
+
+        const monthlyTarget = 6;
+        let placedOff = 0;
+        for (let d = 1; d <= dim; d++) {
+          const v = cs[`${staff.id}-${d}`];
+          if (v === "公" || v === "希" || v === "有") placedOff++;
+        }
+        const need = Math.max(0, monthlyTarget - placedOff);
+
+        for (let k = 0; k < need; k++) {
+          const candidates = [];
+          for (let d = 1; d <= dim; d++) {
+            if (isClosed(d)) continue;
+            const dow = new Date(currentYear, currentMonth, d).getDay();
+            const isHol = holidays.includes(d);
+            if (dow === 0 || dow === 6 || isHol) continue;
+            const v = cs[`${staff.id}-${d}`];
+            if (v === "公" || v === "希" || v === "有" || v === "必") continue;
+            const offCount = currentStaffs.filter(s => {
+              const sv = cs[`${s.id}-${d}`];
+              return sv === "公" || sv === "希";
+            }).length;
+            const remainWork = currentStaffs.length - offCount - 1;
+            if (remainWork < getMinStaffForDay(d)) continue;
+            candidates.push(d);
+          }
+          if (candidates.length === 0) break;
+
+          let placed = [];
+          for (let d = 1; d <= dim; d++) {
+            if (cs[`${staff.id}-${d}`] === "公") placed.push(d);
+          }
+
+          let best = null, bestScore = -Infinity;
+          candidates.forEach(d => {
+            const dow = new Date(currentYear, currentMonth, d).getDay();
+            let dowOff = 0;
+            for (let dd = 1; dd <= dim; dd++) {
+              if (new Date(currentYear, currentMonth, dd).getDay() === dow) {
+                if (cs[`${staff.id}-${dd}`] === "公") dowOff++;
+              }
+            }
+            const minDist = placed.length === 0 ? 999
+              : Math.min(...placed.map(o => Math.abs(d - o)));
+            const hash = Math.sin(staff.id * 997 + d * 113) * 1000;
+            const score = -dowOff * 5000 + minDist * 100 + hash;
+            if (score > bestScore) { best = d; bestScore = score; }
+          });
+
+          if (best !== null) {
+            cs[`${staff.id}-${best}`] = "公";
+            placedOff++;
+          }
+        }
       });
 
       // ─── Phase 3.5: 6連勤以上になっているスタッフに追加公休を配置 ───
