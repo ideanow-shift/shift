@@ -345,7 +345,7 @@
 // ════════════════════════════════════════════════════════════════════
 // 設定
 // ════════════════════════════════════════════════════════════════════
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzPZvcfZpEEN4k8Z3Fqkr1cCX9hRz8tKbCmDb0WYzX_ZSPOb34IwxmO_UBYLGRAJ-Ag/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwAjHsIY--ktVQpTfLLNc0RFiWHq1YGvExg1mvhG6iJUX6uapCfqu57dXo3DCis6Bu4/exec";
 // ↑ デプロイ後にURLを差し替えてください
 
 const PUNCH_TYPES = {
@@ -707,7 +707,7 @@ function buildPunchPayload(type, def, dateObj) {
             verifiedAt: dateObj.toISOString(),
             testMode:   false,
         },
-        // PINはサーバーに送らない（クライアント照合済みフラグのみ）
+        pin:            enteredPin,  // GAS側のPIN照合用
         punchType:      type,
         punchTypeLabel: def.label,
         storeId:        currentStore.id,
