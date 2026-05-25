@@ -875,10 +875,11 @@
             reason: "",
         });
         currentStaffs.forEach(s => {
+            // 既存設定がある場合は保持、ない場合のみ初期化
             if (!liveStaffConfig[s.id]) {
                 liveStaffConfig[s.id] = {
-                    holidayType: s.holidayType,
-                    workType:    s.workType,
+                    holidayType: s.holidayType || "完全週休2日",
+                    workType:    s.workType    || "通常",
                     startTime:   "8:40",
                     endTime:     "17:40",
                     maxHoliday:  2,
@@ -887,6 +888,7 @@
                     irregular:   defaultIrregular(),
                 };
             } else {
+                // 既存設定がある場合は holidayType を上書きしない
                 // 旧形式のエントリにも新フィールドのデフォルトを補う
                 if (liveStaffConfig[s.id].maxHoliday == null) liveStaffConfig[s.id].maxHoliday = 2;
                 if (liveStaffConfig[s.id].note == null)       liveStaffConfig[s.id].note = "";
@@ -1079,6 +1081,7 @@
     }
 
     function updateStaffRule(staffId, field, value) {
+        console.log("updateStaffRule:", staffId, field, value);
         if (!liveStaffConfig[staffId]) {
             liveStaffConfig[staffId] = { holidayType: "完全週休2日", workType: "通常", startTime: "8:40", endTime: "17:40", maxHoliday: 2, note: "" };
         }
