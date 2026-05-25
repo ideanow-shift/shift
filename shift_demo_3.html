@@ -80,6 +80,7 @@
         .st-meet { background: #fff7e6; color: #fa8c16; }
         .st-train { background: #feffe6; color: #d4b106; }
         .st-paid { background: #fff0f6; color: #eb2f96; }
+        .st-must { background: #fff1f0; color: #f5222d; border: 2px solid #f5222d; }
 
         .content-area {
             background: white; padding: 20px; border-radius: 16px;
@@ -272,6 +273,7 @@
         <div class="stamp st-req" onclick="selectStamp('希', this)">⭐ 希望休</div>
         <div class="stamp st-paid" onclick="selectStamp('有', this)">💴 有給</div>
         <div class="stamp st-train" onclick="selectStamp('研', this)">✨ 研修</div>
+        <div class="stamp st-must" onclick="selectStamp('必', this)">🔴 絶対出勤</div>
     </div>
 </div>
 
@@ -1304,6 +1306,7 @@
                         if (currentVal === "希") cellColorStyle = "background:#f6ffed; color:#52c41a;";
                         if (currentVal === "有") cellColorStyle = "background:#fff0f6; color:#eb2f96;";
                         if (currentVal === "研") cellColorStyle = "background:#feffe6; color:#d4b106;";
+                        if (currentVal === "必") cellColorStyle = "background:#fff1f0; color:#f5222d; font-weight:bold; border: 2px solid #f5222d;";
                         bodyHtml += `<td class="cell-clickable" style="${cellColorStyle}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
                     } else {
                         const currentVal = getCurrentCellStates()[cellKey] || "-";
@@ -1315,6 +1318,7 @@
                         if (currentVal === "研") cellColorStyle = "background:#feffe6; color:#d4b106;";
                         if (currentVal === "出") cellColorStyle = "background:#e6f7ff; color:#1890ff;";
                         if (currentVal === "有") cellColorStyle = "background:#fff0f6; color:#eb2f96;";
+                        if (currentVal === "必") cellColorStyle = "background:#fff1f0; color:#f5222d; font-weight:bold; border: 2px solid #f5222d;";
 
                         bodyHtml += `<td class="cell-clickable" style="${cellColorStyle}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
                     }
@@ -1522,6 +1526,9 @@
               .map(d => +d)
               .filter(d => {
                 if (!isOff(staff.id, d) && dayCapacity[d] > 0) {
+                  // 「必」が設定されている日は公休候補にしない
+                  const v = stampOf(staff.id, d);
+                  if (v === "必") return false;
                   const dow = new Date(currentYear, currentMonth, d).getDay();
                   const isHol = holidays.includes(d);
                   // 土日・祝日は自動公休配置不可
@@ -1630,6 +1637,7 @@
         for (let d = 1; d <= dim; d++) {
           if (isClosed(d)) continue;
           const v = cs[`${staff.id}-${d}`];
+          // 「必」スタンプ（絶対出勤日）は上書きしない
           if (!v || v === "出" || v === "時") cs[`${staff.id}-${d}`] = workStamp;
         }
       });
@@ -1702,6 +1710,7 @@
                     // 時短スタッフの出勤日: 勤務時間を付記
                     val = `時${timeRange}`;
                 }
+                if (val === "必") val = "出勤(必須)";
                 csvContent += val + ",";
             }
             csvContent += "\n";
