@@ -1481,9 +1481,6 @@
         wk.activeDaysCount = activeDays.length;
       });
 
-      // 端数週を除いた有効週のみの配列（隔週計算用）
-      const validWeeks = weeks.filter(wk => wk.activeDaysCount > 2);
-
       // ─── Phase 3: 週ごとに公休配置 ───
       weeks.forEach((wk, wIdx) => {
         // 月内有効日が2日以下の端数週は公休配置をスキップ
@@ -1523,7 +1520,8 @@
             if (isOff(staff.id, d)) offDays.push(d);
           }
 
-          const weekTarget = TARGET_OFF;
+          const cfg = liveStaffConfig[staff.id] || {};
+          const weekTarget = TARGET_OFF; // 全スタッフ週2日統一
           const need = Math.max(0, weekTarget - offDays.length);
 
           for (let k = 0; k < need; k++) {
@@ -1726,26 +1724,14 @@
       // ─── 検証 ───
       const violations = [];
       currentStaffs.forEach(staff => {
-        const cfg = liveStaffConfig[staff.id] || {};
-        const holidayType = cfg.holidayType || staff.holidayType || "完全週休2日";
-        const isAlternate = holidayType.includes("隔週");
-
-        // 隔週休2日は月6日が基準なので週単位の検証をスキップ
-        if (isAlternate) {
-          let monthOff = 0;
-          for (let d = 1; d <= dim; d++) {
-            if (isOff(staff.id, d)) monthOff++;
-          }
-          if (monthOff < 6) violations.push(`${staff.name}-月間公休不足(${monthOff}日)`);
-          return; // 週単位チェックはスキップ
-        }
+        const minWeekly = TARGET_OFF; // 全スタッフ週2日統一
 
         weeks.forEach((wk, i) => {
           let off = 0;
           for (let d = wk.start; d <= wk.end; d++) {
             if (isOff(staff.id, d)) off++;
           }
-          if (off < TARGET_OFF) violations.push(`${staff.name}-第${i + 1}週(${off}日)`);
+          if (off < minWeekly) violations.push(`${staff.name}-第${i + 1}週(${off}日)`);
         });
       });
       // 各日の出勤者数チェック
