@@ -1381,6 +1381,12 @@
     function generateShift() {
       if (!currentStore || currentStaffs.length === 0) return;
 
+      console.log("=== スタッフ設定確認 ===");
+      currentStaffs.forEach(s => {
+        const cfg = liveStaffConfig[s.id] || {};
+        console.log(s.name, "holidayType:", cfg.holidayType);
+      });
+
       const cs = getCurrentCellStates();
       const tueClosed = currentStore.rule.includes("火曜");
       const dim = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -1511,8 +1517,9 @@
 
           // 隔週休2日 = 月6日配置、完全週休2日 = 週2日固定
           const cfg = liveStaffConfig[staff.id] || {};
-          const isAlternate = (cfg.holidayType || "").includes("隔週");
-          console.log("staff:", staff.name, "holidayType:", cfg.holidayType, "isAlternate:", isAlternate);
+          const holidayType = cfg.holidayType || staff.holidayType || "完全週休2日";
+          const isAlternate = holidayType.includes("隔週");
+          console.log("staff:", staff.name, "holidayType:", holidayType, "isAlternate:", isAlternate);
           let weekTarget;
           if (isAlternate) {
             const monthlyTarget = 6;
