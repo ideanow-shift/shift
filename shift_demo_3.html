@@ -1522,7 +1522,9 @@
 
           const cfg = liveStaffConfig[staff.id] || {};
           const weekTarget = TARGET_OFF; // 全スタッフ週2日統一
-          const need = Math.max(0, weekTarget - offDays.length);
+          // 定休日を除いた実質的な公休数でカウント
+          const paidOffDays = offDays.filter(d => !isClosed(d));
+          const need = Math.max(0, weekTarget - paidOffDays.length);
 
           for (let k = 0; k < need; k++) {
             // 候補: 当月内、定休でない、未オフ、容量あり
