@@ -1472,6 +1472,9 @@
         wk.activeDaysCount = activeDays.length;
       });
 
+      // 端数週を除いた有効週のみの配列（隔週計算用）
+      const validWeeks = weeks.filter(wk => wk.activeDaysCount > 2);
+
       // ─── Phase 3: 週ごとに公休配置 ───
       weeks.forEach((wk, wIdx) => {
         // 月内有効日が2日以下の端数週は公休配置をスキップ
@@ -1506,17 +1509,13 @@
             if (isOff(staff.id, d)) offDays.push(d);
           }
 
-          // 隔週休2日の場合、週番号で交互に1日・2日を切り替え
+          // 隔週休2日の場合、有効週番号で交互に切り替え
           const cfg = liveStaffConfig[staff.id] || {};
           const isAlternate = (cfg.holidayType || "").includes("隔週");
-          let weekTarget;
-          if (isAlternate) {
-            // スタッフインデックスでずらして全員が同じ週に
-            // 休みが集中しないようにする
-            weekTarget = (wIdx + si) % 2 === 0 ? 1 : 2;
-          } else {
-            weekTarget = TARGET_OFF; // 完全週休2日は2日固定
-          }
+          const validWIdx = validWeeks.indexOf(wk);
+          const weekTarget = isAlternate
+            ? ((validWIdx + si) % 2 === 0 ? 1 : 2)
+            : TARGET_OFF;
 
           const need = Math.max(0, weekTarget - offDays.length);
 
