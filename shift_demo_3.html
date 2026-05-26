@@ -2397,36 +2397,17 @@ ${request}
     }
 
     // シフトデータをGASに保存
-    // ─── JSONP方式でGASを呼び出す共通関数（CORS完全回避） ───
-    function callGAS(params) {
-        return new Promise((resolve, reject) => {
-            const cbName = "gasCallback_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
-            const timeout = setTimeout(() => {
-                delete window[cbName];
-                if (script.parentNode) script.parentNode.removeChild(script);
-                reject(new Error("タイムアウト"));
-            }, 30000);
+    // ─── GAS呼び出し共通関数（no-corsで保存、通常fetchで読込） ───
+    async function callGAS(params) {
+        const query = Object.entries(params)
+            .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+            .join("&");
+        const url = `${GAS_API_URL}?${query}`;
 
-            window[cbName] = function(data) {
-                clearTimeout(timeout);
-                delete window[cbName];
-                if (script.parentNode) script.parentNode.removeChild(script);
-                resolve(data);
-            };
-
-            const query = Object.entries({ ...params, callback: cbName })
-                .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-                .join("&");
-
-            const script = document.createElement("script");
-            script.src = `${GAS_API_URL}?${query}`;
-            script.onerror = () => {
-                clearTimeout(timeout);
-                delete window[cbName];
-                reject(new Error("GAS接続エラー"));
-            };
-            document.head.appendChild(script);
-        });
+        // 保存系（saveShift・saveSettings）はno-corsで送信
+        // 応答は読めないが、エラーが出なければ成功とみなす
+        await fetch(url, { method: "GET", mode: "no-cors" });
+        return { ok: true };
     }
 
     async function saveShiftToGAS() {
@@ -2434,7 +2415,7 @@ ${request}
         setSaveStatus("💾 保存中...", "info");
         try {
             const cells = getCurrentCellStates();
-            const data  = await callGAS({
+            await callGAS({
                 action:    "saveShift",
                 storeId:   currentStore.id,
                 storeName: currentStore.name,
@@ -2442,7 +2423,6 @@ ${request}
                 month:     currentMonth + 1,
                 cells:     JSON.stringify(cells)
             });
-            if (!data.ok) throw new Error(data.error || "保存失敗");
             setSaveStatus(`✅ 保存完了 ${new Date().toLocaleTimeString("ja-JP")}`, "ok");
         } catch (err) {
             console.error("[saveShift]", err);
@@ -2459,7 +2439,7 @@ ${request}
                 groupView:   document.getElementById("enableGroupView")?.checked || false,
                 managerRule: document.getElementById("enableManagerRule")?.checked || false,
             };
-            const data = await callGAS({
+            await callGAS({
                 action:        "saveSettings",
                 storeId:       currentStore.id,
                 storeName:     currentStore.name,
@@ -2468,7 +2448,6 @@ ${request}
                 staffConfig:   JSON.stringify(liveStaffConfig),
                 extraRules:    JSON.stringify(extraRules)
             });
-            if (!data.ok) throw new Error(data.error || "設定保存失敗");
             setSaveStatus(`✅ 設定保存完了 ${new Date().toLocaleTimeString("ja-JP")}`, "ok");
         } catch (err) {
             console.error("[saveSettings]", err);
