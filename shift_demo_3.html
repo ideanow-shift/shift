@@ -261,6 +261,7 @@
             <button onclick="changeMonth(1)" style="border: none; background: transparent; cursor: pointer; padding: 6px 8px; font-size: 14px; border-radius: 6px;" title="次月">▶</button>
         </div>
         <button class="btn btn-primary" onclick="generateShift()">⚡ シフトを自動生成する</button>
+        <button class="btn btn-outline" onclick="exportToHTML()">🖨️ シフト表をHTML出力</button>
         <button class="btn btn-outline" onclick="exportToCSV()">📥 CSVを書き出す</button>
     </div>
 </div>
@@ -368,6 +369,16 @@
                     oninput="updateStoreMaxKibou(this.value)">
                 <span style="font-size:11px;">日まで</span>
             </div>
+
+            <div class="file-label" style="margin-top:15px;">追加ルール設定</div>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0; border-bottom: 1px solid #edf2f7;">
+                <input type="checkbox" id="enableGroupView" onchange="onGroupViewChange()">
+                <span>👥 入社年数グループ別に表示</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0;">
+                <input type="checkbox" id="enableManagerRule" onchange="renderTable()">
+                <span>🚫 店長・副店長の同日休み禁止</span>
+            </label>
         </div>
 
         <div id="alertBox" class="alert-area"></div>
@@ -480,6 +491,16 @@
     let storeMinStaff = {}; // { storeId: { weekday: 4, saturday: 6, sunday: 5, holiday: 5 } } 店舗ごとの最低出勤人数
     let storeSettings = {}; // { storeId: { maxKibou: 2 } } 店舗ごとの希望休上限など
     let staffFairnessCount = {}; // { staffId: { 希: 0, 有: 0 } } スタッフごとの希望休/有給 取得数
+
+    // 入社年数グループの表示順と色設定（renderTable / exportToHTML で共用）
+    const GROUP_ORDER = ["6年目以上", "3〜5年目", "2年目", "1年目", "不明"];
+    const GROUP_COLORS = {
+        "6年目以上": { bg: "#ebf8ff", border: "#3182ce", text: "#2b6cb0", label: "🎖️ 6年目以上（リーダー層）" },
+        "3〜5年目":  { bg: "#f0fff4", border: "#38a169", text: "#276749", label: "⭐ 3〜5年目（中堅）" },
+        "2年目":     { bg: "#fefcbf", border: "#d69e2e", text: "#744210", label: "🌱 2年目" },
+        "1年目":     { bg: "#fff5f5", border: "#fc8181", text: "#9b2c2c", label: "🌸 1年目" },
+        "不明":      { bg: "#f7fafc", border: "#a0aec0", text: "#4a5568", label: "— 入社年不明" },
+    };
 
     // ─────────────────────────────────────────────────────────────
     // 📅 年月切り替えユーティリティ
@@ -756,6 +777,7 @@
         const nameIdx   = findCol(rawHeaders, "氏名");
         const retireIdx = findCol(rawHeaders, "退職日");
         const licenseIdx = findCol(rawHeaders, "美容師免許取得者", "美容師免許");
+        const joinDateIdx = findCol(rawHeaders, "入社年月日", "入社日", "入社");
 
         // 列が見つからない場合は代表マスタの固定インデックスで補完
         const FIXED = { store: 2, rank: 3, active: 5, name: 7 };
@@ -785,11 +807,32 @@
             if (active === "否" || active === "退職" || active === "×" || active === "0") return;
             if (retire && retire !== "" && retire !== "0" && retire !== "-") return;
 
+            // 入社年数グループ計算
+            let joinDateStr = joinDateIdx !== -1 ? (row[joinDateIdx] || "").trim() : "";
+            let yearsGroup = "不明";
+            if (joinDateStr) {
+                // "YYYY/MM/DD" "YYYY-MM-DD" "YYYY年MM月DD日" 等を解析
+                const m = joinDateStr.match(/(\d{4})[\/\-年](\d{1,2})[\/\-月]?(\d{0,2})/);
+                if (m) {
+                    const joinYear = parseInt(m[1]);
+                    const joinMonth = parseInt(m[2]);
+                    const now = new Date();
+                    let years = now.getFullYear() - joinYear;
+                    if (now.getMonth() + 1 < joinMonth) years--;
+                    if (years < 1) yearsGroup = "1年目";
+                    else if (years < 2) yearsGroup = "2年目";
+                    else if (years < 5) yearsGroup = "3〜5年目";
+                    else yearsGroup = "6年目以上";
+                }
+            }
+
             staffMaster.push({
                 id: (staffMaster.length + 1).toString(),
                 name:  name,
                 store: store,
                 rank:  rank,
+                joinDate: joinDateStr,
+                yearsGroup: yearsGroup,
                 holidayType: "完全週休2日",
                 workType:    empTypeIdx !== -1 && (row[empTypeIdx] || "").includes("時短") ? "時短" : "通常",
                 hasLicense: licenseIdx !== -1
@@ -1243,7 +1286,39 @@
             bodyHtml = `<tr><td colspan="${daysInMonth + 1}" style="padding:40px; color:#a0aec0; font-size:14px;">2番目の「社員名簿 CSVファイル」を選択してください。自動的に所属スタッフ名が一斉に漢字で展開されます！</td></tr>`;
         } else {
             recomputeFairness();
-            currentStaffs.forEach(staff => {
+
+            // グループ分け表示の準備
+            const groupEnabled = isGroupViewEnabled();
+            let staffRenderList = [];
+            if (groupEnabled) {
+                const grouped = {};
+                GROUP_ORDER.forEach(g => { grouped[g] = []; });
+                currentStaffs.forEach(s => {
+                    const g = s.yearsGroup || "不明";
+                    if (!grouped[g]) grouped[g] = [];
+                    grouped[g].push(s);
+                });
+                GROUP_ORDER.forEach(g => {
+                    if (grouped[g].length === 0) return;
+                    const gc = GROUP_COLORS[g] || GROUP_COLORS["不明"];
+                    // グループ区切り行
+                    staffRenderList.push({ type: "group-header", label: gc.label, count: grouped[g].length, gc });
+                    grouped[g].forEach(s => staffRenderList.push({ type: "staff", staff: s }));
+                });
+            } else {
+                currentStaffs.forEach(s => staffRenderList.push({ type: "staff", staff: s }));
+            }
+
+            staffRenderList.forEach(item => {
+                if (item.type === "group-header") {
+                    const { label, count, gc } = item;
+                    bodyHtml += `<tr>
+                        <td colspan="${daysInMonth + 1}" style="background:${gc.bg}; border-left:4px solid ${gc.border}; color:${gc.text}; font-weight:bold; font-size:11px; padding:5px 10px; position:sticky; left:0;">
+                            ${label}（${count}名）
+                        </td></tr>`;
+                    return;
+                }
+                const staff = item.staff;
                 const config = liveStaffConfig[staff.id] || { holidayType: "完全週休2日", workType: "通常" };
                 const avatarChar = staff.name.charAt(0);
                 const fair = staffFairnessCount[staff.id] || { 希: 0, 有: 0 };
@@ -1362,6 +1437,12 @@
         if (cs[cellKey] === selectedStamp) {
             delete cs[cellKey];
         } else {
+            // 役職者同日休みチェック
+            const managerWarning = checkManagerConflict(staffId, day, selectedStamp);
+            if (managerWarning) {
+                const ok = confirm(managerWarning);
+                if (!ok) return;
+            }
             cs[cellKey] = selectedStamp;
         }
         renderTable();
@@ -1536,6 +1617,16 @@
                   const isHol = holidays.includes(d);
                   // 土日・祝日は自動公休配置不可
                   if (dow === 0 || dow === 6 || isHol) return false;
+                  // 役職者同日休み禁止チェック（自動生成時）
+                  if (isManagerRuleEnabled() && isManager(staff)) {
+                    const alreadyOff = currentStaffs.some(s => {
+                      if (s.id === staff.id) return false;
+                      if (!isManager(s)) return false;
+                      const sv = cs[`${s.id}-${d}`];
+                      return sv === "公" || sv === "希" || sv === "有";
+                    });
+                    if (alreadyOff) return false;
+                  }
                   return true;
                 }
                 return false;
@@ -1729,8 +1820,242 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 👥 公平性集計: 希望休 / 有給の取得数をスタッフ単位で集計
+    // 👥 グループ分け表示の切替
     // ─────────────────────────────────────────────────────────────
+    function onGroupViewChange() {
+        renderTable();
+    }
+
+    function isGroupViewEnabled() {
+        const el = document.getElementById("enableGroupView");
+        return el ? el.checked : false;
+    }
+
+    function isManagerRuleEnabled() {
+        const el = document.getElementById("enableManagerRule");
+        return el ? el.checked : false;
+    }
+
+    // 役職者（店長・副店長）判定
+    function isManager(staff) {
+        const r = (staff.rank || "").trim();
+        return r === "店長" || r === "副店長";
+    }
+
+    function checkManagerConflict(targetStaffId, day, newStamp) {
+        if (!isManagerRuleEnabled()) return null;
+        const isOff = (v) => v === "公" || v === "希" || v === "有";
+        if (!isOff(newStamp)) return null;
+
+        const targetStaff = currentStaffs.find(s => s.id === targetStaffId);
+        if (!targetStaff || !isManager(targetStaff)) return null;
+
+        // 同日に既に休んでいる役職者を探す
+        const cs = getCurrentCellStates();
+        const conflicting = currentStaffs.filter(s => {
+            if (s.id === targetStaffId) return false;
+            if (!isManager(s)) return false;
+            const v = cs[`${s.id}-${day}`];
+            return isOff(v);
+        });
+        if (conflicting.length > 0) {
+            return `⚠️ ${conflicting.map(s=>s.name).join("・")}さん（${conflicting.map(s=>s.rank).join("・")}）も${day}日は休みです。役職者の同日休みは禁止ルールに違反します。\n承認しますか？`;
+        }
+        return null;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 📄 HTML形式でシフト表を出力（色分けカレンダー）
+    // ─────────────────────────────────────────────────────────────
+    function exportToHTML() {
+        if (!currentStore || currentStaffs.length === 0) return;
+
+        const weekDays = ["日", "月", "火", "水", "木", "金", "土"];
+        const isTuesdayClosed = currentStore.rule.includes("火曜") || currentStore.rule.includes("火曜日");
+
+        // スタンプの色定義
+        const stampStyle = {
+            "出": "background:#e6f7ff; color:#1890ff;",
+            "時": "background:#f9f0ff; color:#722ed1;",
+            "公": "background:#fff0f0; color:#e53e3e;",
+            "希": "background:#f6ffed; color:#52c41a;",
+            "有": "background:#fff0f6; color:#eb2f96;",
+            "研": "background:#feffe6; color:#d4b106;",
+            "必": "background:#fff1f0; color:#f5222d; font-weight:bold; border:1px solid #f5222d;",
+            "定": "background:#e2e8f0; color:#718096;",
+            "-": "color:#cbd5e0;",
+        };
+
+        const groupEnabled = isGroupViewEnabled();
+        const staffToRender = [...currentStaffs];
+
+        // グループ分けする場合の順序整列
+        let groupedStaffs = null;
+        if (groupEnabled) {
+            groupedStaffs = {};
+            GROUP_ORDER.forEach(g => { groupedStaffs[g] = []; });
+            staffToRender.forEach(s => {
+                const g = s.yearsGroup || "不明";
+                if (!groupedStaffs[g]) groupedStaffs[g] = [];
+                groupedStaffs[g].push(s);
+            });
+        }
+
+        // ヘッダー行生成
+        let headerRow = `<th style="min-width:120px; position:sticky; left:0; background:#f7fafc; z-index:2;">スタッフ名</th>`;
+        let subRow    = `<th style="position:sticky; left:0; background:#f7fafc; z-index:2; font-size:10px; color:#718096;">曜日</th>`;
+        let countRow  = `<th style="position:sticky; left:0; background:#f7fafc; z-index:2; font-size:10px;">出勤数</th>`;
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateObj = new Date(currentYear, currentMonth, d);
+            const dayIdx  = dateObj.getDay();
+            const dayStr  = weekDays[dayIdx];
+            const isHol   = holidays.includes(d);
+            const isTues  = isTuesdayClosed && dayIdx === 2;
+
+            let thBg    = "#f7fafc"; let thColor = "#4a5568";
+            if (isHol)       { thBg = "#fffaf0"; thColor = "#dd6b20"; }
+            else if (dayIdx===6) { thBg = "#ebf8ff"; thColor = "#3182ce"; }
+            else if (dayIdx===0) { thBg = "#fff5f5"; thColor = "#e53e3e"; }
+            if (isTues)      { thBg = "#f7fafc"; thColor = "#a0aec0"; }
+
+            const wBorder = dayIdx === 0 ? "border-left:3px solid #f6ad55;" : "";
+
+            headerRow += `<th style="background:${thBg}; color:${thColor}; ${wBorder} padding:6px 2px; font-size:11px;">${d}</th>`;
+            subRow    += `<th style="background:${thBg}; color:${thColor}; ${wBorder} padding:4px 2px; font-size:10px;">${dayStr}</th>`;
+
+            // 出勤人数
+            const count    = countWorkers(d);
+            const required = getMinRequired(d);
+            let countTxt   = isTues ? "-" : `${count}名`;
+            let countStyle = "font-size:10px; padding:3px 2px; color:#4a5568;";
+            if (!isTues && required != null) {
+                countStyle = count >= required
+                    ? "font-size:10px; padding:3px 2px; color:#22c55e; font-weight:bold;"
+                    : "font-size:10px; padding:3px 2px; background:#fee2e2; color:#dc2626; font-weight:bold;";
+            }
+            countRow += `<th style="${countStyle} ${wBorder}">${countTxt}</th>`;
+        }
+
+        // スタッフ行生成
+        function renderStaffRows(staffList) {
+            let rows = "";
+            staffList.forEach(staff => {
+                const cfg    = liveStaffConfig[staff.id] || {};
+                const isShort = (cfg.workType || "").includes("時短");
+                rows += `<tr>
+                    <td style="position:sticky; left:0; background:#fcfbf7; z-index:1; min-width:120px; padding:6px 8px; white-space:nowrap; border:1px solid #edf2f7;">
+                        <span style="font-weight:bold; font-size:12px;">${staff.name}</span>
+                        <span style="font-size:9px; background:#e2e8f0; padding:1px 4px; border-radius:3px; margin-left:4px;">${staff.rank}</span>
+                        ${isShort ? `<div style="font-size:9px; color:#722ed1;">🕒 ${cfg.startTime||"8:40"}〜${cfg.endTime||"17:40"}</div>` : ""}
+                    </td>`;
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateObj = new Date(currentYear, currentMonth, d);
+                    const dayIdx  = dateObj.getDay();
+                    const isTues  = isTuesdayClosed && dayIdx === 2;
+                    const wBorder = dayIdx === 0 ? "border-left:3px solid #f6ad55;" : "";
+                    const isHol   = holidays.includes(d);
+
+                    let cellBg = "";
+                    if (isHol)       cellBg = "background:#fffaf0;";
+                    else if (dayIdx===6) cellBg = "background:#f0f8ff;";
+                    else if (dayIdx===0) cellBg = "background:#fff5f5;";
+
+                    let val = isTues
+                        ? (getCurrentCellStates()[`${staff.id}-${d}`] || "定")
+                        : (getCurrentCellStates()[`${staff.id}-${d}`] || "-");
+                    if (isTues && val === "定") {
+                        rows += `<td style="background:#e2e8f0; color:#718096; ${wBorder} text-align:center; font-size:11px; padding:5px 2px; border:1px solid #edf2f7;">定休</td>`;
+                        continue;
+                    }
+                    const sStyle = stampStyle[val] || "";
+                    rows += `<td style="${sStyle} ${cellBg} ${wBorder} text-align:center; font-size:12px; padding:5px 2px; border:1px solid #edf2f7;">${val}</td>`;
+                }
+                rows += `</tr>`;
+            });
+            return rows;
+        }
+
+        let tableBody = "";
+        if (groupEnabled && groupedStaffs) {
+            GROUP_ORDER.forEach(g => {
+                const list = groupedStaffs[g] || [];
+                if (list.length === 0) return;
+                const gc = GROUP_COLORS[g] || GROUP_COLORS["不明"];
+                // グループ区切り行
+                tableBody += `<tr>
+                    <td colspan="${daysInMonth + 1}" style="background:${gc.bg}; border-left:4px solid ${gc.border}; color:${gc.text}; font-weight:bold; font-size:11px; padding:5px 10px; border-bottom:1px solid ${gc.border};">
+                        ${gc.label}（${list.length}名）
+                    </td></tr>`;
+                tableBody += renderStaffRows(list);
+            });
+        } else {
+            tableBody = renderStaffRows(staffToRender);
+        }
+
+        const legends = [
+            { stamp:"出", label:"出勤", style: stampStyle["出"] },
+            { stamp:"時", label:"時短", style: stampStyle["時"] },
+            { stamp:"公", label:"公休", style: stampStyle["公"] },
+            { stamp:"希", label:"希望休", style: stampStyle["希"] },
+            { stamp:"有", label:"有給", style: stampStyle["有"] },
+            { stamp:"研", label:"研修", style: stampStyle["研"] },
+            { stamp:"必", label:"絶対出勤", style: stampStyle["必"] },
+        ];
+        const legendHtml = legends.map(l =>
+            `<span style="${l.style} padding:3px 10px; border-radius:12px; font-size:11px; margin-right:6px; margin-bottom:4px; display:inline-block;">${l.stamp} ${l.label}</span>`
+        ).join("");
+
+        const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>シフト表 ${currentStore.name} ${currentYear}年${currentMonth+1}月</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; background:#fcfbf7; color:#2d3748; padding:20px; }
+  h1 { font-size:20px; margin-bottom:4px; }
+  .meta { font-size:12px; color:#718096; margin-bottom:12px; }
+  .legend { margin-bottom:16px; }
+  .table-wrap { overflow-x:auto; border-radius:8px; border:1px solid #e2e8f0; }
+  table { border-collapse:collapse; width:100%; }
+  th { background:#f7fafc; font-size:11px; padding:6px 2px; border:1px solid #e2e8f0; }
+  @media print {
+    body { padding:10px; }
+    .no-print { display:none; }
+    .table-wrap { overflow:visible; }
+  }
+</style>
+</head>
+<body>
+  <h1>📅 ${currentStore.name} シフト表</h1>
+  <p class="meta">${currentYear}年${currentMonth+1}月 ／ 作成日: ${new Date().toLocaleDateString("ja-JP")} ／ スタッフ計${currentStaffs.length}名</p>
+  <div class="legend">${legendHtml}</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>${headerRow}</tr>
+        <tr>${subRow}</tr>
+        <tr>${countRow}</tr>
+      </thead>
+      <tbody>${tableBody}</tbody>
+    </table>
+  </div>
+  <p style="margin-top:16px; font-size:11px; color:#a0aec0;" class="no-print">※ Ctrl+P（Cmd+P）で印刷できます。</p>
+</body>
+</html>`;
+
+        const blob = new Blob([html], { type: "text/html;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", `シフト表_${currentStore.name}_${currentYear}年${currentMonth+1}月.html`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+
     function recomputeFairness() {
         staffFairnessCount = {};
         currentStaffs.forEach(s => {
