@@ -253,16 +253,13 @@
     </div>
     <div style="display: flex; gap: 10px; align-items: center;">
         <select id="storeSelector" class="btn btn-outline" style="padding: 10px 15px; border-radius: 12px; font-weight: bold; color: #2d3748;" onchange="changeStore()">
-            <option value="">CSVファイルを選んでインポートしてね 📁</option>
+            <option value="">店舗を選択してください 📁</option>
         </select>
         <div style="display: flex; align-items: center; gap: 4px; background: #f7fafc; border-radius: 12px; padding: 4px 8px; border: 1px solid #e2e8f0;">
             <button onclick="changeMonth(-1)" style="border: none; background: transparent; cursor: pointer; padding: 6px 8px; font-size: 14px; border-radius: 6px;" title="前月">◀</button>
             <span id="currentMonthLabel" style="font-weight: bold; font-size: 14px; min-width: 92px; text-align: center;">2026年6月</span>
             <button onclick="changeMonth(1)" style="border: none; background: transparent; cursor: pointer; padding: 6px 8px; font-size: 14px; border-radius: 6px;" title="次月">▶</button>
         </div>
-        <button class="btn btn-primary" onclick="generateShift()">⚡ シフトを自動生成する</button>
-        <button class="btn btn-outline" onclick="exportToHTML()">🖨️ シフト表をHTML出力</button>
-        <button class="btn btn-outline" onclick="exportToCSV()">📥 CSVを書き出す</button>
     </div>
 </div>
 
@@ -428,19 +425,97 @@
             <div id="aiAlertBox" style="display:none; margin-top:10px; padding:10px; background:#f0f9ff; border-left:4px solid #667eea; border-radius:4px; font-size:12px; color:#2d3748;"></div>
         </div>
 
-        <!-- STEP 5: 保存（毎月） -->
+        <!-- STEP 4: シフト自動生成（毎月） -->
+        <div style="background:#f0fff4; border:1px solid #9ae6b4; border-radius:10px; padding:12px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#276749; margin-bottom:10px;">
+                <span style="background:#276749; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">4</span>
+                ⚡ シフト自動生成（毎月）
+            </div>
+            <button onclick="generateShift()"
+                style="width:100%; padding:12px; background:linear-gradient(135deg,#38a169,#276749); color:white; border:none; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">
+                ⚡ シフトを自動生成する
+            </button>
+        </div>
+
+        <!-- STEP 5: AI調整（毎月） -->
+        <div style="background:#f9f7ff; border:1px solid #e9d8fd; border-radius:10px; padding:12px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#553c9a; margin-bottom:10px;">
+                <span style="background:#553c9a; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">5</span>
+                🤖 AI調整（毎月）
+            </div>
+            <textarea id="aiRequestInput" rows="3" placeholder="スタッフの要望・イレギュラーをここに入力してください&#10;例：村山さん12日希望休、19日コンテストで田中・佐藤中抜け"
+                style="width:100%; padding:8px; border:1px solid #d6bcfa; border-radius:6px; font-size:12px; resize:vertical; box-sizing:border-box; font-family:inherit; background:white;"></textarea>
+            <button id="aiAdjustBtn" onclick="callAIAdjust()"
+                style="width:100%; margin-top:8px; padding:10px; background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px;">
+                🤖 AIでシフトを調整する
+            </button>
+            <button onclick="resetApiKey()" style="width:100%; margin-top:4px; padding:4px; background:transparent; color:#718096; border:none; cursor:pointer; font-size:10px; text-decoration:underline;">
+                APIキーを再設定
+            </button>
+            <details style="margin-top:8px; background:white; padding:8px 10px; border-radius:6px; font-size:12px; border:1px solid #e2e8f0;">
+                <summary style="cursor:pointer; font-weight:bold; color:#4a5568;">⚙️ 禁止事項・ルール設定</summary>
+                <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="restrictSixConsec" checked>
+                        <span>6連勤以上禁止</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="restrictMinStaff" checked>
+                        <span>最低出勤人数を下回る公休・希望休禁止</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px;">
+                        <span style="flex:1;">月の希望休上限</span>
+                        <input type="number" id="restrictMonthlyKibou" min="0" value="2" style="width:50px; padding:2px 4px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;">
+                        <span>日まで</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="restrictFairness" checked>
+                        <span>希望休取得をスタッフ間で公平に管理</span>
+                    </label>
+                </div>
+            </details>
+            <div id="aiAlertBox" style="display:none; margin-top:10px; padding:10px; background:#f0f9ff; border-left:4px solid #667eea; border-radius:4px; font-size:12px; color:#2d3748;"></div>
+        </div>
+
+        <!-- STEP 6: 手入力による微調整 -->
+        <div style="background:#fffaf0; border:1px solid #fbd38d; border-radius:10px; padding:12px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#744210; margin-bottom:10px;">
+                <span style="background:#744210; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">6</span>
+                ✏️ 手入力による微調整
+            </div>
+            <div style="font-size:12px; color:#744210; line-height:1.7; background:white; border-radius:6px; padding:10px; border:1px solid #fbd38d;">
+                <div style="margin-bottom:6px;">📌 <b>スタンプの使い方</b></div>
+                <div>① 上部のスタンプを選ぶ</div>
+                <div>② シフト表のセルをクリック</div>
+                <div>③ もう一度クリックで解除</div>
+                <div style="margin-top:8px; padding-top:8px; border-top:1px solid #fbd38d;">
+                    <b>スタンプ一覧：</b><br>
+                    出勤 / 公休 / 希望休 / 有給 / 研修 / 絶対出勤
+                </div>
+            </div>
+            <button onclick="showFairnessReport()"
+                style="width:100%; margin-top:10px; padding:7px; background:white; border:1px solid #fbd38d; border-radius:6px; font-size:12px; cursor:pointer; color:#744210;">
+                📊 公平性レポートを表示
+            </button>
+        </div>
+
+        <!-- STEP 7: 保存・出力（毎月） -->
         <div style="background:#ebf8ff; border:1px solid #bee3f8; border-radius:10px; padding:12px;">
             <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#2b6cb0; margin-bottom:10px;">
-                <span style="background:#2b6cb0; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">5</span>
-                💾 保存
+                <span style="background:#2b6cb0; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">7</span>
+                💾 保存・出力
             </div>
             <button onclick="saveShiftToGAS()"
                 style="width:100%; padding:10px; background:#2b6cb0; color:white; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; margin-bottom:6px;">
                 💾 シフトを保存する
             </button>
-            <button onclick="showFairnessReport()"
+            <button onclick="exportToHTML()"
+                style="width:100%; padding:7px; background:white; border:1px solid #bee3f8; border-radius:6px; font-size:12px; cursor:pointer; color:#2b6cb0; margin-bottom:6px;">
+                🖨️ シフト表をHTML出力
+            </button>
+            <button onclick="exportToCSV()"
                 style="width:100%; padding:7px; background:white; border:1px solid #bee3f8; border-radius:6px; font-size:12px; cursor:pointer; color:#2b6cb0;">
-                📊 公平性レポートを表示
+                📥 CSVを書き出す
             </button>
             <div id="saveStatus" style="font-size:11px; color:#718096; margin-top:6px; text-align:center;"></div>
         </div>
