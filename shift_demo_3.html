@@ -281,152 +281,170 @@
 <div class="main-layout">
     <button class="mobile-sidebar-toggle" onclick="toggleSidebar(this)">⚙️ 設定・ルールを開く</button>
     <div class="sidebar mobile-collapsed">
-        <!-- 🤖 AI Shift Adjustment (top) -->
-        <div>
-            <div class="section-title">🤖 AIシフト調整</div>
-            <textarea id="aiRequestInput" rows="4" placeholder="スタッフの要望・イレギュラーをここに入力してください&#10;例：村山さん12日希望休、19日コンテストで田中・佐藤中抜け"
-                style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 12px; resize: vertical; box-sizing: border-box; font-family: inherit;"></textarea>
 
+        <!-- STEP 1: データ読込 -->
+        <details id="step1" style="margin-bottom:12px;">
+            <summary style="cursor:pointer; display:flex; align-items:center; gap:8px; padding:10px 12px; background:#f7fafc; border-radius:10px; border:1px solid #e2e8f0; font-size:13px; font-weight:bold; color:#2d3748; list-style:none;">
+                <span style="background:#52b788; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">1</span>
+                📡 データ読込
+                <span style="margin-left:auto; font-size:10px; color:#a0aec0;">初回のみ</span>
+            </summary>
+            <div style="padding:12px 4px 4px;">
+                <div id="alertBox" class="alert-area"></div>
+                <div class="file-input-group">
+                    <span class="file-label">店舗設備情報 CSVファイル</span>
+                    <input type="file" class="file-btn" accept=".csv" onchange="handleStoreFile(this)">
+                    <div id="storeLoadStatus" class="status-badge status-none">未読込</div>
+                </div>
+                <div class="file-input-group" style="margin-bottom:0;">
+                    <span class="file-label">社員名簿 CSVファイル</span>
+                    <input type="file" class="file-btn" accept=".csv" onchange="handleStaffFile(this)">
+                    <div id="staffLoadStatus" class="status-badge status-none">未読込</div>
+                </div>
+            </div>
+        </details>
+
+        <!-- STEP 2: 店舗ルール設定 -->
+        <details id="step2" style="margin-bottom:12px;">
+            <summary style="cursor:pointer; display:flex; align-items:center; gap:8px; padding:10px 12px; background:#f7fafc; border-radius:10px; border:1px solid #e2e8f0; font-size:13px; font-weight:bold; color:#2d3748; list-style:none;">
+                <span style="background:#52b788; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">2</span>
+                🏢 店舗ルール設定
+                <span style="margin-left:auto; font-size:10px; color:#a0aec0;">初回のみ</span>
+            </summary>
+            <div style="padding:12px 4px 4px;">
+                <div class="file-label">定休日設定</div>
+                <div class="toggle-group">
+                    <button id="holidayBtn1" class="toggle-btn active accent" disabled>年中無休</button>
+                    <button id="holidayBtn2" class="toggle-btn" disabled>火曜定休</button>
+                </div>
+
+                <div class="file-label" style="margin-top:10px;">最低出勤人数設定</div>
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                    <span style="font-size:11px; flex:1;">平日（月〜金）</span>
+                    <input type="number" id="minStaffWeekday" min="0" placeholder="未設定"
+                        style="width:56px; padding:4px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;"
+                        oninput="updateMinStaff('weekday', this.value)">
+                    <span style="font-size:11px;">名</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                    <span style="font-size:11px; flex:1;">土曜日</span>
+                    <input type="number" id="minStaffSaturday" min="0" placeholder="未設定"
+                        style="width:56px; padding:4px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;"
+                        oninput="updateMinStaff('saturday', this.value)">
+                    <span style="font-size:11px;">名</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                    <span style="font-size:11px; flex:1;">日曜日</span>
+                    <input type="number" id="minStaffSunday" min="0" placeholder="未設定"
+                        style="width:56px; padding:4px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;"
+                        oninput="updateMinStaff('sunday', this.value)">
+                    <span style="font-size:11px;">名</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:11px; flex:1;">祝日</span>
+                    <input type="number" id="minStaffHoliday" min="0" placeholder="未設定"
+                        style="width:56px; padding:4px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;"
+                        oninput="updateMinStaff('holiday', this.value)">
+                    <span style="font-size:11px;">名</span>
+                </div>
+
+                <div class="file-label" style="margin-top:10px;">希望休上限設定</div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:11px; flex:1;">月間希望休上限</span>
+                    <input type="number" id="storeMaxKibou" min="0" value="2"
+                        style="width:56px; padding:4px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;"
+                        oninput="updateStoreMaxKibou(this.value)">
+                    <span style="font-size:11px;">日まで</span>
+                </div>
+
+                <div class="file-label" style="margin-top:10px;">追加ルール設定</div>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0; border-bottom:1px solid #edf2f7;">
+                    <input type="checkbox" id="enableGroupView" onchange="onGroupViewChange()">
+                    <span>👥 入社年数グループ別に表示</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0;">
+                    <input type="checkbox" id="enableManagerRule" onchange="renderTable()">
+                    <span>🚫 店長・副店長の同日休み禁止</span>
+                </label>
+
+                <button onclick="saveSettingsToGAS()"
+                    style="width:100%; margin-top:12px; padding:8px; background:#f7fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; cursor:pointer;">
+                    ⚙️ 店舗設定を保存する
+                </button>
+            </div>
+        </details>
+
+        <!-- STEP 3: スタッフ個別ルール -->
+        <details id="step3" style="margin-bottom:12px;">
+            <summary style="cursor:pointer; display:flex; align-items:center; gap:8px; padding:10px 12px; background:#f7fafc; border-radius:10px; border:1px solid #e2e8f0; font-size:13px; font-weight:bold; color:#2d3748; list-style:none;">
+                <span style="background:#52b788; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">3</span>
+                👤 スタッフ個別ルール
+                <span style="margin-left:auto; font-size:10px; color:#a0aec0;">必要時のみ</span>
+            </summary>
+            <div style="padding:12px 4px 4px;">
+                <div id="staffRulesPanel" style="max-height:360px; overflow-y:auto; padding-right:4px;">
+                    <div style="font-size:11px; color:#a0aec0;">店舗を選択するとスタッフ別ルールが表示されます。</div>
+                </div>
+            </div>
+        </details>
+
+        <!-- STEP 4: AI調整（毎月） -->
+        <div style="background:#f9f7ff; border:1px solid #e9d8fd; border-radius:10px; padding:12px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#553c9a; margin-bottom:10px;">
+                <span style="background:#553c9a; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">4</span>
+                🤖 AI調整（毎月）
+            </div>
+            <textarea id="aiRequestInput" rows="3" placeholder="スタッフの要望・イレギュラーをここに入力してください&#10;例：村山さん12日希望休、19日コンテストで田中・佐藤中抜け"
+                style="width:100%; padding:8px; border:1px solid #d6bcfa; border-radius:6px; font-size:12px; resize:vertical; box-sizing:border-box; font-family:inherit; background:white;"></textarea>
             <button id="aiAdjustBtn" onclick="callAIAdjust()"
-                style="width: 100%; margin-top: 10px; padding: 10px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px;">
+                style="width:100%; margin-top:8px; padding:10px; background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px;">
                 🤖 AIでシフトを調整する
             </button>
-            <button onclick="resetApiKey()" style="width: 100%; margin-top: 4px; padding: 4px; background: transparent; color: #718096; border: none; cursor: pointer; font-size: 10px; text-decoration: underline;">
+            <button onclick="resetApiKey()" style="width:100%; margin-top:4px; padding:4px; background:transparent; color:#718096; border:none; cursor:pointer; font-size:10px; text-decoration:underline;">
                 APIキーを再設定
             </button>
-
-            <details style="margin-top: 10px; background: #f7fafc; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
-                <summary style="cursor: pointer; font-weight: bold; color: #4a5568;">⚙️ 禁止事項・ルール設定</summary>
-                <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
-                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <details style="margin-top:8px; background:white; padding:8px 10px; border-radius:6px; font-size:12px; border:1px solid #e2e8f0;">
+                <summary style="cursor:pointer; font-weight:bold; color:#4a5568;">⚙️ 禁止事項・ルール設定</summary>
+                <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
                         <input type="checkbox" id="restrictSixConsec" checked>
                         <span>6連勤以上禁止</span>
                     </label>
-                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
                         <input type="checkbox" id="restrictMinStaff" checked>
                         <span>最低出勤人数を下回る公休・希望休禁止</span>
                     </label>
-                    <label style="display: flex; align-items: center; gap: 6px;">
-                        <span style="flex: 1;">月の希望休上限</span>
-                        <input type="number" id="restrictMonthlyKibou" min="0" value="2" style="width: 50px; padding: 2px 4px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 12px; text-align: right;">
+                    <label style="display:flex; align-items:center; gap:6px;">
+                        <span style="flex:1;">月の希望休上限</span>
+                        <input type="number" id="restrictMonthlyKibou" min="0" value="2" style="width:50px; padding:2px 4px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;">
                         <span>日まで</span>
                     </label>
-                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
                         <input type="checkbox" id="restrictFairness" checked>
                         <span>希望休取得をスタッフ間で公平に管理</span>
                     </label>
                 </div>
             </details>
-
-            <div id="aiAlertBox" style="display: none; margin-top: 10px; padding: 10px; background: #f0f9ff; border-left: 4px solid #667eea; border-radius: 4px; font-size: 12px; color: #2d3748;"></div>
+            <div id="aiAlertBox" style="display:none; margin-top:10px; padding:10px; background:#f0f9ff; border-left:4px solid #667eea; border-radius:4px; font-size:12px; color:#2d3748;"></div>
         </div>
 
-        <!-- 🏢 Store Rules -->
-        <div style="border-top: 1px solid #edf2f7; padding-top: 15px; margin-top: 15px;">
-            <div class="section-title">🏢 店舗営業ルール</div>
-            <div class="file-label">この店舗の定休日設定</div>
-            <div class="toggle-group">
-                <button id="holidayBtn1" class="toggle-btn active accent" disabled>年中無休</button>
-                <button id="holidayBtn2" class="toggle-btn" disabled>火曜定休</button>
+        <!-- STEP 5: 保存（毎月） -->
+        <div style="background:#ebf8ff; border:1px solid #bee3f8; border-radius:10px; padding:12px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#2b6cb0; margin-bottom:10px;">
+                <span style="background:#2b6cb0; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">5</span>
+                💾 保存
             </div>
-
-            <div class="file-label" style="margin-top:15px;">最低出勤人数設定</div>
-
-            <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
-                <span style="font-size:11px; flex:1;">平日（月〜金）</span>
-                <input type="number" id="minStaffWeekday" min="0" placeholder="未設定"
-                    style="width:56px; padding:4px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;"
-                    oninput="updateMinStaff('weekday', this.value)">
-                <span style="font-size:11px;">名</span>
-            </div>
-            <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
-                <span style="font-size:11px; flex:1;">土曜日</span>
-                <input type="number" id="minStaffSaturday" min="0" placeholder="未設定"
-                    style="width:56px; padding:4px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;"
-                    oninput="updateMinStaff('saturday', this.value)">
-                <span style="font-size:11px;">名</span>
-            </div>
-            <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
-                <span style="font-size:11px; flex:1;">日曜日</span>
-                <input type="number" id="minStaffSunday" min="0" placeholder="未設定"
-                    style="width:56px; padding:4px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;"
-                    oninput="updateMinStaff('sunday', this.value)">
-                <span style="font-size:11px;">名</span>
-            </div>
-            <div style="display:flex; align-items:center; gap:6px;">
-                <span style="font-size:11px; flex:1;">祝日</span>
-                <input type="number" id="minStaffHoliday" min="0" placeholder="未設定"
-                    style="width:56px; padding:4px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;"
-                    oninput="updateMinStaff('holiday', this.value)">
-                <span style="font-size:11px;">名</span>
-            </div>
-
-            <div class="file-label" style="margin-top:15px;">希望休上限設定</div>
-            <div style="display:flex; align-items:center; gap:6px;">
-                <span style="font-size:11px; flex:1;">月間希望休上限</span>
-                <input type="number" id="storeMaxKibou" min="0" value="2"
-                    style="width:56px; padding:4px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;"
-                    oninput="updateStoreMaxKibou(this.value)">
-                <span style="font-size:11px;">日まで</span>
-            </div>
-
-            <div class="file-label" style="margin-top:15px;">追加ルール設定</div>
-            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0; border-bottom: 1px solid #edf2f7;">
-                <input type="checkbox" id="enableGroupView" onchange="onGroupViewChange()">
-                <span>👥 入社年数グループ別に表示</span>
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0;">
-                <input type="checkbox" id="enableManagerRule" onchange="renderTable()">
-                <span>🚫 店長・副店長の同日休み禁止</span>
-            </label>
-        </div>
-
-        <div id="alertBox" class="alert-area"></div>
-        <button onclick="showFairnessReport()"
-            style="width:100%; margin-top:8px; padding:8px; background:#f7fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; cursor:pointer;">
-            📊 公平性レポートを表示
-        </button>
-
-        <!-- 💾 保存・読込 -->
-        <div style="border-top: 1px solid #edf2f7; padding-top: 15px; margin-top: 15px;">
-            <div class="section-title">💾 データ保存</div>
             <button onclick="saveShiftToGAS()"
-                style="width:100%; padding:9px; background:#2b6cb0; color:white; border:none; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; margin-bottom:6px;">
+                style="width:100%; padding:10px; background:#2b6cb0; color:white; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; margin-bottom:6px;">
                 💾 シフトを保存する
             </button>
-            <button onclick="saveSettingsToGAS()"
-                style="width:100%; padding:7px; background:#f7fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; cursor:pointer;">
-                ⚙️ 店舗設定を保存する
+            <button onclick="showFairnessReport()"
+                style="width:100%; padding:7px; background:white; border:1px solid #bee3f8; border-radius:6px; font-size:12px; cursor:pointer; color:#2b6cb0;">
+                📊 公平性レポートを表示
             </button>
             <div id="saveStatus" style="font-size:11px; color:#718096; margin-top:6px; text-align:center;"></div>
         </div>
 
-        <!-- 👤 Staff Individual Rules -->
-        <div style="border-top: 1px solid #edf2f7; padding-top: 15px; margin-top: 15px;">
-            <div class="section-title">👤 スタッフ個別ルール</div>
-            <div id="staffRulesPanel" style="max-height: 360px; overflow-y: auto; padding-right: 4px;">
-                <div style="font-size:11px; color:#a0aec0;">店舗を選択するとスタッフ別ルールが表示されます。</div>
-            </div>
-        </div>
-
-        <!-- 📁 CSV Import (bottom, collapsed - admin only) -->
-        <div style="border-top: 1px solid #edf2f7; padding-top: 15px; margin-top: 15px;">
-            <details>
-                <summary style="font-size:11px; color:#a0aec0; cursor:pointer;">▶ CSVインポート・GAS設定（管理者用）</summary>
-                <div style="margin-top: 10px;">
-                    <div class="file-input-group">
-                        <span class="file-label">1. 店舗設備情報 CSVファイル</span>
-                        <input type="file" class="file-btn" accept=".csv" onchange="handleStoreFile(this)">
-                        <div id="storeLoadStatus" class="status-badge status-none">未読込</div>
-                    </div>
-                    <div class="file-input-group" style="margin-bottom: 0;">
-                        <span class="file-label">2. 社員名簿 CSVファイル</span>
-                        <input type="file" class="file-btn" accept=".csv" onchange="handleStaffFile(this)">
-                        <div id="staffLoadStatus" class="status-badge status-none">未読込</div>
-                    </div>
-                </div>
-            </details>
-        </div>
     </div>
 
     <div class="content-area">
