@@ -2397,17 +2397,26 @@ ${request}
     }
 
     // シフトデータをGASに保存
-    // ─── GAS呼び出し共通関数（no-corsで保存、通常fetchで読込） ───
-    async function callGAS(params) {
-        const query = Object.entries(params)
-            .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-            .join("&");
-        const url = `${GAS_API_URL}?${query}`;
+    // ─── iframe方式でGASを呼び出す（CORS完全回避） ───
+    function callGAS(params) {
+        return new Promise((resolve) => {
+            const query = Object.entries(params)
+                .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+                .join("&");
+            const url = `${GAS_API_URL}?${query}`;
 
-        // 保存系（saveShift・saveSettings）はno-corsで送信
-        // 応答は読めないが、エラーが出なければ成功とみなす
-        await fetch(url, { method: "GET", mode: "no-cors" });
-        return { ok: true };
+            const iframe = document.createElement("iframe");
+            iframe.style.display = "none";
+            iframe.src = url;
+            document.body.appendChild(iframe);
+
+            // iframeは応答を読めないが、リクエストは届く
+            // 3秒後に成功とみなしてiframeを削除
+            setTimeout(() => {
+                document.body.removeChild(iframe);
+                resolve({ ok: true });
+            }, 3000);
+        });
     }
 
     async function saveShiftToGAS() {
