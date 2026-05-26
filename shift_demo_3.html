@@ -2397,24 +2397,51 @@ ${request}
     }
 
     // シフトデータをGASに保存
+    // ─── JSONP方式でGASを呼び出す共通関数（CORS完全回避） ───
+    function callGAS(params) {
+        return new Promise((resolve, reject) => {
+            const cbName = "gasCallback_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
+            const timeout = setTimeout(() => {
+                delete window[cbName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+                reject(new Error("タイムアウト"));
+            }, 30000);
+
+            window[cbName] = function(data) {
+                clearTimeout(timeout);
+                delete window[cbName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+                resolve(data);
+            };
+
+            const query = Object.entries({ ...params, callback: cbName })
+                .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+                .join("&");
+
+            const script = document.createElement("script");
+            script.src = `${GAS_API_URL}?${query}`;
+            script.onerror = () => {
+                clearTimeout(timeout);
+                delete window[cbName];
+                reject(new Error("GAS接続エラー"));
+            };
+            document.head.appendChild(script);
+        });
+    }
+
     async function saveShiftToGAS() {
         if (!currentStore) { alert("店舗を選択してください"); return; }
         setSaveStatus("💾 保存中...", "info");
         try {
             const cells = getCurrentCellStates();
-            const res = await fetch(GAS_API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    action:     "saveShift",
-                    storeId:    currentStore.id,
-                    storeName:  currentStore.name,
-                    year:       currentYear,
-                    month:      currentMonth + 1,
-                    cells:      cells
-                })
+            const data  = await callGAS({
+                action:    "saveShift",
+                storeId:   currentStore.id,
+                storeName: currentStore.name,
+                year:      currentYear,
+                month:     currentMonth + 1,
+                cells:     JSON.stringify(cells)
             });
-            const data = await res.json();
             if (!data.ok) throw new Error(data.error || "保存失敗");
             setSaveStatus(`✅ 保存完了 ${new Date().toLocaleTimeString("ja-JP")}`, "ok");
         } catch (err) {
@@ -2426,26 +2453,26 @@ ${request}
     // 店舗設定をGASに保存
     async function saveSettingsToGAS() {
         if (!currentStore) return;
+        setSaveStatus("⚙️ 設定保存中...", "info");
         try {
             const extraRules = {
                 groupView:   document.getElementById("enableGroupView")?.checked || false,
                 managerRule: document.getElementById("enableManagerRule")?.checked || false,
             };
-            await fetch(GAS_API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    action:        "saveSettings",
-                    storeId:       currentStore.id,
-                    storeName:     currentStore.name,
-                    minStaff:      storeMinStaff[currentStore.id] || {},
-                    storeSettings: storeSettings[currentStore.id] || {},
-                    staffConfig:   liveStaffConfig,
-                    extraRules:    extraRules
-                })
+            const data = await callGAS({
+                action:        "saveSettings",
+                storeId:       currentStore.id,
+                storeName:     currentStore.name,
+                minStaff:      JSON.stringify(storeMinStaff[currentStore.id] || {}),
+                storeSettings: JSON.stringify(storeSettings[currentStore.id] || {}),
+                staffConfig:   JSON.stringify(liveStaffConfig),
+                extraRules:    JSON.stringify(extraRules)
             });
+            if (!data.ok) throw new Error(data.error || "設定保存失敗");
+            setSaveStatus(`✅ 設定保存完了 ${new Date().toLocaleTimeString("ja-JP")}`, "ok");
         } catch (err) {
             console.error("[saveSettings]", err);
+            setSaveStatus("❌ 設定保存失敗: " + err.message, "err");
         }
     }
 
