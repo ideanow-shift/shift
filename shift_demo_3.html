@@ -385,50 +385,47 @@
             </div>
         </details>
 
-        <!-- STEP 4: AI調整（毎月） -->
-        <div style="background:#f9f7ff; border:1px solid #e9d8fd; border-radius:10px; padding:12px; margin-bottom:12px;">
-            <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#553c9a; margin-bottom:10px;">
-                <span style="background:#553c9a; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">4</span>
-                🤖 AI調整（毎月）
-            </div>
-            <textarea id="aiRequestInput" rows="3" placeholder="スタッフの要望・イレギュラーをここに入力してください&#10;例：村山さん12日希望休、19日コンテストで田中・佐藤中抜け"
-                style="width:100%; padding:8px; border:1px solid #d6bcfa; border-radius:6px; font-size:12px; resize:vertical; box-sizing:border-box; font-family:inherit; background:white;"></textarea>
-            <button id="aiAdjustBtn" onclick="callAIAdjust()"
-                style="width:100%; margin-top:8px; padding:10px; background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px;">
-                🤖 AIでシフトを調整する
-            </button>
-            <button onclick="resetApiKey()" style="width:100%; margin-top:4px; padding:4px; background:transparent; color:#718096; border:none; cursor:pointer; font-size:10px; text-decoration:underline;">
-                APIキーを再設定
-            </button>
-            <details style="margin-top:8px; background:white; padding:8px 10px; border-radius:6px; font-size:12px; border:1px solid #e2e8f0;">
-                <summary style="cursor:pointer; font-weight:bold; color:#4a5568;">⚙️ 禁止事項・ルール設定</summary>
-                <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
-                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-                        <input type="checkbox" id="restrictSixConsec" checked>
-                        <span>6連勤以上禁止</span>
-                    </label>
-                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-                        <input type="checkbox" id="restrictMinStaff" checked>
-                        <span>最低出勤人数を下回る公休・希望休禁止</span>
-                    </label>
-                    <label style="display:flex; align-items:center; gap:6px;">
-                        <span style="flex:1;">月の希望休上限</span>
-                        <input type="number" id="restrictMonthlyKibou" min="0" value="2" style="width:50px; padding:2px 4px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:right;">
-                        <span>日まで</span>
-                    </label>
-                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-                        <input type="checkbox" id="restrictFairness" checked>
-                        <span>希望休取得をスタッフ間で公平に管理</span>
-                    </label>
+        <!-- STEP 4: 固定条件入力（毎月） -->
+        <details id="step4" style="margin-bottom:12px;">
+            <summary style="cursor:pointer; display:flex; align-items:center; gap:8px; padding:10px 12px; background:#fff5f5; border-radius:10px; border:1px solid #fed7d7; font-size:13px; font-weight:bold; color:#c53030; list-style:none;">
+                <span style="background:#c53030; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">4</span>
+                📅 固定条件入力（毎月）
+                <span style="margin-left:auto; font-size:10px; color:#fc8181;">生成前に入力</span>
+            </summary>
+            <div style="padding:12px 4px 4px;">
+                <div style="font-size:11px; color:#718096; margin-bottom:10px; line-height:1.6; background:#fff5f5; border-radius:6px; padding:8px 10px; border:1px solid #fed7d7;">
+                    希望休・有給・研修日など<b>出勤に関する固定条件</b>を先にシフト表へスタンプしてください。<br>
+                    入力後に「シフト自動生成」を実行すると、これらの条件が優先されます。
                 </div>
-            </details>
-            <div id="aiAlertBox" style="display:none; margin-top:10px; padding:10px; background:#f0f9ff; border-left:4px solid #667eea; border-radius:4px; font-size:12px; color:#2d3748;"></div>
-        </div>
+                <div style="font-size:12px; font-weight:bold; color:#4a5568; margin-bottom:6px;">入力すべき固定条件：</div>
+                <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:#4a5568;">
+                    <div style="display:flex; align-items:center; gap:8px; padding:6px 8px; background:white; border-radius:6px; border:1px solid #edf2f7;">
+                        <span style="background:#fff0f6; color:#eb2f96; padding:2px 8px; border-radius:10px; font-weight:bold; font-size:11px;">有給</span>
+                        <span>有給休暇の取得予定日</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; padding:6px 8px; background:white; border-radius:6px; border:1px solid #edf2f7;">
+                        <span style="background:#f6ffed; color:#52c41a; padding:2px 8px; border-radius:10px; font-weight:bold; font-size:11px;">希望休</span>
+                        <span>スタッフからの希望休申請日</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; padding:6px 8px; background:white; border-radius:6px; border:1px solid #edf2f7;">
+                        <span style="background:#feffe6; color:#d4b106; padding:2px 8px; border-radius:10px; font-weight:bold; font-size:11px;">研修</span>
+                        <span>コンテスト・セミナー・研修日</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; padding:6px 8px; background:white; border-radius:6px; border:1px solid #edf2f7;">
+                        <span style="background:#fff1f0; color:#f5222d; padding:2px 8px; border-radius:10px; font-weight:bold; font-size:11px; border:2px solid #f5222d;">絶対出勤</span>
+                        <span>必ず出勤が必要な日</span>
+                    </div>
+                </div>
+                <div style="margin-top:10px; font-size:11px; color:#a0aec0; line-height:1.6;">
+                    ※ 上部のスタンプを選んでシフト表のセルをクリックすると入力できます
+                </div>
+            </div>
+        </details>
 
-        <!-- STEP 4: シフト自動生成（毎月） -->
+        <!-- STEP 5: シフト自動生成（毎月） -->
         <div style="background:#f0fff4; border:1px solid #9ae6b4; border-radius:10px; padding:12px; margin-bottom:12px;">
             <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#276749; margin-bottom:10px;">
-                <span style="background:#276749; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">4</span>
+                <span style="background:#276749; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">5</span>
                 ⚡ シフト自動生成（毎月）
             </div>
             <button onclick="generateShift()"
@@ -437,10 +434,10 @@
             </button>
         </div>
 
-        <!-- STEP 5: AI調整（毎月） -->
+        <!-- STEP 6: AI調整（毎月） -->
         <div style="background:#f9f7ff; border:1px solid #e9d8fd; border-radius:10px; padding:12px; margin-bottom:12px;">
             <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#553c9a; margin-bottom:10px;">
-                <span style="background:#553c9a; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">5</span>
+                <span style="background:#553c9a; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">6</span>
                 🤖 AI調整（毎月）
             </div>
             <textarea id="aiRequestInput" rows="3" placeholder="スタッフの要望・イレギュラーをここに入力してください&#10;例：村山さん12日希望休、19日コンテストで田中・佐藤中抜け"
@@ -477,10 +474,10 @@
             <div id="aiAlertBox" style="display:none; margin-top:10px; padding:10px; background:#f0f9ff; border-left:4px solid #667eea; border-radius:4px; font-size:12px; color:#2d3748;"></div>
         </div>
 
-        <!-- STEP 6: 手入力による微調整 -->
+        <!-- STEP 7: 手入力による微調整 -->
         <div style="background:#fffaf0; border:1px solid #fbd38d; border-radius:10px; padding:12px; margin-bottom:12px;">
             <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#744210; margin-bottom:10px;">
-                <span style="background:#744210; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">6</span>
+                <span style="background:#744210; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">7</span>
                 ✏️ 手入力による微調整
             </div>
             <div style="font-size:12px; color:#744210; line-height:1.7; background:white; border-radius:6px; padding:10px; border:1px solid #fbd38d;">
@@ -499,10 +496,10 @@
             </button>
         </div>
 
-        <!-- STEP 7: 保存・出力（毎月） -->
+        <!-- STEP 8: 保存・出力（毎月） -->
         <div style="background:#ebf8ff; border:1px solid #bee3f8; border-radius:10px; padding:12px;">
             <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#2b6cb0; margin-bottom:10px;">
-                <span style="background:#2b6cb0; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">7</span>
+                <span style="background:#2b6cb0; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">8</span>
                 💾 保存・出力
             </div>
             <button onclick="saveShiftToGAS()"
