@@ -81,6 +81,10 @@
         .st-train { background: #feffe6; color: #d4b106; }
         .st-paid { background: #fff0f6; color: #eb2f96; }
         .st-must { background: #fff1f0; color: #f5222d; border: 2px solid #f5222d; }
+        .st-half  { background: #e6f7ff; color: #0050b3; border: 1px solid #91d5ff; }
+        .st-out   { background: #fff7e6; color: #874d00; border: 1px solid #ffd591; }
+        .st-bereave { background: #f9f0ff; color: #531dab; border: 1px solid #d3adf7; }
+        .st-special { background: #f0f5ff; color: #1d39c4; border: 1px solid #adc6ff; }
 
         .content-area {
             background: white; padding: 20px; border-radius: 16px;
@@ -265,13 +269,18 @@
 
 <div class="stamp-box">
     <div style="font-size: 12px; font-weight: bold; color: #718096; margin-bottom: 8px;">ペタペタ押したいスタンプを選んでね：</div>
-    <div class="stamp-list">
+    <div class="stamp-list" id="stampList">
         <div class="stamp st-work active" onclick="selectStamp('出', this)">✅ 出勤</div>
         <div class="stamp st-off" onclick="selectStamp('公', this)">❌ 公休</div>
         <div class="stamp st-req" onclick="selectStamp('希', this)">⭐ 希望休</div>
         <div class="stamp st-paid" onclick="selectStamp('有', this)">💴 有給</div>
         <div class="stamp st-train" onclick="selectStamp('研', this)">✨ 研修</div>
         <div class="stamp st-must" onclick="selectStamp('必', this)">🔴 絶対出勤</div>
+        <!-- カスタムスタンプ（店舗設定でONにすると表示） -->
+        <div class="stamp st-half" onclick="selectStamp('半', this)" id="stamp_half" style="display:none;">🕐 半休</div>
+        <div class="stamp st-out" onclick="selectStamp('外', this)" id="stamp_out" style="display:none;">🚗 外勤</div>
+        <div class="stamp st-bereave" onclick="selectStamp('忌', this)" id="stamp_bereave" style="display:none;">🙏 忌引</div>
+        <div class="stamp st-special" onclick="selectStamp('特', this)" id="stamp_special" style="display:none;">📋 特休</div>
     </div>
 </div>
 
@@ -359,10 +368,47 @@
                     <input type="checkbox" id="enableGroupView" onchange="onGroupViewChange()">
                     <span>👥 入社年数グループ別に表示</span>
                 </label>
-                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0;">
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0; border-bottom:1px solid #edf2f7;">
                     <input type="checkbox" id="enableManagerRule" onchange="renderTable()">
                     <span>🚫 店長・副店長の同日休み禁止</span>
                 </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0; border-bottom:1px solid #edf2f7;">
+                    <input type="checkbox" id="enableKibouAsOff" onchange="saveStoreCustomRules()">
+                    <span>📅 希望休がある週は公休を別の週へ移す</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0;">
+                    <input type="checkbox" id="enableRemarksCol" onchange="onRemarksColChange()">
+                    <span>📝 備考欄を表示する（会議・研修予定など）</span>
+                </label>
+
+                <div class="file-label" style="margin-top:10px;">カスタムスタンプ設定</div>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid #edf2f7;">
+                    <input type="checkbox" id="stamp_enable_half" onchange="updateCustomStamps()">
+                    <span>🕐 半休スタンプを使用する</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid #edf2f7;">
+                    <input type="checkbox" id="stamp_enable_out" onchange="updateCustomStamps()">
+                    <span>🚗 外勤スタンプを使用する（セミナー・出張）</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid #edf2f7;">
+                    <input type="checkbox" id="stamp_enable_bereave" onchange="updateCustomStamps()">
+                    <span>🙏 忌引きスタンプを使用する</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid #edf2f7;">
+                    <input type="checkbox" id="stamp_enable_special" onchange="updateCustomStamps()">
+                    <span>📋 特別休暇スタンプを使用する</span>
+                </label>
+
+                <div class="file-label" style="margin-top:10px;">独自ルール（AI調整に自動反映）</div>
+                <textarea id="storeCustomRule" rows="3" placeholder="例：火曜は板垣店長を必ず出勤にする&#10;例：連休は月1回まで&#10;例：Aチームは週1回必ず揃える"
+                    style="width:100%; padding:6px 8px; border:1px solid #cbd5e0; border-radius:4px; font-size:11px; box-sizing:border-box; resize:vertical; font-family:inherit;"
+                    oninput="saveStoreCustomRules()"></textarea>
+                <div style="font-size:10px; color:#a0aec0; margin-top:3px;">ここに書いた内容はAI調整時に自動でプロンプトに追加されます</div>
+
+                <button onclick="saveSettingsToGAS()"
+                    style="width:100%; margin-top:12px; padding:8px; background:#f7fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; cursor:pointer;">
+                    ⚙️ 店舗設定を保存する
+                </button>
 
                 <button onclick="saveSettingsToGAS()"
                     style="width:100%; margin-top:12px; padding:8px; background:#f7fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; cursor:pointer;">
@@ -1112,6 +1158,7 @@
 
         renderStaffRulesPanel();
         renderTable();
+        restoreStoreCustomRules();
 
         // GASから設定・シフトデータを非同期読込
         (async () => {
@@ -1986,6 +2033,78 @@
     }
 
     // ─────────────────────────────────────────────────────────────
+    // 🎨 カスタムスタンプ管理
+    // ─────────────────────────────────────────────────────────────
+    function updateCustomStamps() {
+        const map = {
+            half:    "stamp_half",
+            out:     "stamp_out",
+            bereave: "stamp_bereave",
+            special: "stamp_special",
+        };
+        Object.entries(map).forEach(([key, stampId]) => {
+            const checkbox = document.getElementById(`stamp_enable_${key}`);
+            const stampEl  = document.getElementById(stampId);
+            if (checkbox && stampEl) {
+                stampEl.style.display = checkbox.checked ? "" : "none";
+            }
+        });
+        saveStoreCustomRules();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 📝 備考欄の表示切り替え
+    // ─────────────────────────────────────────────────────────────
+    function onRemarksColChange() {
+        renderTable();
+        saveStoreCustomRules();
+    }
+
+    function isRemarksEnabled() {
+        const el = document.getElementById("enableRemarksCol");
+        return el ? el.checked : false;
+    }
+
+    function isKibouAsOffEnabled() {
+        const el = document.getElementById("enableKibouAsOff");
+        return el ? el.checked : false;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 💾 カスタムルールをstoreSettingsに保存
+    // ─────────────────────────────────────────────────────────────
+    function saveStoreCustomRules() {
+        if (!currentStore) return;
+        if (!storeSettings[currentStore.id]) storeSettings[currentStore.id] = {};
+        storeSettings[currentStore.id].customRule      = document.getElementById("storeCustomRule")?.value || "";
+        storeSettings[currentStore.id].kibouAsOff      = document.getElementById("enableKibouAsOff")?.checked || false;
+        storeSettings[currentStore.id].remarksCol      = document.getElementById("enableRemarksCol")?.checked || false;
+        storeSettings[currentStore.id].stampHalf       = document.getElementById("stamp_enable_half")?.checked || false;
+        storeSettings[currentStore.id].stampOut        = document.getElementById("stamp_enable_out")?.checked || false;
+        storeSettings[currentStore.id].stampBereave    = document.getElementById("stamp_enable_bereave")?.checked || false;
+        storeSettings[currentStore.id].stampSpecial    = document.getElementById("stamp_enable_special")?.checked || false;
+    }
+
+    // カスタムルールをUIに復元
+    function restoreStoreCustomRules() {
+        if (!currentStore) return;
+        const s = storeSettings[currentStore.id] || {};
+
+        const setCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
+        const setVal   = (id, val) => { const el = document.getElementById(id); if (el) el.value  = val || ""; };
+
+        setCheck("enableKibouAsOff",    s.kibouAsOff);
+        setCheck("enableRemarksCol",    s.remarksCol);
+        setCheck("stamp_enable_half",   s.stampHalf);
+        setCheck("stamp_enable_out",    s.stampOut);
+        setCheck("stamp_enable_bereave",s.stampBereave);
+        setCheck("stamp_enable_special",s.stampSpecial);
+        setVal("storeCustomRule",       s.customRule);
+
+        updateCustomStamps();
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // 👥 グループ分け表示の切替
     // ─────────────────────────────────────────────────────────────
     function onGroupViewChange() {
@@ -2440,6 +2559,10 @@ ${JSON.stringify(getCurrentCellStates(), null, 2)}
 
 【スタッフからの要望】
 ${request}
+${(() => {
+    const customRule = currentStore ? (storeSettings[currentStore.id] || {}).customRule || "" : "";
+    return customRule ? `\n【この店舗の独自ルール】\n${customRule}` : "";
+})()}
 
 上記の禁止事項を守りながら要望を最大限反映して changes の JSON配列を返してください。`;
     }
@@ -2620,6 +2743,13 @@ ${request}
             const extraRules = {
                 groupView:   document.getElementById("enableGroupView")?.checked || false,
                 managerRule: document.getElementById("enableManagerRule")?.checked || false,
+                kibouAsOff:  document.getElementById("enableKibouAsOff")?.checked || false,
+                remarksCol:  document.getElementById("enableRemarksCol")?.checked || false,
+                stampHalf:   document.getElementById("stamp_enable_half")?.checked || false,
+                stampOut:    document.getElementById("stamp_enable_out")?.checked || false,
+                stampBereave:document.getElementById("stamp_enable_bereave")?.checked || false,
+                stampSpecial:document.getElementById("stamp_enable_special")?.checked || false,
+                customRule:  document.getElementById("storeCustomRule")?.value || "",
             };
             await callGAS({
                 action:        "saveSettings",
@@ -2688,6 +2818,8 @@ ${request}
                 if (gv) gv.checked = s.extraRules.groupView   || false;
                 if (mr) mr.checked = s.extraRules.managerRule || false;
             }
+            // カスタムルール復元
+            restoreStoreCustomRules();
             return true;
         } catch (err) {
             console.error("[loadSettings]", err);
