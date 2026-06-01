@@ -1955,73 +1955,6 @@
         }
       });
 
-      // ─── Phase 3.6: 連休回数制限（店舗設定でONの場合） ───
-      const consecLimitEnabled = document.getElementById("enableConsecLimit")?.checked || false;
-      const consecLimitMax     = parseInt(document.getElementById("consecLimitCount")?.value || "1");
-
-      if (consecLimitEnabled) {
-        currentStaffs.forEach(staff => {
-          if (staff.isReceptionPart) return;
-
-          // 連休（2日以上連続の公休）を検出
-          const offDays = new Set();
-          for (let d = 1; d <= dim; d++) {
-            const v = cs[`${staff.id}-${d}`];
-            if (v === "公" || v === "希" || v === "有") offDays.add(d);
-          }
-
-          // 連休グループを検出
-          let consecGroups = [];
-          let groupStart = null;
-          for (let d = 1; d <= dim + 1; d++) {
-            if (offDays.has(d)) {
-              if (groupStart === null) groupStart = d;
-            } else {
-              if (groupStart !== null) {
-                const len = d - groupStart;
-                if (len >= 2) consecGroups.push({ start: groupStart, end: d - 1, len });
-                groupStart = null;
-              }
-            }
-          }
-
-          // 連休がlimitMaxを超えている場合、超過分の連休を解除
-          if (consecGroups.length > consecLimitMax) {
-            // 後ろの連休から解除（最初の連休を優先的に残す）
-            const toRemove = consecGroups.slice(consecLimitMax);
-            toRemove.forEach(grp => {
-              // 連休の2日目以降を公休→出勤に変換（1日休みは残す）
-              for (let d = grp.start + 1; d <= grp.end; d++) {
-                const v = cs[`${staff.id}-${d}`];
-                if (v === "公") {
-                  // 代わりの公休日を別の週で探す
-                  let replaced = false;
-                  for (let dd = 1; dd <= dim; dd++) {
-                    const ddow = new Date(currentYear, currentMonth, dd).getDay();
-                    if (ddow === 0 || ddow === 6 || holidays.includes(dd)) continue;
-                    if (offDays.has(dd)) continue;
-                    const v2 = cs[`${staff.id}-${dd}`];
-                    if (!v2 || v2 === "出" || v2 === "時") {
-                      // 連休にならない日を選ぶ
-                      const prevOff = offDays.has(dd - 1);
-                      const nextOff = offDays.has(dd + 1);
-                      if (!prevOff && !nextOff) {
-                        cs[`${staff.id}-${dd}`] = "公";
-                        offDays.add(dd);
-                        replaced = true;
-                        break;
-                      }
-                    }
-                  }
-                  delete cs[`${staff.id}-${d}`];
-                  offDays.delete(d);
-                }
-              }
-            });
-          }
-        });
-      }
-
       // ─── Phase 4: 残りの当月日を勤務スタンプで埋める ───
       currentStaffs.forEach(staff => {
         const cfg = liveStaffConfig[staff.id] || {};
@@ -2033,6 +1966,86 @@
           if (!v || v === "出" || v === "時") cs[`${staff.id}-${d}`] = workStamp;
         }
       });
+
+      // ─── Phase 4.5: 連休回数制限（Phase4後に実行） ───
+      const consecLimitEnabled = document.getElementById("enableConsecLimit")?.checked || false;
+      const consecLimitMax     = parseInt(document.getElementById("consecLimitCount")?.value || "1");
+
+      if (consecLimitEnabled) {
+        currentStaffs.forEach(staff => {
+          if (staff.isReceptionPart) return;
+          const cfg = liveStaffConfig[staff.id] || {};
+          const workStamp = (cfg.workType || "").includes("時短") ? "時" : "出";
+
+          // 連続する休日グループを検出（土日を挟む場合も含む）
+          function getOffGroups() {
+            const groups = [];
+            let grpStart = null;
+            for (let d = 1; d <= dim + 1; d++) {
+              const v = d <= dim ? cs[`${staff.id}-${d}`] : null;
+              const isOff = v === "公" || v === "希" || v === "有";
+              if (isOff) {
+                if (grpStart === null) grpStart = d;
+              } else {
+                if (grpStart !== null) {
+                  if (d - grpStart >= 2) groups.push({ start: grpStart, end: d - 1 });
+                  grpStart = null;
+                }
+              }
+            }
+            return groups;
+          }
+
+          let groups = getOffGroups();
+          let safetyCount = 0;
+
+          while (groups.length > consecLimitMax && safetyCount++ < 30) {
+            // 最後の連休グループを分割
+            const grp = groups[groups.length - 1];
+            // 連休の中日を出勤に戻す
+            const midDay = Math.floor((grp.start + grp.end) / 2);
+            let moved = false;
+            // midDayかその近くで公休を探して出勤に変換
+            for (let offset = 0; offset <= grp.end - grp.start; offset++) {
+              for (const sign of [0, 1, -1]) {
+                const d = midDay + (offset * sign);
+                if (d < grp.start || d > grp.end) continue;
+                const v = cs[`${staff.id}-${d}`];
+                if (v !== "公") continue;
+                const dow = new Date(currentYear, currentMonth, d).getDay();
+                if (dow === 0 || dow === 6 || holidays.includes(d)) continue;
+
+                // 別の孤立した日に公休を移す
+                let replacedDay = null;
+                for (let dd = 1; dd <= dim; dd++) {
+                  const ddow = new Date(currentYear, currentMonth, dd).getDay();
+                  if (ddow === 0 || ddow === 6 || holidays.includes(dd)) continue;
+                  const vv = cs[`${staff.id}-${dd}`];
+                  if (vv !== "出" && vv !== "時") continue;
+                  // 前後が休みでない日（孤立した出勤日）
+                  const prevV = cs[`${staff.id}-${dd-1}`];
+                  const nextV = cs[`${staff.id}-${dd+1}`];
+                  const prevOff = prevV === "公" || prevV === "希" || prevV === "有";
+                  const nextOff = nextV === "公" || nextV === "希" || nextV === "有";
+                  if (!prevOff && !nextOff && dd !== d) {
+                    replacedDay = dd;
+                    break;
+                  }
+                }
+
+                // 移動実行
+                cs[`${staff.id}-${d}`] = workStamp;
+                if (replacedDay !== null) cs[`${staff.id}-${replacedDay}`] = "公";
+                moved = true;
+                break;
+              }
+              if (moved) break;
+            }
+            if (!moved) break;
+            groups = getOffGroups();
+          }
+        });
+      }
 
       // ─── 検証 ───
       const violations = [];
