@@ -1972,19 +1972,31 @@
       const consecLimitMax     = parseInt(document.getElementById("consecLimitCount")?.value || "1");
 
       if (consecLimitEnabled) {
+        const isTuesdayClosed = currentStore && (currentStore.rule.includes("火曜") || currentStore.rule.includes("火曜日"));
+
+        // ある日が「休み扱い」かどうか（公休・希望休・有給・土日・定休日・祝日）
+        function isRestDay(staffId, d) {
+            if (d < 1 || d > dim) return false;
+            const dow = new Date(currentYear, currentMonth, d).getDay();
+            if (dow === 0 || dow === 6) return true; // 土日
+            if (holidays.includes(d)) return true;   // 祝日
+            if (isTuesdayClosed && dow === 2) return true; // 火曜定休
+            const v = cs[`${staffId}-${d}`];
+            return v === "公" || v === "希" || v === "有";
+        }
+
         currentStaffs.forEach(staff => {
           if (staff.isReceptionPart) return;
           const cfg = liveStaffConfig[staff.id] || {};
           const workStamp = (cfg.workType || "").includes("時短") ? "時" : "出";
 
-          // 連続する休日グループを検出（土日を挟む場合も含む）
-          function getOffGroups() {
+          // 連休グループを検出（土日・定休日含む）
+          function getConsecGroups() {
             const groups = [];
             let grpStart = null;
             for (let d = 1; d <= dim + 1; d++) {
-              const v = d <= dim ? cs[`${staff.id}-${d}`] : null;
-              const isOff = v === "公" || v === "希" || v === "有";
-              if (isOff) {
+              const isRest = isRestDay(staff.id, d);
+              if (isRest && d <= dim) {
                 if (grpStart === null) grpStart = d;
               } else {
                 if (grpStart !== null) {
@@ -1996,53 +2008,45 @@
             return groups;
           }
 
-          let groups = getOffGroups();
+          let groups = getConsecGroups();
           let safetyCount = 0;
 
           while (groups.length > consecLimitMax && safetyCount++ < 30) {
             // 最後の連休グループを分割
             const grp = groups[groups.length - 1];
-            // 連休の中日を出勤に戻す
-            const midDay = Math.floor((grp.start + grp.end) / 2);
+
+            // 連休内で「公」スタンプが入っている平日を探して出勤に変換
             let moved = false;
-            // midDayかその近くで公休を探して出勤に変換
-            for (let offset = 0; offset <= grp.end - grp.start; offset++) {
-              for (const sign of [0, 1, -1]) {
-                const d = midDay + (offset * sign);
-                if (d < grp.start || d > grp.end) continue;
-                const v = cs[`${staff.id}-${d}`];
-                if (v !== "公") continue;
-                const dow = new Date(currentYear, currentMonth, d).getDay();
-                if (dow === 0 || dow === 6 || holidays.includes(d)) continue;
+            for (let d = grp.start; d <= grp.end; d++) {
+              const dow = new Date(currentYear, currentMonth, d).getDay();
+              if (dow === 0 || dow === 6) continue; // 土日はスキップ
+              if (holidays.includes(d)) continue;   // 祝日はスキップ
+              if (isTuesdayClosed && dow === 2) continue; // 定休日はスキップ
+              const v = cs[`${staff.id}-${d}`];
+              if (v !== "公") continue;
 
-                // 別の孤立した日に公休を移す
-                let replacedDay = null;
-                for (let dd = 1; dd <= dim; dd++) {
-                  const ddow = new Date(currentYear, currentMonth, dd).getDay();
-                  if (ddow === 0 || ddow === 6 || holidays.includes(dd)) continue;
-                  const vv = cs[`${staff.id}-${dd}`];
-                  if (vv !== "出" && vv !== "時") continue;
-                  // 前後が休みでない日（孤立した出勤日）
-                  const prevV = cs[`${staff.id}-${dd-1}`];
-                  const nextV = cs[`${staff.id}-${dd+1}`];
-                  const prevOff = prevV === "公" || prevV === "希" || prevV === "有";
-                  const nextOff = nextV === "公" || nextV === "希" || nextV === "有";
-                  if (!prevOff && !nextOff && dd !== d) {
-                    replacedDay = dd;
-                    break;
-                  }
+              // 別の孤立した日に公休を移す
+              let replacedDay = null;
+              for (let dd = 1; dd <= dim; dd++) {
+                const ddow = new Date(currentYear, currentMonth, dd).getDay();
+                if (ddow === 0 || ddow === 6 || holidays.includes(dd)) continue;
+                if (isTuesdayClosed && ddow === 2) continue;
+                const vv = cs[`${staff.id}-${dd}`];
+                if (vv !== "出" && vv !== "時") continue;
+                // 前後が休みでない日（連休にならない日）
+                if (!isRestDay(staff.id, dd - 1) && !isRestDay(staff.id, dd + 1)) {
+                  replacedDay = dd;
+                  break;
                 }
-
-                // 移動実行
-                cs[`${staff.id}-${d}`] = workStamp;
-                if (replacedDay !== null) cs[`${staff.id}-${replacedDay}`] = "公";
-                moved = true;
-                break;
               }
-              if (moved) break;
+
+              cs[`${staff.id}-${d}`] = workStamp;
+              if (replacedDay !== null) cs[`${staff.id}-${replacedDay}`] = "公";
+              moved = true;
+              break;
             }
             if (!moved) break;
-            groups = getOffGroups();
+            groups = getConsecGroups();
           }
         });
       }
