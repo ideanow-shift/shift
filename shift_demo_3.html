@@ -376,10 +376,18 @@
                     <input type="checkbox" id="enableKibouAsOff" onchange="saveStoreCustomRules()">
                     <span>📅 希望休がある週は公休を別の週へ移す</span>
                 </label>
-                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0;">
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0; border-bottom:1px solid #edf2f7;">
                     <input type="checkbox" id="enableRemarksCol" onchange="onRemarksColChange()">
                     <span>📝 備考欄を表示する（会議・研修予定など）</span>
                 </label>
+                <div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid #edf2f7;">
+                    <input type="checkbox" id="enableConsecLimit" onchange="saveStoreCustomRules()" style="flex-shrink:0;">
+                    <span style="font-size:12px; flex:1;">🌙 連休は月</span>
+                    <input type="number" id="consecLimitCount" min="1" max="5" value="1"
+                        style="width:44px; padding:3px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; text-align:center;"
+                        oninput="saveStoreCustomRules()">
+                    <span style="font-size:12px;">回まで</span>
+                </div>
 
                 <div class="file-label" style="margin-top:10px;">カスタムスタンプ設定</div>
                 <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid #edf2f7;">
@@ -1947,6 +1955,73 @@
         }
       });
 
+      // ─── Phase 3.6: 連休回数制限（店舗設定でONの場合） ───
+      const consecLimitEnabled = document.getElementById("enableConsecLimit")?.checked || false;
+      const consecLimitMax     = parseInt(document.getElementById("consecLimitCount")?.value || "1");
+
+      if (consecLimitEnabled) {
+        currentStaffs.forEach(staff => {
+          if (staff.isReceptionPart) return;
+
+          // 連休（2日以上連続の公休）を検出
+          const offDays = new Set();
+          for (let d = 1; d <= dim; d++) {
+            const v = cs[`${staff.id}-${d}`];
+            if (v === "公" || v === "希" || v === "有") offDays.add(d);
+          }
+
+          // 連休グループを検出
+          let consecGroups = [];
+          let groupStart = null;
+          for (let d = 1; d <= dim + 1; d++) {
+            if (offDays.has(d)) {
+              if (groupStart === null) groupStart = d;
+            } else {
+              if (groupStart !== null) {
+                const len = d - groupStart;
+                if (len >= 2) consecGroups.push({ start: groupStart, end: d - 1, len });
+                groupStart = null;
+              }
+            }
+          }
+
+          // 連休がlimitMaxを超えている場合、超過分の連休を解除
+          if (consecGroups.length > consecLimitMax) {
+            // 後ろの連休から解除（最初の連休を優先的に残す）
+            const toRemove = consecGroups.slice(consecLimitMax);
+            toRemove.forEach(grp => {
+              // 連休の2日目以降を公休→出勤に変換（1日休みは残す）
+              for (let d = grp.start + 1; d <= grp.end; d++) {
+                const v = cs[`${staff.id}-${d}`];
+                if (v === "公") {
+                  // 代わりの公休日を別の週で探す
+                  let replaced = false;
+                  for (let dd = 1; dd <= dim; dd++) {
+                    const ddow = new Date(currentYear, currentMonth, dd).getDay();
+                    if (ddow === 0 || ddow === 6 || holidays.includes(dd)) continue;
+                    if (offDays.has(dd)) continue;
+                    const v2 = cs[`${staff.id}-${dd}`];
+                    if (!v2 || v2 === "出" || v2 === "時") {
+                      // 連休にならない日を選ぶ
+                      const prevOff = offDays.has(dd - 1);
+                      const nextOff = offDays.has(dd + 1);
+                      if (!prevOff && !nextOff) {
+                        cs[`${staff.id}-${dd}`] = "公";
+                        offDays.add(dd);
+                        replaced = true;
+                        break;
+                      }
+                    }
+                  }
+                  delete cs[`${staff.id}-${d}`];
+                  offDays.delete(d);
+                }
+              }
+            });
+          }
+        });
+      }
+
       // ─── Phase 4: 残りの当月日を勤務スタンプで埋める ───
       currentStaffs.forEach(staff => {
         const cfg = liveStaffConfig[staff.id] || {};
@@ -2089,6 +2164,8 @@
         storeSettings[currentStore.id].customRule      = document.getElementById("storeCustomRule")?.value || "";
         storeSettings[currentStore.id].kibouAsOff      = document.getElementById("enableKibouAsOff")?.checked || false;
         storeSettings[currentStore.id].remarksCol      = document.getElementById("enableRemarksCol")?.checked || false;
+        storeSettings[currentStore.id].consecLimit     = document.getElementById("enableConsecLimit")?.checked || false;
+        storeSettings[currentStore.id].consecLimitCount= parseInt(document.getElementById("consecLimitCount")?.value || "1");
         storeSettings[currentStore.id].stampHalf       = document.getElementById("stamp_enable_half")?.checked || false;
         storeSettings[currentStore.id].stampOut        = document.getElementById("stamp_enable_out")?.checked || false;
         storeSettings[currentStore.id].stampBereave    = document.getElementById("stamp_enable_bereave")?.checked || false;
@@ -2105,6 +2182,9 @@
 
         setCheck("enableKibouAsOff",    s.kibouAsOff);
         setCheck("enableRemarksCol",    s.remarksCol);
+        setCheck("enableConsecLimit",   s.consecLimit);
+        const consecEl = document.getElementById("consecLimitCount");
+        if (consecEl) consecEl.value = s.consecLimitCount ?? 1;
         setCheck("stamp_enable_half",   s.stampHalf);
         setCheck("stamp_enable_out",    s.stampOut);
         setCheck("stamp_enable_bereave",s.stampBereave);
