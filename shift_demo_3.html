@@ -508,25 +508,8 @@
                 <span style="background:#553c9a; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">6</span>
                 🤖 AI調整（毎月）
             </div>
-
-            <!-- APIキー設定UI -->
-            <div style="margin-bottom:10px; padding:8px; background:white; border-radius:6px; border:1px solid #e2e8f0;">
-                <div style="font-size:11px; font-weight:bold; color:#553c9a; margin-bottom:6px;">🔑 Gemini APIキー</div>
-                <div id="apiKeyStatus" style="font-size:11px; margin-bottom:6px;"></div>
-                <div id="apiKeyInputArea" style="display:none;">
-                    <input type="password" id="apiKeyInput" placeholder="AIza... 形式で入力"
-                        style="width:100%; padding:6px 8px; border:1px solid #d6bcfa; border-radius:4px; font-size:12px; box-sizing:border-box; margin-bottom:6px;">
-                    <div style="display:flex; gap:6px;">
-                        <button onclick="saveApiKey()"
-                            style="flex:1; padding:6px; background:#553c9a; color:white; border:none; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;">
-                            💾 保存
-                        </button>
-                        <button onclick="cancelApiKey()"
-                            style="flex:1; padding:6px; background:#f7fafc; border:1px solid #e2e8f0; border-radius:4px; font-size:11px; cursor:pointer;">
-                            キャンセル
-                        </button>
-                    </div>
-                </div>
+            <div style="font-size:11px; color:#553c9a; background:white; padding:6px 8px; border-radius:4px; border:1px solid #e9d8fd; margin-bottom:8px;">
+                🔒 APIキーはサーバー側で安全に管理されています
             </div>
 
             <textarea id="aiRequestInput" rows="3" placeholder="スタッフの要望・イレギュラーをここに入力してください&#10;例：村山さん12日希望休、19日コンテストで田中・佐藤中抜け"
@@ -2769,17 +2752,6 @@ ${(() => {
             return;
         }
 
-        // APIキー取得（なければ設定UIを表示）
-        let apiKey = localStorage.getItem("gemini_api_key");
-        if (!apiKey) {
-            alertBox.style.display = "block";
-            alertBox.innerHTML = "⚠️ Gemini APIキーが設定されていません。上の🔑Gemini APIキー欄から設定してください。";
-            btn.disabled = false;
-            btn.textContent = originalLabel;
-            showApiKeyInput();
-            return;
-        }
-
         const restrictions = {
             noSixConsec:     document.getElementById("restrictSixConsec").checked,
             respectMinStaff: document.getElementById("restrictMinStaff").checked,
@@ -2792,39 +2764,19 @@ ${(() => {
         btn.disabled = true;
         btn.textContent = "⏳ AI調整中...";
         alertBox.style.display = "block";
-        alertBox.innerHTML = "⏳ AIにシフト調整を依頼しています...";
+        alertBox.innerHTML = "⏳ AIにシフト調整を依頼しています（GAS経由）...";
 
         try {
-            const res = await fetch(
-                `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
-                {
-                    method: "POST",
-                    headers: { "content-type": "application/json" },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: buildAISystemMessage(restrictions) +
-                                      "\n\n" +
-                                      buildAIUserMessage(request, restrictions)
-                            }]
-                        }],
-                        generationConfig: { maxOutputTokens: 2000 }
-                    }),
-                }
-            );
+            // GAS経由でGemini APIを呼び出す（APIキーはGASのスクリプトプロパティで管理）
+            const prompt = buildAISystemMessage(restrictions) + "\n\n" + buildAIUserMessage(request, restrictions);
+            const data = await callGAS({
+                action: "aiAdjust",
+                prompt: prompt,
+            });
 
-            if (!res.ok) {
-                const errText = await res.text();
-                throw new Error(`HTTP ${res.status}: ${errText}`);
-            }
+            if (!data.ok) throw new Error(data.error || "AI調整に失敗しました");
 
-            const data = await res.json();
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-            // レスポンスから JSON 部分を抽出
-            const jsonMatch = text.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) throw new Error("レスポンスにJSONが見つかりませんでした");
-            const result = JSON.parse(jsonMatch[0]);
+            const result = data.result;
 
             // changes を getCurrentCellStates() に適用
             let applied = 0;
@@ -2840,13 +2792,11 @@ ${(() => {
             recomputeFairness();
             renderTable();
 
-            // alerts と summary を表示
             const alertLines = (result.alerts || []).map(a => `• ${a}`);
             const summary = result.summary || `${applied}件の変更を適用しました`;
             let html = `✅ <b>${summary}</b>`;
             if (alertLines.length > 0) html += "<br><br>" + alertLines.join("<br>");
 
-            // 6連勤チェック
             if (restrictions.noSixConsec) {
                 const issues = checkConsecutiveWork(6);
                 if (issues.length > 0) {
@@ -2878,26 +2828,15 @@ ${(() => {
     }
 
     // シフトデータをGASに保存
-    // ─── iframe方式でGASを呼び出す（CORS完全回避） ───
-    function callGAS(params) {
-        return new Promise((resolve) => {
-            const query = Object.entries(params)
-                .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-                .join("&");
-            const url = `${GAS_API_URL}?${query}`;
-
-            const iframe = document.createElement("iframe");
-            iframe.style.display = "none";
-            iframe.src = url;
-            document.body.appendChild(iframe);
-
-            // iframeは応答を読めないが、リクエストは届く
-            // 3秒後に成功とみなしてiframeを削除
-            setTimeout(() => {
-                document.body.removeChild(iframe);
-                resolve({ ok: true });
-            }, 3000);
+    // ─── fetch POST方式でGASを呼び出す（redirect:followでCORS解決） ───
+    async function callGAS(payload) {
+        const res  = await fetch(GAS_API_URL, {
+            method:   "POST",
+            mode:     "cors",
+            redirect: "follow",
+            body:     JSON.stringify(payload),
         });
+        return await res.json();
     }
 
     async function saveShiftToGAS() {
@@ -2905,18 +2844,22 @@ ${(() => {
         setSaveStatus("💾 保存中...", "info");
         try {
             const cells = getCurrentCellStates();
-            await callGAS({
+            const data  = await callGAS({
                 action:    "saveShift",
                 storeId:   currentStore.id,
                 storeName: currentStore.name,
                 year:      currentYear,
                 month:     currentMonth + 1,
-                cells:     JSON.stringify(cells)
+                cells:     cells
             });
-            setSaveStatus(`✅ 保存完了 ${new Date().toLocaleTimeString("ja-JP")}`, "ok");
+            if (data.ok) {
+                setSaveStatus(`✅ 保存完了 ${new Date().toLocaleTimeString("ja-JP")}`, "ok");
+            } else {
+                setSaveStatus(`❌ 保存失敗: ${data.error}`, "err");
+            }
         } catch (err) {
-            // iframeは応答を読めないためタイムアウトは成功とみなす
-            setSaveStatus(`✅ 保存完了 ${new Date().toLocaleTimeString("ja-JP")}`, "ok");
+            console.error("[saveShift]", err);
+            setSaveStatus("❌ 保存失敗: " + err.message, "err");
         }
     }
 
@@ -2939,19 +2882,23 @@ ${(() => {
                 noHolidayOnSun: document.getElementById("noHolidayOnSun")?.checked ?? true,
                 noHolidayOnHol: document.getElementById("noHolidayOnHol")?.checked ?? true,
             };
-            await callGAS({
+            const data = await callGAS({
                 action:        "saveSettings",
                 storeId:       currentStore.id,
                 storeName:     currentStore.name,
-                minStaff:      JSON.stringify(storeMinStaff[currentStore.id] || {}),
-                storeSettings: JSON.stringify(storeSettings[currentStore.id] || {}),
-                staffConfig:   JSON.stringify(liveStaffConfig),
-                extraRules:    JSON.stringify(extraRules)
+                minStaff:      storeMinStaff[currentStore.id] || {},
+                storeSettings: storeSettings[currentStore.id] || {},
+                staffConfig:   liveStaffConfig,
+                extraRules:    extraRules
             });
-            setSaveStatus(`✅ 設定保存完了 ${new Date().toLocaleTimeString("ja-JP")}`, "ok");
+            if (data.ok) {
+                setSaveStatus(`✅ 設定保存完了 ${new Date().toLocaleTimeString("ja-JP")}`, "ok");
+            } else {
+                setSaveStatus(`❌ 設定保存失敗: ${data.error}`, "err");
+            }
         } catch (err) {
-            // iframeは応答を読めないためタイムアウトは成功とみなす
-            setSaveStatus(`✅ 設定保存完了 ${new Date().toLocaleTimeString("ja-JP")}`, "ok");
+            console.error("[saveSettings]", err);
+            setSaveStatus("❌ 設定保存失敗: " + err.message, "err");
         }
     }
 
