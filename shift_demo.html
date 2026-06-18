@@ -1,0 +1,3161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>イディア・ノブ・シフト自動生成＆調製ダッシュボード</title>
+    <style>
+        :root {
+            --bg-primary: #FFFFFF;
+            --text-primary: #1F1F1F;
+            --text-secondary: #767676;
+            --color-bassa: #E8B4B8;
+            --color-bassa-hover: #D9959F;
+            --color-alert: #FF3B30;
+            --color-success: #34C759;
+            --border-light: #E5E5E5;
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 12px;
+            --spacing-lg: 16px;
+            --spacing-xl: 24px;
+            --radius-md: 8px;
+            /* 後方互換 */
+            --bg-color: #FFFFFF;
+            --card-bg: #FFFFFF;
+            --primary: #E8B4B8;
+            --primary-light: #FCF0F1;
+            --accent: #E8B4B8;
+            --accent-light: #FCF0F1;
+            --text-main: #1F1F1F;
+            --border: #E5E5E5;
+            --holiday-bg: #FFF5F5;
+            --holiday-text: #FF3B30;
+            --fixed-holiday-bg: #F9F9F9;
+            --fixed-holiday-text: #767676;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans JP', sans-serif;
+            background: #F5F5F5;
+            color: var(--text-primary);
+            margin: 0;
+            padding: var(--spacing-lg);
+        }
+
+        /* ── ヘッダー ── */
+        .header {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md) var(--spacing-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        .header h1::before {
+            content: '';
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            background: var(--color-bassa);
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+        .header p { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+        /* ── レイアウト ── */
+        .main-layout { display: grid; grid-template-columns: 320px 1fr; gap: var(--spacing-lg); }
+
+        /* ── サイドバー ── */
+        .sidebar {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-lg);
+            height: fit-content;
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: var(--spacing-md);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        /* ── トグルグループ ── */
+        .toggle-group {
+            background: #F9F9F9;
+            padding: 4px;
+            border-radius: var(--radius-md);
+            display: flex;
+            margin-bottom: var(--spacing-md);
+            border: 1px solid var(--border-light);
+        }
+        .toggle-btn {
+            flex: 1;
+            text-align: center;
+            padding: var(--spacing-sm);
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .toggle-btn.active {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-light);
+        }
+        .toggle-btn.active.primary { color: var(--color-bassa-hover); }
+        .toggle-btn.active.accent  { color: var(--color-bassa-hover); }
+
+        /* ── スタンプエリア ── */
+        .stamp-box {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+        .stamp-list { display: flex; gap: var(--spacing-sm); flex-wrap: wrap; }
+        .stamp {
+            padding: 6px var(--spacing-md);
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid var(--border-light);
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-primary);
+            background: #F9F9F9;
+        }
+        .stamp.active {
+            border-color: var(--color-bassa);
+            background: #FCF0F1;
+            color: var(--color-bassa-hover);
+        }
+
+        /* スタンプ色（視認性のため維持） */
+        .st-work    { background: #EFF9FF; color: #0066CC; border-color: #BDE0FF; }
+        .st-off     { background: #FFF5F5; color: #CC3300; border-color: #FFBFBF; }
+        .st-req     { background: #F0FFF5; color: #006633; border-color: #B3EFCC; }
+        .st-shor    { background: #F9F0FF; color: #6600CC; border-color: #DDB3FF; }
+        .st-meet    { background: #FFF8EF; color: #CC6600; border-color: #FFD9B3; }
+        .st-train   { background: #FFFDE0; color: #997700; border-color: #FFE966; }
+        .st-paid    { background: #FFF0F9; color: #CC0066; border-color: #FFB3DD; }
+        .st-must    { background: #FFF0F0; color: #CC0000; border-color: #FF3B30; }
+        .st-half    { background: #EFF9FF; color: #003399; border-color: #99CCFF; }
+        .st-out     { background: #FFF8EF; color: #663300; border-color: #FFCC99; }
+        .st-bereave { background: #F9F0FF; color: #440099; border-color: #CC99FF; }
+        .st-special { background: #F0F5FF; color: #0033AA; border-color: #99BBFF; }
+
+        .stamp.active.st-work    { border-color: #0066CC; }
+        .stamp.active.st-off     { border-color: #CC3300; }
+        .stamp.active.st-req     { border-color: #006633; }
+        .stamp.active.st-must    { border-color: #CC0000; }
+
+        /* ── コンテンツエリア ── */
+        .content-area {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-lg);
+        }
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: center; }
+        th, td {
+            padding: var(--spacing-sm);
+            border: 1px solid var(--border-light);
+            font-size: 12px;
+            min-width: 36px;
+            color: var(--text-primary);
+        }
+        th {
+            background: #F9F9F9;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .th-sat { color: #0066CC; background: #EFF9FF; }
+        .th-sun { color: #CC3300; background: #FFF5F5; }
+        .th-hol { color: #CC6600; background: #FFF8EF; }
+
+        .staff-info-cell {
+            text-align: left;
+            min-width: 240px;
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--bg-primary);
+        }
+        .staff-profile { display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: 4px; }
+        .staff-avatar {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            background: var(--color-bassa);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; color: white; font-weight: 500;
+            flex-shrink: 0;
+        }
+        .staff-name { font-weight: 500; font-size: 13px; color: var(--text-primary); }
+        .staff-controls { display: flex; gap: 4px; margin-top: 4px; }
+        .staff-select {
+            font-size: 11px; padding: 2px 6px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-light);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        /* ── フォーム系 ── */
+        .file-input-group { margin-bottom: var(--spacing-md); }
+        .file-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        .file-btn {
+            font-size: 13px; width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px dashed var(--border-light);
+            border-radius: var(--radius-md);
+            background: #F9F9F9;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-family: inherit;
+            text-align: left;
+        }
+        .file-btn:hover { border-color: var(--color-bassa); background: #FCF0F1; }
+
+        .status-badge {
+            font-size: 11px; padding: 2px 8px;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            display: inline-block;
+            margin-top: 4px;
+        }
+        .status-ok      { background: #F0FFF5; color: #006633; border: 1px solid #B3EFCC; }
+        .status-none    { background: #F9F9F9; color: var(--text-secondary); border: 1px solid var(--border-light); }
+
+        /* ── アラート ── */
+        .alert-area {
+            margin-top: var(--spacing-md);
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: #FFFAF0;
+            border: 1px solid var(--border-light);
+            border-left: 3px solid var(--color-bassa);
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            display: none;
+            color: var(--text-primary);
+        }
+
+        /* ── ボタン ── */
+        .btn {
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+            transition: background 0.15s;
+        }
+        .btn-primary {
+            background: var(--color-bassa);
+            color: #FFFFFF;
+        }
+        .btn-primary:hover { background: var(--color-bassa-hover); }
+        .btn-secondary {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-light);
+        }
+        .btn-secondary:hover { background: #F0F0F0; }
+
+        /* ── モバイル用 ── */
+        .mobile-sidebar-toggle { display: none; }
+        .mobile-staff-toggle   { display: none; }
+
+        /* ── タブレット ── */
+        @media (min-width: 768px) and (max-width: 1023px) {
+            body { padding: 14px; }
+            .main-layout { grid-template-columns: 1fr; gap: 14px; }
+            .sidebar { max-height: 420px; overflow-y: auto; }
+            .header h1 { font-size: 15px; }
+        }
+
+        /* ── スマホ ── */
+        @media (max-width: 767px) {
+            body { padding: var(--spacing-sm); }
+            .header { padding: var(--spacing-md); margin-bottom: var(--spacing-md); flex-direction: column; align-items: stretch; gap: var(--spacing-sm); }
+            .header h1 { font-size: 15px; }
+            .header > div:last-child { flex-direction: column; gap: 6px; align-items: stretch; }
+            .header > div:last-child > * { width: 100%; }
+            #storeSelector { width: 100%; box-sizing: border-box; }
+            .btn { padding: var(--spacing-md) var(--spacing-lg); min-height: 44px; }
+            .stamp-box { padding: var(--spacing-md); }
+            .stamp-list { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+            .stamp { flex-shrink: 0; padding: var(--spacing-sm) var(--spacing-md); font-size: 12px; min-height: 36px; }
+            .main-layout { grid-template-columns: 1fr; gap: var(--spacing-sm); }
+            .mobile-sidebar-toggle {
+                display: block; width: 100%; padding: var(--spacing-md);
+                background: #F9F9F9; border: 1px solid var(--border-light);
+                border-radius: var(--radius-md); font-weight: 500; font-size: 14px;
+                color: var(--text-primary); cursor: pointer; min-height: 44px;
+                font-family: inherit;
+            }
+            .sidebar.mobile-collapsed { display: none; }
+            .sidebar { padding: var(--spacing-md); }
+            .content-area { padding: var(--spacing-sm); }
+            .table-wrapper { -webkit-overflow-scrolling: touch; }
+            #shiftTable th, #shiftTable td { font-size: 10px; min-width: 32px; padding: 5px 2px; }
+            #shiftTable th:first-child { position: sticky; left: 0; z-index: 3; box-shadow: 2px 0 4px rgba(0,0,0,0.05); }
+            .staff-info-cell {
+                position: sticky; left: 0; z-index: 2;
+                min-width: 130px; max-width: 140px; padding: 6px;
+                box-shadow: 2px 0 4px rgba(0,0,0,0.05);
+                background: #FFFFFF !important;
+            }
+            .staff-name { font-size: 12px; }
+            .mobile-staff-toggle ~ * { display: none; }
+            tr.expanded .mobile-staff-toggle ~ * { display: block; }
+            .staff-controls { display: none; }
+            tr.expanded .staff-controls { display: flex; margin-top: 6px; }
+            .mobile-staff-toggle {
+                display: inline-block; margin-left: 4px; padding: 2px 6px;
+                background: #F9F9F9; border: 1px solid var(--border-light);
+                border-radius: var(--radius-md); cursor: pointer;
+                font-size: 10px; color: var(--text-secondary);
+                transition: transform 0.2s; min-width: 24px; min-height: 24px;
+            }
+            tr.expanded .mobile-staff-toggle { transform: rotate(180deg); }
+            .cell-clickable { min-height: 32px; }
+            #aiRequestInput { font-size: 14px; padding: var(--spacing-sm); }
+            #aiAdjustBtn { padding: 14px; font-size: 14px; min-height: 48px; }
+        }
+
+        @media (hover: none) {
+            .stamp:hover, .btn:hover { transform: none; }
+            .stamp.active:hover { transform: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div>
+        <h1 id="titleStoreName">IDEA NOV シフト管理</h1>
+        <p>自動生成・AI調整・公平性チェック</p>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <select id="storeSelector" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-light); font-size: 13px; color: var(--text-primary); background: white; font-family: inherit; cursor: pointer;" onchange="changeStore()">
+            <option value="">店舗を選択</option>
+        </select>
+        <div style="display: flex; align-items: center; gap: 4px; background: #F9F9F9; border-radius: 8px; padding: 4px 8px; border: 1px solid var(--border-light);">
+            <button onclick="changeMonth(-1)" style="border: none; background: transparent; cursor: pointer; padding: 4px 8px; font-size: 14px; border-radius: 8px; color: var(--text-secondary);" title="前月">◀</button>
+            <span id="currentMonthLabel" style="font-weight: 500; font-size: 14px; min-width: 92px; text-align: center; color: var(--text-primary);">2026年6月</span>
+            <button onclick="changeMonth(1)" style="border: none; background: transparent; cursor: pointer; padding: 4px 8px; font-size: 14px; border-radius: 8px; color: var(--text-secondary);" title="次月">▶</button>
+        </div>
+    </div>
+</div>
+
+<div class="stamp-box">
+    <div style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 8px;">スタンプを選んでタップ：</div>
+    <div class="stamp-list" id="stampList">
+        <div class="stamp st-work active" onclick="selectStamp('出', this)">✅ 出勤</div>
+        <div class="stamp st-off" onclick="selectStamp('公', this)">❌ 公休</div>
+        <div class="stamp st-req" onclick="selectStamp('希', this)">⭐ 希望休</div>
+        <div class="stamp st-paid" onclick="selectStamp('有', this)">💴 有給</div>
+        <div class="stamp st-train" onclick="selectStamp('研', this)">✨ 研修</div>
+        <div class="stamp st-must" onclick="selectStamp('必', this)">🔴 絶対出勤</div>
+        <!-- カスタムスタンプ（店舗設定でONにすると表示） -->
+        <div class="stamp st-half" onclick="selectStamp('半', this)" id="stamp_half" style="display:none;">🕐 半休</div>
+        <div class="stamp st-out" onclick="selectStamp('外', this)" id="stamp_out" style="display:none;">🚗 外勤</div>
+        <div class="stamp st-bereave" onclick="selectStamp('忌', this)" id="stamp_bereave" style="display:none;">🙏 忌引</div>
+        <div class="stamp st-special" onclick="selectStamp('特', this)" id="stamp_special" style="display:none;">📋 特休</div>
+    </div>
+</div>
+
+<div class="main-layout">
+    <button class="mobile-sidebar-toggle" onclick="toggleSidebar(this)">⚙️ 設定・ルールを開く</button>
+    <div class="sidebar mobile-collapsed">
+
+        <!-- STEP 1: データ読込 -->
+        <details id="step1" style="margin-bottom:12px;">
+            <summary style="cursor:pointer; display:flex; align-items:center; gap:8px; padding:10px 12px; background:#F9F9F9; border-radius:8px; border:1px solid var(--border-light); font-size:13px; font-weight:500; color:var(--text-primary); list-style:none;">
+                <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">1</span>
+                📡 データ読込
+                <span style="margin-left:auto; font-size:10px; color:var(--text-secondary);">初回のみ</span>
+            </summary>
+            <div style="padding:12px 4px 4px;">
+                <div id="alertBox" class="alert-area"></div>
+                <div class="file-input-group">
+                    <span class="file-label">店舗設備情報 CSVファイル</span>
+                    <input type="file" class="file-btn" accept=".csv" onchange="handleStoreFile(this)">
+                    <div id="storeLoadStatus" class="status-badge status-none">未読込</div>
+                </div>
+                <div class="file-input-group" style="margin-bottom:0;">
+                    <span class="file-label">社員名簿 CSVファイル</span>
+                    <input type="file" class="file-btn" accept=".csv" onchange="handleStaffFile(this)">
+                    <div id="staffLoadStatus" class="status-badge status-none">未読込</div>
+                </div>
+            </div>
+        </details>
+
+        <!-- STEP 2: 店舗ルール設定 -->
+        <details id="step2" style="margin-bottom:12px;">
+            <summary style="cursor:pointer; display:flex; align-items:center; gap:8px; padding:10px 12px; background:#F9F9F9; border-radius:8px; border:1px solid var(--border-light); font-size:13px; font-weight:500; color:var(--text-primary); list-style:none;">
+                <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">2</span>
+                🏢 店舗ルール設定
+                <span style="margin-left:auto; font-size:10px; color:var(--text-secondary);">初回のみ</span>
+            </summary>
+            <div style="padding:12px 4px 4px;">
+                <div class="file-label">定休日設定</div>
+                <div class="toggle-group">
+                    <button id="holidayBtn1" class="toggle-btn active accent" disabled>年中無休</button>
+                    <button id="holidayBtn2" class="toggle-btn" disabled>火曜定休</button>
+                </div>
+
+                <div class="file-label" style="margin-top:10px;">最低出勤人数設定</div>
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                    <span style="font-size:11px; flex:1;">平日（月〜金）</span>
+                    <input type="number" id="minStaffWeekday" min="0" placeholder="未設定"
+                        style="width:56px; padding:4px 6px; border:1px solid var(--border-light); border-radius:8px; font-size:12px; text-align:right;"
+                        oninput="updateMinStaff('weekday', this.value)">
+                    <span style="font-size:11px;">名</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                    <span style="font-size:11px; flex:1;">土曜日</span>
+                    <input type="number" id="minStaffSaturday" min="0" placeholder="未設定"
+                        style="width:56px; padding:4px 6px; border:1px solid var(--border-light); border-radius:8px; font-size:12px; text-align:right;"
+                        oninput="updateMinStaff('saturday', this.value)">
+                    <span style="font-size:11px;">名</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                    <span style="font-size:11px; flex:1;">日曜日</span>
+                    <input type="number" id="minStaffSunday" min="0" placeholder="未設定"
+                        style="width:56px; padding:4px 6px; border:1px solid var(--border-light); border-radius:8px; font-size:12px; text-align:right;"
+                        oninput="updateMinStaff('sunday', this.value)">
+                    <span style="font-size:11px;">名</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:11px; flex:1;">祝日</span>
+                    <input type="number" id="minStaffHoliday" min="0" placeholder="未設定"
+                        style="width:56px; padding:4px 6px; border:1px solid var(--border-light); border-radius:8px; font-size:12px; text-align:right;"
+                        oninput="updateMinStaff('holiday', this.value)">
+                    <span style="font-size:11px;">名</span>
+                </div>
+
+                <div class="file-label" style="margin-top:10px;">希望休上限設定</div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:11px; flex:1;">月間希望休上限</span>
+                    <input type="number" id="storeMaxKibou" min="0" value="2"
+                        style="width:56px; padding:4px 6px; border:1px solid var(--border-light); border-radius:8px; font-size:12px; text-align:right;"
+                        oninput="updateStoreMaxKibou(this.value)">
+                    <span style="font-size:11px;">日まで</span>
+                </div>
+
+                <div class="file-label" style="margin-top:10px;">自動生成の公休配置ルール</div>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid var(--border-light);">
+                    <input type="checkbox" id="noHolidayOnSat" checked onchange="saveStoreCustomRules()">
+                    <span>🚫 土曜日の公休配置を禁止</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid var(--border-light);">
+                    <input type="checkbox" id="noHolidayOnSun" checked onchange="saveStoreCustomRules()">
+                    <span>🚫 日曜日の公休配置を禁止</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid var(--border-light);">
+                    <input type="checkbox" id="noHolidayOnHol" checked onchange="saveStoreCustomRules()">
+                    <span>🚫 祝日の公休配置を禁止</span>
+                </label>
+
+                <div class="file-label" style="margin-top:10px;">追加ルール設定</div>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0; border-bottom:1px solid var(--border-light);">
+                    <input type="checkbox" id="enableGroupView" onchange="onGroupViewChange()">
+                    <span>👥 入社年数グループ別に表示</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0; border-bottom:1px solid var(--border-light);">
+                    <input type="checkbox" id="enableManagerRule" onchange="renderTable()">
+                    <span>🚫 店長・副店長の同日休み禁止</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0; border-bottom:1px solid var(--border-light);">
+                    <input type="checkbox" id="enableKibouAsOff" onchange="saveStoreCustomRules()">
+                    <span>📅 希望休がある週は公休を別の週へ移す</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0; border-bottom:1px solid var(--border-light);">
+                    <input type="checkbox" id="enableRemarksCol" onchange="onRemarksColChange()">
+                    <span>📝 備考欄を表示する（会議・研修予定など）</span>
+                </label>
+                <div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border-light);">
+                    <input type="checkbox" id="enableConsecLimit" onchange="saveStoreCustomRules()" style="flex-shrink:0;">
+                    <span style="font-size:12px; flex:1;">🌙 連休は月</span>
+                    <input type="number" id="consecLimitCount" min="1" max="5" value="1"
+                        style="width:44px; padding:3px 6px; border:1px solid var(--border-light); border-radius:8px; font-size:12px; text-align:center;"
+                        oninput="saveStoreCustomRules()">
+                    <span style="font-size:12px;">回まで</span>
+                </div>
+
+                <div class="file-label" style="margin-top:10px;">カスタムスタンプ設定</div>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid var(--border-light);">
+                    <input type="checkbox" id="stamp_enable_half" onchange="updateCustomStamps()">
+                    <span>🕐 半休スタンプを使用する</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid var(--border-light);">
+                    <input type="checkbox" id="stamp_enable_out" onchange="updateCustomStamps()">
+                    <span>🚗 外勤スタンプを使用する（セミナー・出張）</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid var(--border-light);">
+                    <input type="checkbox" id="stamp_enable_bereave" onchange="updateCustomStamps()">
+                    <span>🙏 忌引きスタンプを使用する</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid var(--border-light);">
+                    <input type="checkbox" id="stamp_enable_special" onchange="updateCustomStamps()">
+                    <span>📋 特別休暇スタンプを使用する</span>
+                </label>
+
+                <div class="file-label" style="margin-top:10px;">独自ルール（AI調整に自動反映）</div>
+                <textarea id="storeCustomRule" rows="3" placeholder="例：火曜は板垣店長を必ず出勤にする&#10;例：連休は月1回まで&#10;例：Aチームは週1回必ず揃える"
+                    style="width:100%; padding:6px 8px; border:1px solid var(--border-light); border-radius:8px; font-size:11px; box-sizing:border-box; resize:vertical; font-family:inherit;"
+                    oninput="saveStoreCustomRules()"></textarea>
+                <div style="font-size:10px; color:var(--text-secondary); margin-top:3px;">ここに書いた内容はAI調整時に自動でプロンプトに追加されます</div>
+
+                <button onclick="saveSettingsToGAS()"
+                    style="width:100%; margin-top:12px; padding:8px; background:#F9F9F9; border:1px solid var(--border-light); border-radius:8px; font-size:12px; cursor:pointer;">
+                    ⚙️ 店舗設定を保存する
+                </button>
+
+                <button onclick="saveSettingsToGAS()"
+                    style="width:100%; margin-top:12px; padding:8px; background:#F9F9F9; border:1px solid var(--border-light); border-radius:8px; font-size:12px; cursor:pointer;">
+                    ⚙️ 店舗設定を保存する
+                </button>
+            </div>
+        </details>
+
+        <!-- STEP 3: スタッフ個別ルール -->
+        <details id="step3" style="margin-bottom:12px;">
+            <summary style="cursor:pointer; display:flex; align-items:center; gap:8px; padding:10px 12px; background:#F9F9F9; border-radius:8px; border:1px solid var(--border-light); font-size:13px; font-weight:500; color:var(--text-primary); list-style:none;">
+                <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">3</span>
+                👤 スタッフ個別ルール
+                <span style="margin-left:auto; font-size:10px; color:var(--text-secondary);">必要時のみ</span>
+            </summary>
+            <div style="padding:12px 4px 4px;">
+                <div id="staffRulesPanel" style="max-height:360px; overflow-y:auto; padding-right:4px;">
+                    <div style="font-size:11px; color:var(--text-secondary);">店舗を選択するとスタッフ別ルールが表示されます。</div>
+                </div>
+            </div>
+        </details>
+
+        <!-- STEP 4: 固定条件入力（毎月） -->
+        <details id="step4" style="margin-bottom:12px;">
+            <summary style="cursor:pointer; display:flex; align-items:center; gap:8px; padding:10px 12px; background:#fff5f5; border-radius:8px; border:1px solid #fed7d7; font-size:13px; font-weight:bold; color:#c53030; list-style:none;">
+                <span style="background:#c53030; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">4</span>
+                📅 固定条件入力（毎月）
+                <span style="margin-left:auto; font-size:10px; color:#fc8181;">生成前に入力</span>
+            </summary>
+            <div style="padding:12px 4px 4px;">
+                <div style="font-size:11px; color:var(--text-secondary); margin-bottom:10px; line-height:1.6; background:#fff5f5; border-radius:8px; padding:8px 10px; border:1px solid #fed7d7;">
+                    希望休・有給・研修日など<b>出勤に関する固定条件</b>を先にシフト表へスタンプしてください。<br>
+                    入力後に「シフト自動生成」を実行すると、これらの条件が優先されます。
+                </div>
+                <div style="font-size:12px; font-weight:bold; color:var(--text-secondary); margin-bottom:6px;">入力すべき固定条件：</div>
+                <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--text-secondary);">
+                    <div style="display:flex; align-items:center; gap:8px; padding:6px 8px; background:white; border-radius:8px; border:1px solid var(--border-light);">
+                        <span style="background:#fff0f6; color:#eb2f96; padding:2px 8px; border-radius:8px; font-weight:bold; font-size:11px;">有給</span>
+                        <span>有給休暇の取得予定日</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; padding:6px 8px; background:white; border-radius:8px; border:1px solid var(--border-light);">
+                        <span style="background:#f6ffed; color:#52c41a; padding:2px 8px; border-radius:8px; font-weight:bold; font-size:11px;">希望休</span>
+                        <span>スタッフからの希望休申請日</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; padding:6px 8px; background:white; border-radius:8px; border:1px solid var(--border-light);">
+                        <span style="background:#feffe6; color:#d4b106; padding:2px 8px; border-radius:8px; font-weight:bold; font-size:11px;">研修</span>
+                        <span>コンテスト・セミナー・研修日</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; padding:6px 8px; background:white; border-radius:8px; border:1px solid var(--border-light);">
+                        <span style="background:#fff1f0; color:#f5222d; padding:2px 8px; border-radius:8px; font-weight:bold; font-size:11px; border:2px solid #f5222d;">絶対出勤</span>
+                        <span>必ず出勤が必要な日</span>
+                    </div>
+                </div>
+                <div style="margin-top:10px; font-size:11px; color:var(--text-secondary); line-height:1.6;">
+                    ※ 上部のスタンプを選んでシフト表のセルをクリックすると入力できます
+                </div>
+            </div>
+        </details>
+
+        <!-- STEP 5: シフト自動生成（毎月） -->
+        <div style="background:#f0fff4; border:1px solid #9ae6b4; border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#276749; margin-bottom:10px;">
+                <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">5</span>
+                ⚡ シフト自動生成（毎月）
+            </div>
+            <button onclick="generateShift()"
+                style="width:100%; padding:12px; background:linear-gradient(135deg,#38a169,#276749); color:white; border:none; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">
+                ⚡ シフトを自動生成する
+            </button>
+        </div>
+
+        <!-- STEP 6: AI調整（毎月） -->
+        <div style="background:#f9f7ff; border:1px solid #e9d8fd; border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#553c9a; margin-bottom:10px;">
+                <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">6</span>
+                🤖 AI調整（毎月）
+            </div>
+            <div style="font-size:11px; color:#553c9a; background:white; padding:6px 8px; border-radius:8px; border:1px solid #e9d8fd; margin-bottom:8px;">
+                🔒 APIキーは画面入力またはGASのスクリプトプロパティで利用します
+            </div>
+
+            <textarea id="aiRequestInput" rows="3" placeholder="スタッフの要望・イレギュラーをここに入力してください&#10;例：村山さん12日希望休、19日コンテストで田中・佐藤中抜け"
+                style="width:100%; padding:8px; border:1px solid #d6bcfa; border-radius:8px; font-size:12px; resize:vertical; box-sizing:border-box; font-family:inherit; background:white;"></textarea>
+            <button id="aiAdjustBtn" onclick="callAIAdjust()"
+                style="width:100%; margin-top:8px; padding:10px; background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px;">
+                🤖 AIでシフトを調整する
+            </button>
+            <details style="margin-top:8px; background:white; padding:8px 10px; border-radius:8px; font-size:12px; border:1px solid var(--border-light);">
+                <summary style="cursor:pointer; font-weight:bold; color:var(--text-secondary);">⚙️ 禁止事項・ルール設定</summary>
+                <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="restrictSixConsec" checked>
+                        <span>6連勤以上禁止</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="restrictMinStaff" checked>
+                        <span>最低出勤人数を下回る公休・希望休禁止</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px;">
+                        <span style="flex:1;">月の希望休上限</span>
+                        <input type="number" id="restrictMonthlyKibou" min="0" value="2" style="width:50px; padding:2px 4px; border:1px solid var(--border-light); border-radius:8px; font-size:12px; text-align:right;">
+                        <span>日まで</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="restrictFairness" checked>
+                        <span>希望休取得をスタッフ間で公平に管理</span>
+                    </label>
+                </div>
+            </details>
+            <div id="aiAlertBox" style="display:none; margin-top:10px; padding:10px; background:#f0f9ff; border-left:4px solid #667eea; border-radius:8px; font-size:12px; color:#2d3748;"></div>
+        </div>
+                <summary style="cursor:pointer; font-weight:bold; color:var(--text-secondary);">⚙️ 禁止事項・ルール設定</summary>
+                <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="restrictSixConsec" checked>
+                        <span>6連勤以上禁止</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="restrictMinStaff" checked>
+                        <span>最低出勤人数を下回る公休・希望休禁止</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px;">
+                        <span style="flex:1;">月の希望休上限</span>
+                        <input type="number" id="restrictMonthlyKibou" min="0" value="2" style="width:50px; padding:2px 4px; border:1px solid var(--border-light); border-radius:8px; font-size:12px; text-align:right;">
+                        <span>日まで</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="restrictFairness" checked>
+                        <span>希望休取得をスタッフ間で公平に管理</span>
+                    </label>
+                </div>
+            </details>
+            <div id="aiAlertBox" style="display:none; margin-top:10px; padding:10px; background:#f0f9ff; border-left:4px solid #667eea; border-radius:8px; font-size:12px; color:#2d3748;"></div>
+        </div>
+
+        <!-- STEP 7: 手入力による微調整 -->
+        <div style="background:#fffaf0; border:1px solid #fbd38d; border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#744210; margin-bottom:10px;">
+                <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">7</span>
+                ✏️ 手入力による微調整
+            </div>
+            <div style="font-size:12px; color:#744210; line-height:1.7; background:white; border-radius:8px; padding:10px; border:1px solid #fbd38d;">
+                <div style="margin-bottom:6px;">📌 <b>スタンプの使い方</b></div>
+                <div>① 上部のスタンプを選ぶ</div>
+                <div>② シフト表のセルをクリック</div>
+                <div>③ もう一度クリックで解除</div>
+                <div style="margin-top:8px; padding-top:8px; border-top:1px solid #fbd38d;">
+                    <b>スタンプ一覧：</b><br>
+                    出勤 / 公休 / 希望休 / 有給 / 研修 / 絶対出勤
+                </div>
+            </div>
+            <button onclick="showFairnessReport()"
+                style="width:100%; margin-top:10px; padding:7px; background:white; border:1px solid #fbd38d; border-radius:8px; font-size:12px; cursor:pointer; color:#744210;">
+                📊 公平性レポートを表示
+            </button>
+        </div>
+
+        <!-- STEP 8: 保存・出力（毎月） -->
+        <div style="background:#ebf8ff; border:1px solid #bee3f8; border-radius:8px; padding:12px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#2b6cb0; margin-bottom:10px;">
+                <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">8</span>
+                💾 保存・出力
+            </div>
+            <button onclick="saveShiftToGAS()"
+                style="width:100%; padding:10px; background:var(--color-bassa); color:white; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; margin-bottom:6px;">
+                💾 シフトを保存する
+            </button>
+            <button onclick="exportToHTML()"
+                style="width:100%; padding:7px; background:white; border:1px solid #bee3f8; border-radius:8px; font-size:12px; cursor:pointer; color:#2b6cb0; margin-bottom:6px;">
+                🖨️ シフト表をHTML出力
+            </button>
+            <button onclick="exportToCSV()"
+                style="width:100%; padding:7px; background:white; border:1px solid #bee3f8; border-radius:8px; font-size:12px; cursor:pointer; color:#2b6cb0;">
+                📥 CSVを書き出す
+            </button>
+            <div id="saveStatus" style="font-size:11px; color:var(--text-secondary); margin-top:6px; text-align:center;"></div>
+        </div>
+
+    </div>
+
+    <div class="content-area">
+        <div class="table-wrapper">
+            <table id="shiftTable">
+                <thead><tr><th style="padding: 30px; color: var(--text-secondary); font-size:14px;">左側のメニューから、Googleスプレッドシートからダウンロードした2つのCSVファイルを読み込ませてください。本物のデータが100%確実に展開されます！</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ─────────────────────────────────────────────────────────────
+    // 🛰️ GAS Web API デプロイ URL
+    //    gas_api.js を Apps Script に貼り付けてデプロイし、
+    //    発行された「…/exec」で終わる URL に差し替えてください。
+    // ─────────────────────────────────────────────────────────────
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxs76CWaVsMDg6405YGN3R5mqiJ6PPdw-IXECXAQjEzDJZLCBIrQ9R5xwF0FQFHvMw/exec";
+    // ※ GASに saveShift / loadShift 関数追加後、同じURLのまま使用可能
+
+    // ─────────────────────────────────────────────────────────────
+    // 📅 2026〜2027年の祝日定義（YYYY-M-D 形式）
+    // ─────────────────────────────────────────────────────────────
+    const HOLIDAYS = {
+        "2026-1-1": "元日",
+        "2026-1-12": "成人の日",
+        "2026-2-11": "建国記念の日",
+        "2026-2-23": "天皇誕生日",
+        "2026-3-20": "春分の日",
+        "2026-4-29": "昭和の日",
+        "2026-5-3": "憲法記念日",
+        "2026-5-4": "みどりの日",
+        "2026-5-5": "こどもの日",
+        "2026-5-6": "振替休日",
+        "2026-7-20": "海の日",
+        "2026-8-11": "山の日",
+        "2026-9-21": "敬老の日",
+        "2026-9-23": "秋分の日",
+        "2026-10-12": "スポーツの日",
+        "2026-11-3": "文化の日",
+        "2026-11-23": "勤労感謝の日",
+        "2027-1-1": "元日",
+        "2027-1-11": "成人の日",
+        "2027-2-11": "建国記念の日",
+        "2027-2-23": "天皇誕生日",
+        "2027-3-21": "春分の日",
+        "2027-4-29": "昭和の日",
+        "2027-5-3": "憲法記念日",
+        "2027-5-4": "みどりの日",
+        "2027-5-5": "こどもの日",
+        "2027-7-19": "海の日",
+        "2027-8-11": "山の日",
+        "2027-9-20": "敬老の日",
+        "2027-9-23": "秋分の日",
+        "2027-10-11": "スポーツの日",
+        "2027-11-3": "文化の日",
+        "2027-11-23": "勤労感謝の日"
+    };
+
+    // 表示年月（0-indexed の month）。初期値は現在の年月。
+    let currentYear  = new Date().getFullYear();
+    let currentMonth = new Date().getMonth();
+    let daysInMonth  = new Date(currentYear, currentMonth + 1, 0).getDate();
+    let holidays     = []; // その月の祝日「日」の配列（refreshMonthCalendar で更新）
+
+    let storeMaster = [];
+    let staffMaster = [];
+    let currentStore = null;
+    let currentStaffs = [];
+    let selectedStamp = "出";
+
+    let liveStaffConfig = {}; // { staffId: { holidayType, workType, maxHoliday, note } }
+    // staffRules は liveStaffConfig と同一オブジェクトを参照（双方向同期のための別名）
+    const staffRules = liveStaffConfig;
+    let allCellStates = {}; // { "YYYY-M": { "staffId-day": stamp, ... } } 月ごとに保持
+    let storeMinStaff = {}; // { storeId: { weekday: 4, saturday: 6, sunday: 5, holiday: 5 } } 店舗ごとの最低出勤人数
+    let storeSettings = {}; // { storeId: { maxKibou: 2 } } 店舗ごとの希望休上限など
+    let staffFairnessCount = {}; // { staffId: { 希: 0, 有: 0 } } スタッフごとの希望休/有給 取得数
+
+    // 入社年数グループの表示順と色設定（renderTable / exportToHTML で共用）
+    const GROUP_ORDER = ["6年目以上", "3〜5年目", "2年目", "1年目", "不明"];
+    const GROUP_COLORS = {
+        "6年目以上": { bg: "#ebf8ff", border: "#3182ce", text: "#2b6cb0", label: "🎖️ 6年目以上（リーダー層）" },
+        "3〜5年目":  { bg: "#f0fff4", border: "#38a169", text: "#276749", label: "⭐ 3〜5年目（中堅）" },
+        "2年目":     { bg: "#fefcbf", border: "#d69e2e", text: "#744210", label: "🌱 2年目" },
+        "1年目":     { bg: "#fff5f5", border: "#fc8181", text: "#9b2c2c", label: "🌸 1年目" },
+        "不明":      { bg: "#f7fafc", border: "#a0aec0", text: "#4a5568", label: "— 入社年不明" },
+    };
+
+    // ─────────────────────────────────────────────────────────────
+    // 📅 年月切り替えユーティリティ
+    // ─────────────────────────────────────────────────────────────
+    function getCurrentMonthKey() {
+        return `${currentYear}-${currentMonth + 1}`;
+    }
+    function getCurrentCellStates() {
+        const key = getCurrentMonthKey();
+        if (!allCellStates[key]) allCellStates[key] = {};
+        return allCellStates[key];
+    }
+    function getHolidaysInMonth(year, month) {
+        return Object.keys(HOLIDAYS)
+            .filter(k => {
+                const [y, m] = k.split("-").map(Number);
+                return y === year && m === month + 1;
+            })
+            .map(k => Number(k.split("-")[2]));
+    }
+    function refreshMonthCalendar() {
+        daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        holidays    = getHolidaysInMonth(currentYear, currentMonth);
+    }
+    function updateMonthDisplay() {
+        const label = document.getElementById("currentMonthLabel");
+        if (label) label.textContent = `${currentYear}年${currentMonth + 1}月`;
+    }
+    function changeMonth(delta) {
+        currentMonth += delta;
+        if (currentMonth > 11) { currentMonth = 0;  currentYear++; }
+        if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+        refreshMonthCalendar();
+        updateMonthDisplay();
+        renderTable();
+
+        // 月切替時にシフトデータを非同期読込
+        if (currentStore) {
+            (async () => {
+                setSaveStatus("📥 読込中...", "info");
+                await loadShiftFromGAS(currentStore.id, currentYear, currentMonth + 1);
+                renderTable();
+                setSaveStatus("✅ 読込完了", "ok");
+            })();
+        }
+    }
+    // 初期化
+    refreshMonthCalendar();
+
+    // ─────────────────────────────────────────────────────────────
+    // 【完全書き直し】文字コード自動判定 + 堅牢CSVパーサー
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * RFC4180準拠 + クォート内カンマ・改行・ダブルクォートエスケープ対応
+     * BOM（UTF-8 / UTF-16LE / UTF-16BE）を自動除去してからパース
+     */
+    function parseCSVToRows(text) {
+        if (!text || text.trim() === "") return [];
+
+        // BOM除去（UTF-8: EF BB BF → charCode 0xFEFF, UTF-16も同様）
+        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+
+        // 行末の統一（CR+LF / CR / LF すべて対応）
+        text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
+        const rows = [];
+        let row = [];
+        let field = "";
+        let inQuote = false;
+        let i = 0;
+
+        while (i < text.length) {
+            const ch = text[i];
+            if (inQuote) {
+                if (ch === '"') {
+                    // ダブルクォートのエスケープ ("") 判定
+                    if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
+                    inQuote = false;
+                } else {
+                    field += ch;
+                }
+            } else {
+                if (ch === '"') {
+                    inQuote = true;
+                } else if (ch === ',') {
+                    row.push(field.trim());
+                    field = "";
+                } else if (ch === '\n') {
+                    row.push(field.trim());
+                    field = "";
+                    if (row.some(c => c !== "")) rows.push(row);
+                    row = [];
+                } else {
+                    field += ch;
+                }
+            }
+            i++;
+        }
+        // 最終フィールド・最終行の処理
+        row.push(field.trim());
+        if (row.some(c => c !== "")) rows.push(row);
+
+        return rows;
+    }
+
+    /**
+     * 多層文字コード自動判定デコーダー
+     * 優先順位: UTF-8 BOM → UTF-16LE BOM → Shift-JIS バイト特性判定 → UTF-8 fallback
+     * Google スプレッドシートの「Shift-JIS形式」「UTF-8（BOMなし）」「UTF-8（BOM付き）」すべて対応
+     */
+    function readCSVAutoEncoding(file, callback) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const buf = e.target.result;
+            const bytes = new Uint8Array(buf);
+
+            // ① UTF-8 BOM 判定 (EF BB BF)
+            if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+                callback(new TextDecoder("utf-8").decode(buf));
+                return;
+            }
+            // ② UTF-16 LE BOM 判定 (FF FE)
+            if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
+                callback(new TextDecoder("utf-16le").decode(buf));
+                return;
+            }
+            // ③ UTF-16 BE BOM 判定 (FE FF)
+            if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
+                callback(new TextDecoder("utf-16be").decode(buf));
+                return;
+            }
+
+            // ④ UTF-8バイト列の妥当性を厳密検証（誤判定ゼロ方式）
+            //    UTF-8として完全に valid なら UTF-8 確定
+            //    invalid バイトが1つでも見つかれば Shift-JIS と判定
+            function isValidUTF8(b) {
+                let i = 0;
+                while (i < b.length) {
+                    const byte = b[i];
+                    if (byte <= 0x7F) { i++; continue; } // ASCII
+                    let extraBytes = 0;
+                    if ((byte & 0xE0) === 0xC0) extraBytes = 1;       // 2バイト文字
+                    else if ((byte & 0xF0) === 0xE0) extraBytes = 2;  // 3バイト文字（日本語はここ）
+                    else if ((byte & 0xF8) === 0xF0) extraBytes = 3;  // 4バイト文字
+                    else return false; // 不正な先頭バイト → UTF-8ではない
+                    for (let j = 1; j <= extraBytes; j++) {
+                        if (i + j >= b.length || (b[i + j] & 0xC0) !== 0x80) return false;
+                    }
+                    i += 1 + extraBytes;
+                }
+                return true;
+            }
+
+            const decoder = isValidUTF8(bytes)
+                ? new TextDecoder("utf-8", { fatal: false })
+                : new TextDecoder("windows-31j", { fatal: false });
+
+            callback(decoder.decode(buf));
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    /**
+     * ヘッダー文字列のノーマライズ
+     * 全角スペース・半角スペース・BOM残滓・ダブルクォート・()括弧などを除去して比較しやすくする
+     */
+    function normalizeHeader(h) {
+        return (h || "")
+            .replace(/[\uFEFF\s"'　]/g, "")   // BOM残滓・スペース系・クォート除去
+            .replace(/[（）()【】\[\]]/g, ""); // 括弧類除去
+    }
+
+    /**
+     * ヘッダー配列から完全一致 → 前方一致 → 部分一致 の順で列インデックスを取得
+     */
+    function findCol(headers, ...candidates) {
+        const norm = headers.map(normalizeHeader);
+        for (const c of candidates) {
+            const exact = norm.findIndex(h => h === c);
+            if (exact !== -1) return exact;
+        }
+        for (const c of candidates) {
+            const partial = norm.findIndex(h => h.startsWith(c) || c.startsWith(h));
+            if (partial !== -1) return partial;
+        }
+        for (const c of candidates) {
+            const loose = norm.findIndex(h => h.includes(c) || c.includes(h));
+            if (loose !== -1) return loose;
+        }
+        return -1;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 🏢 1. 店舗設備情報のインポート
+    // 代表の列順マスタ:
+    //   店舗名/定休日ルール/平日営業時間/土曜日営業時間/日曜日営業時間/祝日営業時間
+    //   /オープン日/坪数㎡/家賃(共益費など込)/坪単価/セット面/シャンプー台/席単価/所属/状況/特徴
+    // ─────────────────────────────────────────────────────────────
+    function importStoreFromRows(rows, sourceLabel) {
+        if (!rows || rows.length < 2) {
+            alert(`店舗データが見つかりませんでした。(source: ${sourceLabel || "?"})`);
+            return false;
+        }
+
+        const rawHeaders = rows[0];
+        // 代表マスタの列名で厳密に取得
+        const nameIdx    = findCol(rawHeaders, "店舗名", "店舗");
+        const ruleIdx    = findCol(rawHeaders, "定休日ルール", "定休日", "定休");
+        const weekdayIdx = findCol(rawHeaders, "平日営業時間", "平日");
+        const satIdx     = findCol(rawHeaders, "土曜日営業時間", "土曜日", "土曜");
+        const sunIdx     = findCol(rawHeaders, "日曜日営業時間", "日曜日", "日曜");
+        const holIdx     = findCol(rawHeaders, "祝日営業時間", "祝日");
+        const statusIdx  = findCol(rawHeaders, "状況", "ステータス");
+
+        if (nameIdx === -1) {
+            alert("店舗データの「店舗名」列が見つかりませんでした。ヘッダー行を確認してください。\n検出されたヘッダー: " + rawHeaders.join(" | "));
+            return false;
+        }
+
+        storeMaster = [];
+        rows.slice(1).forEach((row) => {
+            const name = (row[nameIdx] || "").trim();
+            // 空行・ヘッダー繰り返し・閉店店舗などを除外
+            if (!name || name === "店舗名") return;
+            if (statusIdx !== -1 && row[statusIdx]) {
+                const st = row[statusIdx].trim();
+                if (st === "閉店" || st === "休業" || st === "撤退") return;
+            }
+
+            storeMaster.push({
+                id: (storeMaster.length + 1).toString(),
+                name: name,
+                rule:    (ruleIdx    !== -1 && row[ruleIdx])    ? row[ruleIdx].trim()    : "年中無休",
+                weekday: (weekdayIdx !== -1 && row[weekdayIdx]) ? row[weekdayIdx].trim() : "1",
+                sat:     (satIdx     !== -1 && row[satIdx])     ? row[satIdx].trim()     : "1",
+                sun:     (sunIdx     !== -1 && row[sunIdx])     ? row[sunIdx].trim()     : "1",
+                hol:     (holIdx     !== -1 && row[holIdx])     ? row[holIdx].trim()     : "1"
+            });
+        });
+
+        const status = document.getElementById("storeLoadStatus");
+        const tag = sourceLabel === "gas" ? "🛰️" : "✅";
+        status.textContent = `${tag} ${storeMaster.length}店舗 読込済`;
+        status.className = "status-badge status-ok";
+
+        buildStoreSelector();
+        return true;
+    }
+
+    function handleStoreFile(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        readCSVAutoEncoding(file, function(text) {
+            try {
+                const rows = parseCSVToRows(text);
+                importStoreFromRows(rows, "csv");
+            } catch(e) {
+                console.error(e);
+                alert("店舗CSVの解析に失敗しました。\n" + e.message);
+            }
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 👥 2. 社員名簿マスタのインポート
+    // 代表の列順マスタ:
+    //   社員番号/所属会社/所属店舗/役職/雇用形態/現職/美容師免許取得者/氏名/フリガナ・姓
+    //   /フリガナ・名/性別/生年月日/出身美容学校/入社年月日/中途入社/退職日
+    // ─────────────────────────────────────────────────────────────
+    function importStaffFromRows(rows, sourceLabel) {
+        if (!rows || rows.length < 2) {
+            alert(`社員名簿データが見つかりませんでした。(source: ${sourceLabel || "?"})`);
+            return false;
+        }
+
+        const rawHeaders = rows[0];
+        // 代表マスタの列名で厳密に取得（固定インデックスにも対応）
+        const storeIdx  = findCol(rawHeaders, "所属店舗", "店舗");
+        const rankIdx   = findCol(rawHeaders, "役職");
+        const empTypeIdx= findCol(rawHeaders, "雇用形態");
+        const activeIdx = findCol(rawHeaders, "現職");       // ← 在職フィルタ用
+        const nameIdx   = findCol(rawHeaders, "氏名");
+        const retireIdx = findCol(rawHeaders, "退職日");
+        const licenseIdx = findCol(rawHeaders, "美容師免許取得者", "美容師免許");
+        const joinDateIdx = findCol(rawHeaders, "入社年月日", "入社日", "入社");
+
+        // 列が見つからない場合は代表マスタの固定インデックスで補完
+        const FIXED = { store: 2, rank: 3, active: 5, name: 7 };
+        const resolvedStore  = storeIdx  !== -1 ? storeIdx  : FIXED.store;
+        const resolvedRank   = rankIdx   !== -1 ? rankIdx   : FIXED.rank;
+        const resolvedActive = activeIdx !== -1 ? activeIdx : FIXED.active;
+        const resolvedName   = nameIdx   !== -1 ? nameIdx   : FIXED.name;
+
+        if (resolvedName === -1) {
+            alert("社員名簿データの「氏名」列が見つかりませんでした。\n検出されたヘッダー: " + rawHeaders.join(" | "));
+            return false;
+        }
+
+        staffMaster = [];
+        rows.slice(1).forEach((row) => {
+            const store  = (row[resolvedStore]  || "").trim();
+            const name   = (row[resolvedName]   || "").trim();
+            const rank   = (row[resolvedRank]   || "").trim() || "スタッフ";
+            const active = (row[resolvedActive] || "").trim();
+            const retire = (retireIdx !== -1 ? row[retireIdx] || "" : "").trim();
+
+            // 除外条件: 空行 / ヘッダー繰り返し / 氏名が数字のみ
+            if (!name || name === "氏名" || /^\d+$/.test(name)) return;
+            if (!store || store === "所属店舗") return;
+
+            // 退職者除外: 「現職」列が明示的に「否」「退職」「×」 または 退職日に日付が入っている
+            if (active === "否" || active === "退職" || active === "×" || active === "0") return;
+            if (retire && retire !== "" && retire !== "0" && retire !== "-") return;
+
+            // 入社年数グループ計算
+            let joinDateStr = joinDateIdx !== -1 ? (row[joinDateIdx] || "").trim() : "";
+            let yearsGroup = "不明";
+            if (joinDateStr) {
+                // "YYYY/MM/DD" "YYYY-MM-DD" "YYYY年MM月DD日" 等を解析
+                const m = joinDateStr.match(/(\d{4})[\/\-年](\d{1,2})[\/\-月]?(\d{0,2})/);
+                if (m) {
+                    const joinYear = parseInt(m[1]);
+                    const joinMonth = parseInt(m[2]);
+                    const now = new Date();
+                    let years = now.getFullYear() - joinYear;
+                    if (now.getMonth() + 1 < joinMonth) years--;
+                    if (years < 1) yearsGroup = "1年目";
+                    else if (years < 2) yearsGroup = "2年目";
+                    else if (years < 5) yearsGroup = "3〜5年目";
+                    else yearsGroup = "6年目以上";
+                }
+            }
+
+            staffMaster.push({
+                id: (staffMaster.length + 1).toString(),
+                name:  name,
+                store: store,
+                rank:  rank,
+                joinDate: joinDateStr,
+                yearsGroup: yearsGroup,
+                holidayType: "完全週休2日",
+                workType:    empTypeIdx !== -1 && (row[empTypeIdx] || "").includes("時短") ? "時短" : "通常",
+                hasLicense: licenseIdx !== -1
+                    ? (row[licenseIdx] || "").trim() === "〇"
+                    : true,  // 列がない場合はカウント対象とする
+                isReceptionPart: empTypeIdx !== -1
+                    ? (row[empTypeIdx] || "").trim() === "レセプションパート"
+                    : false
+            });
+        });
+
+        const status = document.getElementById("staffLoadStatus");
+        const tag = sourceLabel === "gas" ? "🛰️" : "✅";
+        status.textContent = `${tag} ${staffMaster.length}名 読込済`;
+        status.className = "status-badge status-ok";
+
+        if (currentStore) changeStore();
+        return true;
+    }
+
+    function handleStaffFile(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        readCSVAutoEncoding(file, function(text) {
+            try {
+                const rows = parseCSVToRows(text);
+                importStaffFromRows(rows, "csv");
+            } catch(e) {
+                console.error(e);
+                alert("社員名簿CSVの解析に失敗しました。\n" + e.message);
+            }
+        });
+    }
+
+    function buildStoreSelector() {
+        if (storeMaster.length > 0) {
+            const selector = document.getElementById("storeSelector");
+            selector.innerHTML = `<option value="">▼ 表示する店舗を選んでください ▼</option>` + 
+                storeMaster.map(s => `<option value="${s.id}" data-name="${s.name}">${s.name}</option>`).join("");
+            
+            selector.selectedIndex = 1;
+            changeStore();
+        }
+    }
+
+    function changeStore() {
+        const storeId = document.getElementById("storeSelector").value;
+        if (!storeId) return;
+        
+        currentStore = storeMaster.find(s => s.id === storeId);
+        if (!currentStore) return;
+
+        document.getElementById("titleStoreName").textContent = `イディア・ノブ ${currentStore.name} シフト管理`;
+
+        const isTuesdayRule = currentStore.rule.includes("火曜") || currentStore.rule.includes("火曜日");
+        document.getElementById("holidayBtn1").className = isTuesdayRule ? "toggle-btn" : "toggle-btn active accent";
+        document.getElementById("holidayBtn2").className = isTuesdayRule ? "toggle-btn active accent" : "toggle-btn";
+
+        // 店舗名マッチング: 全角・半角スペース・記号を除去して比較
+        function normalizeStoreName(s) {
+            return (s || "")
+                .replace(/[　 \s\-－・]/g, "")
+                .replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+                .toLowerCase();
+        }
+        const cNorm = normalizeStoreName(currentStore.name);
+        currentStaffs = staffMaster.filter(s => {
+            const sNorm = normalizeStoreName(s.store);
+            return sNorm === cNorm || sNorm.includes(cNorm) || cNorm.includes(sNorm);
+        });
+        // 免許あり→免許なしの順にソート
+        currentStaffs.sort((a, b) => {
+            if (a.hasLicense === b.hasLicense) return 0;
+            return a.hasLicense ? -1 : 1;
+        });
+
+        const defaultIrregular = () => ({
+            enabled: false,
+            weeklyOffEnabled: false, weeklyOff: 2,
+            maxConsecEnabled: false, maxConsecutive: 6,
+            ignoreMinStaff: false,
+            reason: "",
+        });
+        currentStaffs.forEach(s => {
+            if (!liveStaffConfig[s.id]) {
+                liveStaffConfig[s.id] = {
+                    holidayType: s.holidayType,
+                    workType:    s.workType,
+                    startTime:   "8:40",
+                    endTime:     "17:40",
+                    maxHoliday:  2,
+                    note:        "",
+                    noSunday:    false,
+                    irregular:   defaultIrregular(),
+                };
+            } else {
+                // 旧形式のエントリにも新フィールドのデフォルトを補う
+                if (liveStaffConfig[s.id].maxHoliday == null) liveStaffConfig[s.id].maxHoliday = 2;
+                if (liveStaffConfig[s.id].note == null)       liveStaffConfig[s.id].note = "";
+                if (liveStaffConfig[s.id].startTime == null)  liveStaffConfig[s.id].startTime = "8:40";
+                if (liveStaffConfig[s.id].endTime == null)    liveStaffConfig[s.id].endTime = "17:40";
+                if (liveStaffConfig[s.id].noSunday == null)   liveStaffConfig[s.id].noSunday = false;
+                if (liveStaffConfig[s.id].irregular == null)  liveStaffConfig[s.id].irregular = defaultIrregular();
+            }
+        });
+
+        // 店舗切替時: 現在月のシフトデータをリセット（他月の allCellStates は保持）
+        allCellStates[getCurrentMonthKey()] = {};
+
+        // 最低出勤人数の設定値を入力欄に復元（前店舗の値は storeMinStaff に保持されたまま）
+        const min = storeMinStaff[currentStore.id] || {};
+        document.getElementById("minStaffWeekday").value  = min.weekday  ?? "";
+        document.getElementById("minStaffSaturday").value = min.saturday ?? "";
+        document.getElementById("minStaffSunday").value   = min.sunday   ?? "";
+        document.getElementById("minStaffHoliday").value  = min.holiday  ?? "";
+
+        // 希望休上限の復元
+        document.getElementById("storeMaxKibou").value =
+            (storeSettings[currentStore.id] || {}).maxKibou ?? 2;
+
+        renderStaffRulesPanel();
+        renderTable();
+        restoreStoreCustomRules();
+
+        // GASから設定・シフトデータを非同期読込
+        (async () => {
+            setSaveStatus("📥 読込中...", "info");
+            await loadSettingsFromGAS(currentStore.id);
+            await loadShiftFromGAS(currentStore.id, currentYear, currentMonth + 1);
+            renderStaffRulesPanel();
+            renderTable();
+            setSaveStatus("✅ 読込完了", "ok");
+        })();
+    }
+
+    function selectStamp(stampType, element) {
+        selectedStamp = stampType;
+        document.querySelectorAll(".stamp").forEach(s => s.classList.remove("active"));
+        element.classList.add("active");
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 📱 モバイル: サイドバー開閉 & スタッフ行のアコーディオン
+    // ─────────────────────────────────────────────────────────────
+    function toggleSidebar(btn) {
+        const sidebar = document.querySelector(".sidebar");
+        if (!sidebar) return;
+        const isCollapsed = sidebar.classList.toggle("mobile-collapsed");
+        if (btn) btn.textContent = isCollapsed ? "⚙️ 設定・ルールを開く" : "✕ 設定・ルールを閉じる";
+    }
+
+    function toggleStaffRowExpand(staffId, event) {
+        if (event) event.stopPropagation();
+        const row = document.querySelector(`tr[data-staff-id="${staffId}"]`);
+        if (row) row.classList.toggle("expanded");
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 👤 スタッフ個別ルール: サイドバーパネルの描画と更新
+    //   liveStaffConfig (= staffRules) と双方向同期する。
+    // ─────────────────────────────────────────────────────────────
+    function renderStaffRulesPanel() {
+        const panel = document.getElementById("staffRulesPanel");
+        if (!panel) return;
+        if (!currentStaffs || currentStaffs.length === 0) {
+            panel.innerHTML = `<div style="font-size:11px; color:var(--text-secondary);">店舗を選択するとスタッフ別ルールが表示されます。</div>`;
+            return;
+        }
+        panel.innerHTML = currentStaffs.map(staff => {
+            const cfg = liveStaffConfig[staff.id] || {};
+            const holidayType = cfg.holidayType || "完全週休2日";
+            const workType    = cfg.workType    || "通常";
+            const startTime   = cfg.startTime   || "8:40";
+            const endTime     = cfg.endTime     || "17:40";
+            const maxHoliday  = cfg.maxHoliday != null ? cfg.maxHoliday : 2;
+            const note        = cfg.note != null ? cfg.note : "";
+            const avatarChar  = staff.name.charAt(0);
+            const safeName    = staff.name.replace(/"/g, "&quot;");
+            const safeNote    = note.replace(/"/g, "&quot;");
+            const isShort     = workType.includes("時短");
+            return `
+                <div data-staff-rule="${staff.id}" style="border: 1px solid var(--border-light); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; background: #fcfbf7;">
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                        <div style="width: 22px; height: 22px; border-radius: 50%; background: #52b788; display:flex; align-items:center; justify-content:center; color:white; font-size:10px; font-weight:bold;">${avatarChar}</div>
+                        <span style="font-weight: bold; font-size: 12px;">${safeName}</span>
+                        <span style="font-size: 9px; background: var(--border-light); padding: 1px 4px; border-radius: 8px;">${staff.rank}</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 76px 1fr; gap: 4px 6px; font-size: 11px; align-items: center;">
+                        <span>休日タイプ</span>
+                        <select data-field="holidayType" onchange="updateStaffRule('${staff.id}','holidayType', this.value)" style="font-size: 11px; padding: 2px 4px; border: 1px solid var(--border-light); border-radius: 8px;">
+                            <option value="完全週休2日" ${holidayType.includes("完全")?'selected':''}>完全週休2日</option>
+                            <option value="隔週休2日" ${holidayType.includes("隔")?'selected':''}>隔週休2日</option>
+                        </select>
+                        <span>勤務タイプ</span>
+                        <select data-field="workType" onchange="updateStaffRule('${staff.id}','workType', this.value)" style="font-size: 11px; padding: 2px 4px; border: 1px solid var(--border-light); border-radius: 8px;">
+                            <option value="通常" ${workType.includes("通常")?'selected':''}>通常勤務</option>
+                            <option value="時短" ${workType.includes("時短")?'selected':''}>時短スタッフ</option>
+                        </select>
+                    </div>
+                    <label style="display:flex; align-items:center; gap:4px; margin-top:4px; font-size:11px; cursor:pointer;">
+                        <input type="checkbox"
+                            ${cfg.noSunday ? 'checked' : ''}
+                            onchange="updateStaffRule('${staff.id}','noSunday', this.checked)">
+                        <span>日曜出勤不可（公休自動配置）</span>
+                    </label>
+                    <div data-worktime-row style="overflow: hidden; transition: max-height 0.25s ease, opacity 0.25s ease, margin-top 0.25s ease; max-height: ${isShort ? '60px' : '0'}; opacity: ${isShort ? '1' : '0'}; margin-top: ${isShort ? '6px' : '0'};">
+                        <div style="background: #f9f0ff; border: 1px dashed #d6b4fc; border-radius: 8px; padding: 6px 8px; font-size: 11px;">
+                            <div style="font-size: 10px; color: #722ed1; font-weight: bold; margin-bottom: 4px;">勤務時間</div>
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <span>出勤</span>
+                                <input type="text" data-field="startTime" value="${startTime}" onchange="updateStaffRule('${staff.id}','startTime', this.value)" placeholder="8:40" style="font-size: 11px; padding: 2px 4px; border: 1px solid var(--border-light); border-radius: 8px; width: 60px; text-align: center;">
+                                <span style="margin-left: 6px;">退勤</span>
+                                <input type="text" data-field="endTime" value="${endTime}" onchange="updateStaffRule('${staff.id}','endTime', this.value)" placeholder="15:00" style="font-size: 11px; padding: 2px 4px; border: 1px solid var(--border-light); border-radius: 8px; width: 60px; text-align: center;">
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 76px 1fr; gap: 4px 6px; font-size: 11px; align-items: center; margin-top: 6px;">
+                        <span>特記事項</span>
+                        <input type="text" data-field="note" value="${safeNote}" placeholder="例: 水曜は必ず出勤" onchange="updateStaffRule('${staff.id}','note', this.value)" style="font-size: 11px; padding: 2px 4px; border: 1px solid var(--border-light); border-radius: 8px;">
+                    </div>
+
+                    ${renderIrregularSection(staff.id, cfg.irregular || {})}
+                </div>
+            `;
+        }).join("");
+    }
+
+    function renderIrregularSection(staffId, irr) {
+        const safeReason = (irr.reason || "").replace(/"/g, "&quot;");
+        const wOff = irr.weeklyOff != null ? irr.weeklyOff : 2;
+        const mCon = irr.maxConsecutive != null ? irr.maxConsecutive : 6;
+        const opts = (current, values) => values.map(v => `<option value="${v}" ${current==v?'selected':''}>${v}</option>`).join("");
+        return `
+            <div style="margin-top: 8px; background: #fffaf0; border: 1px dashed #fbd38d; border-radius: 8px; padding: 6px 8px; font-size: 11px;">
+                <div style="font-size: 10px; color: #c05621; font-weight: bold; margin-bottom: 6px;">⚠️ イレギュラー設定（本人希望）</div>
+
+                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <input type="checkbox" ${irr.weeklyOffEnabled?'checked':''} onchange="updateStaffIrregular('${staffId}','weeklyOffEnabled', this.checked)">
+                    <span>週休ルールを一時変更する</span>
+                </label>
+                <div style="display: flex; align-items: center; gap: 4px; margin: 2px 0 6px 20px; ${irr.weeklyOffEnabled?'':'opacity:0.5;'}">
+                    <span style="font-size: 10px;">└ 今月の週休:</span>
+                    <select onchange="updateStaffIrregular('${staffId}','weeklyOff', this.value)" ${irr.weeklyOffEnabled?'':'disabled'} style="font-size: 11px; padding: 2px 4px; border: 1px solid var(--border-light); border-radius: 8px;">
+                        ${opts(wOff, [1,2,3])}
+                    </select>
+                    <span style="font-size: 10px;">日/週</span>
+                </div>
+
+                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <input type="checkbox" ${irr.maxConsecEnabled?'checked':''} onchange="updateStaffIrregular('${staffId}','maxConsecEnabled', this.checked)">
+                    <span>連勤上限を一時変更する</span>
+                </label>
+                <div style="display: flex; align-items: center; gap: 4px; margin: 2px 0 6px 20px; ${irr.maxConsecEnabled?'':'opacity:0.5;'}">
+                    <span style="font-size: 10px;">└ 連勤上限:</span>
+                    <select onchange="updateStaffIrregular('${staffId}','maxConsecutive', this.value)" ${irr.maxConsecEnabled?'':'disabled'} style="font-size: 11px; padding: 2px 4px; border: 1px solid var(--border-light); border-radius: 8px;">
+                        ${opts(mCon, [5,6,7,8,9,10])}
+                    </select>
+                    <span style="font-size: 10px;">日</span>
+                </div>
+
+                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; margin-bottom: 6px;">
+                    <input type="checkbox" ${irr.ignoreMinStaff?'checked':''} onchange="updateStaffIrregular('${staffId}','ignoreMinStaff', this.checked)">
+                    <span>最低出勤人数制約を免除する</span>
+                </label>
+
+                <input type="text" value="${safeReason}" placeholder="理由（例: 売上目標達成のため）" onchange="updateStaffIrregular('${staffId}','reason', this.value)"
+                       style="width: 100%; font-size: 10px; padding: 3px 5px; border: 1px solid var(--border-light); border-radius: 8px; box-sizing: border-box;">
+                <div style="font-size: 9px; color: #c05621; margin-top: 4px;">※本人希望による特例設定です</div>
+            </div>
+        `;
+    }
+
+    function updateStaffIrregular(staffId, field, value) {
+        if (!liveStaffConfig[staffId]) {
+            liveStaffConfig[staffId] = { holidayType: "完全週休2日", workType: "通常", startTime: "8:40", endTime: "17:40", maxHoliday: 2, note: "" };
+        }
+        if (!liveStaffConfig[staffId].irregular) {
+            liveStaffConfig[staffId].irregular = {
+                enabled: false, weeklyOffEnabled: false, weeklyOff: 2,
+                maxConsecEnabled: false, maxConsecutive: 6,
+                ignoreMinStaff: false, reason: ""
+            };
+        }
+        const irr = liveStaffConfig[staffId].irregular;
+        if (field === "weeklyOff" || field === "maxConsecutive") {
+            irr[field] = parseInt(value, 10);
+        } else {
+            irr[field] = value; // boolean or string
+        }
+        // 派生フラグ: 何かしらの特例が有効なら enabled = true
+        irr.enabled = !!(irr.weeklyOffEnabled || irr.maxConsecEnabled || irr.ignoreMinStaff);
+
+        // チェックボックス変更時はパネル全体を再描画（dropdown の有効/無効を反映）
+        // 理由テキスト編集時は再描画でフォーカスを失うが、blur 時の onchange なので問題なし
+        renderStaffRulesPanel();
+        renderTable(); // ⚠️ マーク表示更新のため
+    }
+
+    function updateStaffRule(staffId, field, value) {
+        if (!liveStaffConfig[staffId]) {
+            liveStaffConfig[staffId] = { holidayType: "完全週休2日", workType: "通常", startTime: "8:40", endTime: "17:40", maxHoliday: 2, note: "" };
+        }
+        if (field === "noSunday") {
+            liveStaffConfig[staffId][field] = (value === true || value === "true");
+            return;
+        }
+        if (field === "maxHoliday") {
+            const n = parseInt(value, 10);
+            liveStaffConfig[staffId][field] = isNaN(n) ? 2 : n;
+        } else {
+            liveStaffConfig[staffId][field] = value;
+        }
+
+        // holidayType / workType は表内の staff-select と相互同期させる
+        if (field === "holidayType" || field === "workType") {
+            // 表内の <select> を直接書き換える（テーブル全体の再描画は重いため）
+            const rowSelects = document.querySelectorAll(`tr[data-staff-id="${staffId}"] select.staff-select`);
+            rowSelects.forEach(sel => {
+                if (sel.dataset.staffField === field) sel.value = value;
+            });
+            // サイドバーの該当 select も同期（表からの呼び出し時のため）
+            const panelEl = document.querySelector(`[data-staff-rule="${staffId}"]`);
+            if (panelEl) {
+                const sel = panelEl.querySelector(`[data-field="${field}"]`);
+                if (sel) sel.value = value;
+            }
+
+            // workType 切替時に勤務時間欄をスライド表示/非表示
+            if (field === "workType" && panelEl) {
+                const wtRow = panelEl.querySelector('[data-worktime-row]');
+                if (wtRow) {
+                    const isShort = value.includes("時短");
+                    wtRow.style.maxHeight = isShort ? "60px" : "0";
+                    wtRow.style.opacity   = isShort ? "1" : "0";
+                    wtRow.style.marginTop = isShort ? "6px" : "0";
+                }
+                // 勤務時間がカレンダーのスタッフ情報セルにも影響するためテーブルも再描画
+                renderTable();
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 👥 最低出勤人数: 設定・カウント・判定ヘルパー
+    // ─────────────────────────────────────────────────────────────
+    function updateMinStaff(key, value) {
+        if (!currentStore) return;
+        if (!storeMinStaff[currentStore.id]) storeMinStaff[currentStore.id] = {};
+        const num = parseInt(value, 10);
+        if (isNaN(num) || num < 0) {
+            delete storeMinStaff[currentStore.id][key];
+        } else {
+            storeMinStaff[currentStore.id][key] = num;
+        }
+        renderTable();
+    }
+
+    function updateStoreMaxKibou(value) {
+        if (!currentStore) return;
+        if (!storeSettings[currentStore.id]) storeSettings[currentStore.id] = {};
+        const num = parseInt(value, 10);
+        storeSettings[currentStore.id].maxKibou = isNaN(num) ? 2 : num;
+    }
+
+    function getStoreMaxKibou() {
+        if (!currentStore) return 2;
+        return (storeSettings[currentStore.id] || {}).maxKibou ?? 2;
+    }
+
+    // その日の出勤者数をカウント（出 / 時 / 会 / 研 / 未入力 を出勤としてカウント）
+    function countWorkers(day) {
+        if (!currentStore) return 0;
+        const isTuesdayClosed = currentStore.rule.includes("火曜") || currentStore.rule.includes("火曜日");
+        const isTues = new Date(currentYear, currentMonth, day).getDay() === 2;
+        // 定休日でも手動で出勤に変更されている場合はカウントする
+        if (isTuesdayClosed && isTues) {
+            let count = 0;
+            currentStaffs.forEach(s => {
+                const v = getCurrentCellStates()[`${s.id}-${day}`];
+                if (v === "出" || v === "時" || v === "研") count++;
+            });
+            return count;
+        }
+
+        let count = 0;
+        currentStaffs.forEach(s => {
+            const v = getCurrentCellStates()[`${s.id}-${day}`];
+            if (v === "公" || v === "希" || v === "有" || v === "研") return; // 休みはカウントしない
+            // 美容師免許なしはカウントしない
+            const staffInfo = currentStaffs.find(st => st.id === s.id);
+            if (staffInfo && !staffInfo.hasLicense) return;
+            if (staffInfo && staffInfo.isReceptionPart) return;
+            count++; // 出 / 時 / 会 / undefined（未入力）はすべて出勤
+        });
+        return count;
+    }
+
+    // その日の最低出勤人数（土日祝＝weekend / 平日＝weekday）。未設定は null。
+    function getMinRequired(day) {
+        if (!currentStore) return null;
+        const min = storeMinStaff[currentStore.id] || {};
+        const dayIdx = new Date(currentYear, currentMonth, day).getDay();
+        const isHoliday = holidays.includes(day);
+        if (isHoliday) return min.holiday ?? null;
+        if (dayIdx === 6) return min.saturday ?? null;
+        if (dayIdx === 0) return min.sunday ?? null;
+        return min.weekday ?? null;
+    }
+
+    function renderTable() {
+        const thead = document.querySelector("#shiftTable thead");
+        const tbody = document.querySelector("#shiftTable tbody");
+        if (!currentStore) return;
+
+        let headerHtml = `<tr><th style="min-width: 260px;">スタッフ名 [計 ${currentStaffs.length}名] / ダッシュボード設定</th>`;
+        let subHeaderHtml = `<tr><th>曜日</th>`;
+        let countHeaderHtml = `<tr><th style="font-size:10px;">出勤人数</th>`;
+        const weekDays = ["日", "月", "火", "水", "木", "金", "土"];
+
+        const isTuesdayClosed = currentStore.rule.includes("火曜") || currentStore.rule.includes("火曜日");
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateObj = new Date(currentYear, currentMonth, d);
+            const dayIdx = dateObj.getDay();
+            const dayStr = weekDays[dayIdx];
+            const isHoliday = holidays.includes(d);
+
+            let thClass = "";
+            if (isHoliday) thClass = "th-hol";
+            else if (dayIdx === 6) thClass = "th-sat";
+            else if (dayIdx === 0) thClass = "th-sun";
+
+            const sundayBorder = dayIdx === 0 ? 'border-left: 3px solid #f6ad55;' : '';
+            headerHtml += `<th class="${thClass}" style="${sundayBorder}">${d}</th>`;
+            subHeaderHtml += `<th class="${thClass}" style="${sundayBorder}">${dayStr}</th>`;
+
+            // 出勤人数行: 定休日は「-」、それ以外は人数。最低人数との比較で色分け
+            let countCellStyle = "font-size:10px; padding:4px;";
+            let countCellText;
+            if (isTuesdayClosed && dayIdx === 2) {
+                countCellText = "-";
+                countCellStyle += "color:var(--text-secondary);";
+            } else {
+                const count = countWorkers(d);
+                const required = getMinRequired(d);
+                countCellText = `出勤${count}名`;
+                if (required == null) {
+                    countCellStyle += "color:var(--text-secondary);";
+                } else if (count >= required) {
+                    countCellStyle += "color:#22c55e; font-weight:bold;";
+                } else {
+                    countCellStyle += "background:#fee2e2; color:#dc2626; font-weight:bold;";
+                }
+            }
+            countHeaderHtml += `<th style="${countCellStyle} ${sundayBorder}">${countCellText}</th>`;
+        }
+        thead.innerHTML = headerHtml + "</tr>" + subHeaderHtml + "</tr>" + countHeaderHtml + "</tr>";
+
+        let bodyHtml = "";
+        if (currentStaffs.length === 0) {
+            bodyHtml = `<tr><td colspan="${daysInMonth + 1}" style="padding:40px; color:var(--text-secondary); font-size:14px;">2番目の「社員名簿 CSVファイル」を選択してください。自動的に所属スタッフ名が一斉に漢字で展開されます！</td></tr>`;
+        } else {
+            recomputeFairness();
+
+            // グループ分け表示の準備
+            const groupEnabled = isGroupViewEnabled();
+            let staffRenderList = [];
+            if (groupEnabled) {
+                const grouped = {};
+                GROUP_ORDER.forEach(g => { grouped[g] = []; });
+                currentStaffs.forEach(s => {
+                    const g = s.yearsGroup || "不明";
+                    if (!grouped[g]) grouped[g] = [];
+                    grouped[g].push(s);
+                });
+                GROUP_ORDER.forEach(g => {
+                    if (grouped[g].length === 0) return;
+                    const gc = GROUP_COLORS[g] || GROUP_COLORS["不明"];
+                    // グループ区切り行
+                    staffRenderList.push({ type: "group-header", label: gc.label, count: grouped[g].length, gc });
+                    grouped[g].forEach(s => staffRenderList.push({ type: "staff", staff: s }));
+                });
+            } else {
+                currentStaffs.forEach(s => staffRenderList.push({ type: "staff", staff: s }));
+            }
+
+            staffRenderList.forEach(item => {
+                if (item.type === "group-header") {
+                    const { label, count, gc } = item;
+                    bodyHtml += `<tr>
+                        <td colspan="${daysInMonth + 1}" style="background:${gc.bg}; border-left:4px solid ${gc.border}; color:${gc.text}; font-weight:bold; font-size:11px; padding:5px 10px; position:sticky; left:0;">
+                            ${label}（${count}名）
+                        </td></tr>`;
+                    return;
+                }
+                const staff = item.staff;
+                const config = liveStaffConfig[staff.id] || { holidayType: "完全週休2日", workType: "通常" };
+                const avatarChar = staff.name.charAt(0);
+                const fair = staffFairnessCount[staff.id] || { 希: 0, 有: 0 };
+
+                const isShortStaff = (config.workType || "").includes("時短");
+                const workTimeLine = isShortStaff
+                    ? `<div style="font-size:9px; color:#722ed1; font-weight:bold; margin-top:2px;">🕒 ${config.startTime || "8:40"}〜${config.endTime || "17:40"}</div>`
+                    : "";
+                const irrCfg = config.irregular || {};
+                const isIrregular = !!(irrCfg.weeklyOffEnabled || irrCfg.maxConsecEnabled || irrCfg.ignoreMinStaff);
+                const irregularParts = [];
+                if (irrCfg.weeklyOffEnabled) irregularParts.push(`週休${irrCfg.weeklyOff}日`);
+                if (irrCfg.maxConsecEnabled) irregularParts.push(`連勤${irrCfg.maxConsecutive}日まで`);
+                if (irrCfg.ignoreMinStaff)   irregularParts.push(`人数制約免除`);
+                const irrTitle = isIrregular
+                    ? `イレギュラー設定中: ${irregularParts.join("・")}${irrCfg.reason ? `\n理由: ${irrCfg.reason}` : ""}`
+                    : "";
+                const irregularMark = isIrregular
+                    ? `<span title="${irrTitle.replace(/"/g, "&quot;")}" style="margin-left:4px; cursor:help;">⚠️</span>`
+                    : "";
+                const irregularLine = isIrregular
+                    ? `<div style="font-size:9px; color:#c05621; font-weight:bold; margin-top:2px;">⚠️ ${irregularParts.join(" / ")}</div>`
+                    : "";
+
+                bodyHtml += `<tr data-staff-id="${staff.id}">
+                    <td class="staff-info-cell">
+                        <div class="staff-profile">
+                            <div class="staff-avatar">${avatarChar}</div>
+                            <div>
+                                <span class="staff-name">${staff.name}</span>${irregularMark}
+                                <span style="font-size:9px; background:var(--border-light); padding:1px 4px; border-radius:8px; margin-left:4px;">${staff.rank}</span>
+                                <button class="mobile-staff-toggle" onclick="toggleStaffRowExpand('${staff.id}', event)" title="設定を表示／隠す">▼</button>
+                                <span style="font-size:9px; color:var(--text-secondary); margin-left:6px;">今月希望休: ${fair.希}日${fair.有 > 0 ? ` / 有給: ${fair.有}日` : ""}</span>
+                                ${workTimeLine}
+                                ${irregularLine}
+                            </div>
+                        </div>
+                        <div class="staff-controls">
+                            <select class="staff-select" data-staff-field="holidayType" onchange="updateStaffRule('${staff.id}','holidayType', this.value)">
+                                <option value="完全週休2日" ${config.holidayType.includes("完全")?'selected':''}>完全週休2日</option>
+                                <option value="隔週休2日" ${config.holidayType.includes("隔")?'selected':''}>隔週休2日</option>
+                            </select>
+                            <select class="staff-select" data-staff-field="workType" onchange="updateStaffRule('${staff.id}','workType', this.value)">
+                                <option value="通常" ${config.workType.includes("通常")?'selected':''}>通常勤務</option>
+                                <option value="時短" ${config.workType.includes("時短")?'selected':''}>時短スタッフ</option>
+                            </select>
+                        </div>
+                    </td>`;
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateObj = new Date(currentYear, currentMonth, d);
+                    const isTuesday = dateObj.getDay() === 2;
+                    const cellKey = `${staff.id}-${d}`;
+                    const cellSundayBorder = (new Date(currentYear, currentMonth, d).getDay() === 0)
+                        ? 'border-left: 3px solid #f6ad55;' : '';
+
+                    if ((currentStore.rule.includes("火曜") || currentStore.rule.includes("火曜日")) && isTuesday) {
+                        // 定休日でも手動変更可能にする
+                        const currentVal = getCurrentCellStates()[cellKey] || "定";
+                        let cellColorStyle = "background:var(--fixed-holiday-bg); color:var(--fixed-holiday-text);";
+                        if (currentVal === "出") cellColorStyle = "background:#e6f7ff; color:#1890ff;";
+                        if (currentVal === "公") cellColorStyle = "background:var(--holiday-bg); color:var(--holiday-text);";
+                        if (currentVal === "希") cellColorStyle = "background:#f6ffed; color:#52c41a;";
+                        if (currentVal === "有") cellColorStyle = "background:#fff0f6; color:#eb2f96;";
+                        if (currentVal === "研") cellColorStyle = "background:#feffe6; color:#d4b106;";
+                        if (currentVal === "必") cellColorStyle = "background:#fff1f0; color:#f5222d; font-weight:bold; border: 2px solid #f5222d;";
+                        bodyHtml += `<td class="cell-clickable" style="${cellColorStyle} ${cellSundayBorder}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
+                    } else {
+                        const currentVal = getCurrentCellStates()[cellKey] || "-";
+                        let cellColorStyle = "";
+                        if (currentVal === "公") cellColorStyle = "background:var(--holiday-bg); color:var(--holiday-text);";
+                        if (currentVal === "希") cellColorStyle = "background:#f6ffed; color:#52c41a;";
+                        if (currentVal === "時") cellColorStyle = "background:#f9f0ff; color:#722ed1;";
+                        if (currentVal === "会") cellColorStyle = "background:#fff7e6; color:#fa8c16;";
+                        if (currentVal === "研") cellColorStyle = "background:#feffe6; color:#d4b106;";
+                        if (currentVal === "出") cellColorStyle = "background:#e6f7ff; color:#1890ff;";
+                        if (currentVal === "有") cellColorStyle = "background:#fff0f6; color:#eb2f96;";
+                        if (currentVal === "必") cellColorStyle = "background:#fff1f0; color:#f5222d; font-weight:bold; border: 2px solid #f5222d;";
+
+                        bodyHtml += `<td class="cell-clickable" style="${cellColorStyle} ${cellSundayBorder}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
+                    }
+                }
+                bodyHtml += `</tr>`;
+            });
+        }
+        tbody.innerHTML = bodyHtml;
+    }
+
+    function clickCell(staffId, day) {
+        const cellKey = `${staffId}-${day}`;
+        const cs = getCurrentCellStates();
+
+        if (selectedStamp === "希" && cs[cellKey] !== "希") {
+            const staffName = (currentStaffs.find(s => s.id === staffId) || {}).name || staffId;
+            recomputeFairness();
+            const maxKibou = getStoreMaxKibou();
+            const currentCount = (staffFairnessCount[staffId] || {}).希 || 0;
+
+            // 上限チェック
+            if (currentCount >= maxKibou) {
+                alert(`${staffName}さんの希望休は今月${maxKibou}日が上限です。\n現在: ${currentCount}日取得済み`);
+                return;
+            }
+
+            // 公平性チェック（平均との比較）
+            const counts = currentStaffs.map(s =>
+                (staffFairnessCount[s.id] || {}).希 || 0
+            );
+            const avg = counts.reduce((a,b) => a+b, 0) / counts.length;
+            if (currentCount >= avg + 1) {
+                const ok = confirm(`${staffName}さんの希望休取得数(${currentCount+1}日)が\n他スタッフの平均(${avg.toFixed(1)}日)より多くなります。\n承認しますか？`);
+                if (!ok) return;
+            }
+        }
+
+        if (cs[cellKey] === selectedStamp) {
+            delete cs[cellKey];
+        } else {
+            // 役職者同日休みチェック
+            const managerWarning = checkManagerConflict(staffId, day, selectedStamp);
+            if (managerWarning) {
+                const ok = confirm(managerWarning);
+                if (!ok) return;
+            }
+            cs[cellKey] = selectedStamp;
+        }
+        renderTable();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // ⚡ シフト自動生成（完全クリーン実装）
+    //   絶対ルール: 日曜〜土曜の各週で 定休 + 公 + 希 + 有 = 2日以上
+    //   保証:
+    //     - 各日の出勤者は最低 2 名（minWorkers）
+    //     - 月またぎの週も同ルール（allCellStates で前後月を参照）
+    //     - 再生成しても累積しない（Phase 1 で公をクリア）
+    //   設計:
+    //     Phase 1: 既存の公をクリア
+    //     Phase 2: 週ブロック構築（日〜土）
+    //     Phase 3: 週ごとに「日の容量」を先に確定 → スタッフを順に配置
+    //              （同日集中を構造的に防止）
+    //     Phase 4: 残りを 出/時 で埋める
+    // ─────────────────────────────────────────────────────────────
+    function generateShift() {
+      if (!currentStore || currentStaffs.length === 0) return;
+
+      const cs = getCurrentCellStates();
+      const tueClosed = currentStore.rule.includes("火曜");
+      const dim = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const firstDow = new Date(currentYear, currentMonth, 1).getDay();
+
+      const TARGET_OFF = 2;     // 週の最低休日数
+      const totalStaff = currentStaffs.length;
+
+      // 日ごとの最低出勤人数を取得
+      function getMinStaffForDay(day) {
+        if (!currentStore) return 2;
+        const min = storeMinStaff[currentStore.id] || {};
+        const dayIdx = new Date(currentYear, currentMonth, day).getDay();
+        const isHoliday = holidays.includes(day);
+        if (isHoliday) return Number(min.holiday ?? 2);
+        if (dayIdx === 6) return Number(min.saturday ?? 2);
+        if (dayIdx === 0) return Number(min.sunday ?? 2);
+        return Number(min.weekday ?? 2);
+      }
+
+      // ─── ヘルパー: 月またぎ対応でスタンプ取得 ───
+      function stampOf(staffId, day) {
+        let y = currentYear, m = currentMonth, d = day;
+        const monEnd = new Date(y, m + 1, 0).getDate();
+        if (d < 1) {
+          m--; if (m < 0) { m = 11; y--; }
+          d = new Date(y, m + 1, 0).getDate() + day;
+        } else if (d > monEnd) {
+          d -= monEnd;
+          m++; if (m > 11) { m = 0; y++; }
+        }
+        return (allCellStates[`${y}-${m + 1}`] || {})[`${staffId}-${d}`];
+      }
+
+      // 定休判定（月またぎ対応）
+      function isClosed(day) {
+        return tueClosed && new Date(currentYear, currentMonth, day).getDay() === 2;
+      }
+      // オフ判定（定休 / 公 / 希 / 有）
+      function isOff(staffId, day) {
+        if (isClosed(day)) return true;
+        const v = stampOf(staffId, day);
+        return v === "公" || v === "希" || v === "有" || v === "研";
+      }
+
+      // ─── Phase 1: 当月の既存「公」をクリア ───
+      currentStaffs.forEach(staff => {
+        for (let d = 1; d <= dim; d++) {
+          if (cs[`${staff.id}-${d}`] === "公") delete cs[`${staff.id}-${d}`];
+        }
+      });
+
+      // ママスタイリスト等の日曜固定公休を配置
+      currentStaffs.forEach(staff => {
+        const cfg = liveStaffConfig[staff.id] || {};
+        if (!cfg.noSunday) return;
+        for (let d = 1; d <= dim; d++) {
+          const dow = new Date(currentYear, currentMonth, d).getDay();
+          if (dow === 0) { // 日曜日
+            cs[`${staff.id}-${d}`] = "公";
+          }
+        }
+      });
+
+      // レセプションパートは全日公休で埋める
+      currentStaffs.forEach(staff => {
+        if (!staff.isReceptionPart) return;
+        for (let d = 1; d <= dim; d++) {
+          if (isClosed(d)) continue;
+          cs[`${staff.id}-${d}`] = "公";
+        }
+      });
+
+      // ─── Phase 2: 週ブロック構築（日〜土） ───
+      const weeks = [];
+      let wStart = 1 - firstDow;
+      while (wStart <= dim) {
+        weeks.push({ start: wStart, end: wStart + 6 });
+        wStart += 7;
+      }
+
+      // 月内日数が2日以下の端数週はスキップフラグを立てる
+      // （前月・翌月またぎで月内に1〜2日しかない週）
+      weeks.forEach(wk => {
+        const activeDays = [];
+        for (let d = wk.start; d <= wk.end; d++) {
+          if (d >= 1 && d <= dim && !isClosed(d)) activeDays.push(d);
+        }
+        wk.activeDaysCount = activeDays.length;
+      });
+
+      // ─── Phase 3: 週ごとに公休配置 ───
+      weeks.forEach((wk, wIdx) => {
+        // 月内有効日が2日以下の端数週は公休配置をスキップ
+        if (wk.activeDaysCount <= 2) return;
+
+        // この週の「配置候補日」と「日ごとの容量」を計算
+        // 容量 = (totalStaff - 日別最低出勤人数) - (現時点でその日に既にオフのスタッフ数)
+        const dayCapacity = {}; // day -> 残り容量
+        for (let d = wk.start; d <= wk.end; d++) {
+          if (d < 1 || d > dim) continue;       // 月外は配置不可
+          if (isClosed(d)) continue;             // 定休日は配置不可
+          let curOff = 0;
+          currentStaffs.forEach(s => {
+            const v = cs[`${s.id}-${d}`];
+            if (v === "公" || v === "希" || v === "有") curOff++;
+          });
+          const maxOff = Math.max(0, totalStaff - getMinStaffForDay(d));
+          dayCapacity[d] = maxOff - curOff;
+        }
+
+        // スタッフを毎回ランダム順で処理して同日集中を緩和
+        const staffOrder = currentStaffs
+          .filter(s => !s.isReceptionPart)
+          .map((s, i) => ({ s, key: Math.sin(wIdx * 37 + i * 13) }))
+          .sort((a, b) => a.key - b.key)
+          .map(o => o.s);
+
+        staffOrder.forEach((staff, si) => {
+          // このスタッフの週内オフ日（既存）
+          const offDays = [];
+          for (let d = wk.start; d <= wk.end; d++) {
+            if (isOff(staff.id, d)) offDays.push(d);
+          }
+
+          // 隔週休2日の場合、週番号で交互に1日・2日を切り替え
+          const cfg = liveStaffConfig[staff.id] || {};
+          const isAlternate = (cfg.holidayType || "").includes("隔週");
+          let weekTarget;
+          if (isAlternate) {
+            // スタッフインデックスでずらして全員が同じ週に
+            // 休みが集中しないようにする
+            weekTarget = (wIdx + si) % 2 === 0 ? 1 : 2;
+          } else {
+            weekTarget = TARGET_OFF; // 完全週休2日は2日固定
+          }
+
+          const need = Math.max(0, weekTarget - offDays.length);
+
+          for (let k = 0; k < need; k++) {
+            // 候補: 当月内、定休でない、未オフ、容量あり
+            const candidates = Object.keys(dayCapacity)
+              .map(d => +d)
+              .filter(d => {
+                if (!isOff(staff.id, d) && dayCapacity[d] > 0) {
+                  // 「必」が設定されている日は公休候補にしない
+                  const v = stampOf(staff.id, d);
+                  if (v === "必") return false;
+                  const dow = new Date(currentYear, currentMonth, d).getDay();
+                  const isHol = holidays.includes(d);
+                  // 土日・祝日の公休配置禁止（店舗設定に基づく）
+                  const noSat = document.getElementById("noHolidayOnSat")?.checked ?? true;
+                  const noSun = document.getElementById("noHolidayOnSun")?.checked ?? true;
+                  const noHol = document.getElementById("noHolidayOnHol")?.checked ?? true;
+                  if (noSun && dow === 0) return false;
+                  if (noSat && dow === 6) return false;
+                  if (noHol && isHol)     return false;
+                  // 役職者同日休み禁止チェック（自動生成時）
+                  if (isManagerRuleEnabled() && isManager(staff)) {
+                    const alreadyOff = currentStaffs.some(s => {
+                      if (s.id === staff.id) return false;
+                      if (!isManager(s)) return false;
+                      const sv = cs[`${s.id}-${d}`];
+                      return sv === "公" || sv === "希" || sv === "有";
+                    });
+                    if (alreadyOff) return false;
+                  }
+                  return true;
+                }
+                return false;
+              });
+            if (candidates.length === 0) break;
+
+            // 既存オフから最も離れた日を選択（連勤分散）
+            let best = null, bestScore = -Infinity;
+            candidates.forEach(d => {
+              let offCount = 0;
+              currentStaffs.forEach(s => {
+                const v = getCurrentCellStates()[`${s.id}-${d}`];
+                if (v === "公" || v === "希") offCount++;
+              });
+              const remainWork = currentStaffs.length - offCount - 1;
+              const minRequired = getMinStaffForDay(d);
+              if (remainWork < minRequired) return;
+
+              // 曜日ごとの全スタッフ公休合計（均等化のため）
+              const dow = new Date(currentYear, currentMonth, d).getDay();
+              let dowTotalOff = 0;
+              for (let dd = 1; dd <= dim; dd++) {
+                if (new Date(currentYear, currentMonth, dd).getDay() === dow) {
+                  currentStaffs.forEach(s => {
+                    const v = cs[`${s.id}-${dd}`];
+                    if (v === "公" || v === "希") dowTotalOff++;
+                  });
+                }
+              }
+
+              // 土日・祝日は公休を入れにくくする（店舗設定に基づく）
+              const isHol = holidays.includes(d);
+              const noSat2 = document.getElementById("noHolidayOnSat")?.checked ?? true;
+              const noSun2 = document.getElementById("noHolidayOnSun")?.checked ?? true;
+              const noHol2 = document.getElementById("noHolidayOnHol")?.checked ?? true;
+              const isRestrictedDay = (noSun2 && dow === 0) || (noSat2 && dow === 6) || (noHol2 && isHol);
+              const weekendPenalty = isRestrictedDay ? -50000 : 0;
+
+              // 連勤分散スコア
+              const minDist = offDays.length === 0 ? 999
+                : Math.min(...offDays.map(o => Math.abs(d - o)));
+
+              // 曜日バランス強化：月の各曜日の日数を計算して均等配分
+              let dowDayCount = 0;
+              for (let dd = 1; dd <= dim; dd++) {
+                const ddow = new Date(currentYear, currentMonth, dd).getDay();
+                if (ddow === dow && ddow !== 0 && ddow !== 6 && !holidays.includes(dd)) dowDayCount++;
+              }
+              // 公休が少ない曜日を優先（公休数/曜日出現数 が低い曜日にボーナス）
+              const dowOffRate = dowDayCount > 0 ? dowTotalOff / (currentStaffs.length * dowDayCount) : 1;
+              const balanceBonus = (1 - dowOffRate) * 20000; // 公休が少ない曜日ほど高スコア
+
+              // スコア: 土日ペナルティ最優先 → 曜日均等化 → 連勤分散 → ランダム
+              const hash = Math.sin(si * 997 + d * 113) * 1000;
+              const score = weekendPenalty + balanceBonus + (-dowTotalOff * 10000) + minDist * 100 + hash;
+
+              if (score > bestScore) { best = d; bestScore = score; }
+            });
+
+            if (best !== null) {
+              cs[`${staff.id}-${best}`] = "公";
+              dayCapacity[best]--;
+              offDays.push(best);
+            }
+          }
+        });
+      });
+
+      // ─── Phase 3.5: 6連勤以上になっているスタッフに追加公休を配置 ───
+      currentStaffs.forEach(staff => {
+        const cfg = liveStaffConfig[staff.id] || {};
+        const irr = cfg.irregular || {};
+        const maxConsec = irr.maxConsecEnabled ? irr.maxConsecutive : 6;
+
+        // 連勤チェックして6連勤以上の箇所を検出
+        let streak = 0, streakStart = 1;
+        for (let d = 1; d <= dim + 1; d++) {
+          const closed = isClosed(d);
+          const v = d <= dim ? cs[`${staff.id}-${d}`] : null;
+          const isWork = d <= dim && !closed && v !== "公" && v !== "希" && v !== "有";
+
+          if (isWork) {
+            if (streak === 0) streakStart = d;
+            streak++;
+          } else {
+            if (streak >= maxConsec) {
+              // 連勤中の中間に公休を追加（連勤の真ん中あたり）
+              const midPoint = Math.floor((streakStart + d - 1) / 2);
+              for (let fix = midPoint; fix >= streakStart; fix--) {
+                if (isClosed(fix)) continue;
+                const fixDow = new Date(currentYear, currentMonth, fix).getDay();
+                const fixIsHol = holidays.includes(fix);
+                if (fixDow === 0 || fixDow === 6 || fixIsHol) continue;
+                const offCount = currentStaffs.filter(s => {
+                  const sv = cs[`${s.id}-${fix}`];
+                  return sv === "公" || sv === "希";
+                }).length;
+                const remainWork = currentStaffs.length - offCount - 1;
+                const minReq = getMinStaffForDay(fix);
+                if (remainWork >= minReq) {
+                  cs[`${staff.id}-${fix}`] = "公";
+                  break;
+                }
+              }
+            }
+            streak = 0;
+          }
+        }
+      });
+
+      // ─── Phase 4: 残りの当月日を勤務スタンプで埋める ───
+      currentStaffs.forEach(staff => {
+        const cfg = liveStaffConfig[staff.id] || {};
+        const workStamp = (cfg.workType || "").includes("時短") ? "時" : "出";
+        for (let d = 1; d <= dim; d++) {
+          if (isClosed(d)) continue;
+          const v = cs[`${staff.id}-${d}`];
+          // 「必」スタンプ（絶対出勤日）は上書きしない
+          if (!v || v === "出" || v === "時") cs[`${staff.id}-${d}`] = workStamp;
+        }
+      });
+
+      // ─── Phase 4.5: 連休回数制限（Phase4後に実行） ───
+      const consecLimitEnabled = document.getElementById("enableConsecLimit")?.checked || false;
+      const consecLimitMax     = parseInt(document.getElementById("consecLimitCount")?.value || "1");
+
+      if (consecLimitEnabled) {
+        const isTuesdayClosed = currentStore && (currentStore.rule.includes("火曜") || currentStore.rule.includes("火曜日"));
+
+        // 「連休対象日」= 平日の公休・希望休・有給 または 定休日（土日は除外）
+        function isConsecTarget(staffId, d) {
+            if (d < 1 || d > dim) return false;
+            const dow = new Date(currentYear, currentMonth, d).getDay();
+            if (dow === 0 || dow === 6) return false; // 土日は除外
+            if (holidays.includes(d)) return false;   // 祝日も除外
+            if (isTuesdayClosed && dow === 2) return true; // 火曜定休は対象
+            const v = cs[`${staffId}-${d}`];
+            return v === "公" || v === "希" || v === "有";
+        }
+
+        currentStaffs.forEach(staff => {
+          if (staff.isReceptionPart) return;
+          const cfg = liveStaffConfig[staff.id] || {};
+          const workStamp = (cfg.workType || "").includes("時短") ? "時" : "出";
+
+          // 連休グループを検出（平日公休＋定休日の連続のみ）
+          function getConsecGroups() {
+            const groups = [];
+            let grpStart = null;
+            for (let d = 1; d <= dim + 1; d++) {
+              const isTarget = isConsecTarget(staff.id, d);
+              if (isTarget) {
+                if (grpStart === null) grpStart = d;
+              } else {
+                if (grpStart !== null) {
+                  if (d - grpStart >= 2) groups.push({ start: grpStart, end: d - 1 });
+                  grpStart = null;
+                }
+              }
+            }
+            return groups;
+          }
+
+          let groups = getConsecGroups();
+          let safetyCount = 0;
+
+          while (groups.length > consecLimitMax && safetyCount++ < 30) {
+            // 最後の連休グループを分割
+            const grp = groups[groups.length - 1];
+
+            // 連休内で「公」スタンプが入っている平日を探して出勤に変換
+            let moved = false;
+            for (let d = grp.start; d <= grp.end; d++) {
+              const dow = new Date(currentYear, currentMonth, d).getDay();
+              if (dow === 0 || dow === 6) continue;
+              if (holidays.includes(d)) continue;
+              if (isTuesdayClosed && dow === 2) continue; // 定休日はスキップ
+              const v = cs[`${staff.id}-${d}`];
+              if (v !== "公") continue;
+
+              // 別の孤立した平日に公休を移す（前後が連休にならない日）
+              let replacedDay = null;
+              for (let dd = 1; dd <= dim; dd++) {
+                const ddow = new Date(currentYear, currentMonth, dd).getDay();
+                if (ddow === 0 || ddow === 6 || holidays.includes(dd)) continue;
+                if (isTuesdayClosed && ddow === 2) continue;
+                const vv = cs[`${staff.id}-${dd}`];
+                if (vv !== "出" && vv !== "時") continue;
+                // 前後が連休対象でない日を選ぶ
+                if (!isConsecTarget(staff.id, dd - 1) && !isConsecTarget(staff.id, dd + 1)) {
+                  replacedDay = dd;
+                  break;
+                }
+              }
+
+              cs[`${staff.id}-${d}`] = workStamp;
+              if (replacedDay !== null) cs[`${staff.id}-${replacedDay}`] = "公";
+              moved = true;
+              break;
+            }
+            if (!moved) break;
+            groups = getConsecGroups();
+          }
+        });
+      }
+
+      // ─── 検証 ───
+      const violations = [];
+      currentStaffs.forEach(staff => {
+        const cfg = liveStaffConfig[staff.id] || {};
+        const isAlternate = (cfg.holidayType || "").includes("隔週");
+        // 隔週休2日は週によって1日休みが許容される（auto配置と一致）
+        const minWeekly = isAlternate ? 1 : TARGET_OFF;
+        weeks.forEach((wk, i) => {
+          let off = 0;
+          for (let d = wk.start; d <= wk.end; d++) {
+            if (isOff(staff.id, d)) off++;
+          }
+          if (off < minWeekly) violations.push(`${staff.name}-第${i + 1}週(${off}日)`);
+        });
+      });
+      // 各日の出勤者数チェック
+      const lowDays = [];
+      for (let d = 1; d <= dim; d++) {
+        if (isClosed(d)) continue;
+        let workers = 0;
+        currentStaffs.forEach(s => {
+          const v = cs[`${s.id}-${d}`];
+          if (v !== "公" && v !== "希" && v !== "有") workers++;
+        });
+        if (workers < getMinStaffForDay(d)) lowDays.push(`${d}日(${workers}名/最低${getMinStaffForDay(d)}名)`);
+      }
+
+      console.log(`[generateShift] ${currentYear}年${currentMonth + 1}月 / 総スタッフ${totalStaff}名 / 週目標${TARGET_OFF}日休み（日別最低出勤人数はサイドバー設定を使用）`);
+      if (violations.length === 0 && lowDays.length === 0) {
+        console.log("✅ 全週2日休み・全日最低出勤人数を達成");
+      } else {
+        if (violations.length > 0) console.warn("⚠️ 週休不足:", violations.join(", "));
+        if (lowDays.length > 0) console.warn("⚠️ 出勤者不足:", lowDays.join(", "));
+      }
+
+      renderTable();
+      const ab = document.getElementById("alertBox");
+      if (ab) {
+        ab.style.display = "block";
+        const ok = violations.length === 0 && lowDays.length === 0;
+        ab.innerHTML = ok
+          ? `⚡ シフト生成完了（${currentYear}年${currentMonth + 1}月）: 全週2日休み・サイドバー設定の日別最低出勤人数を保証`
+          : `⚠️ 生成完了（${currentYear}年${currentMonth + 1}月） — 週休不足${violations.length}件 / 出勤者不足${lowDays.length}日 (Console確認)`;
+      }
+    }
+
+    function exportToCSV() {
+        if (!currentStore || currentStaffs.length === 0) return;
+        let csvContent = "\uFEFF"; 
+        csvContent += "スタッフ名,";
+        for (let d = 1; d <= daysInMonth; d++) csvContent += d + "日,";
+        csvContent += "\n";
+
+        currentStaffs.forEach(staff => {
+            const cfg = liveStaffConfig[staff.id] || {};
+            const isShort = (cfg.workType || "").includes("時短");
+            const timeRange = isShort ? `(${cfg.startTime || "8:40"}-${cfg.endTime || "17:40"})` : "";
+
+            csvContent += staff.name + ",";
+            for (let d = 1; d <= daysInMonth; d++) {
+                const cellKey = `${staff.id}-${d}`;
+                let val = getCurrentCellStates()[cellKey] || "-";
+                if ((currentStore.rule.includes("火曜") || currentStore.rule.includes("火曜日")) && new Date(currentYear, currentMonth, d).getDay() === 2) {
+                    val = "定休";
+                } else if (isShort && (val === "時" || val === "出")) {
+                    // 時短スタッフの出勤日: 勤務時間を付記
+                    val = `時${timeRange}`;
+                }
+                if (val === "必") val = "出勤(必須)";
+                csvContent += val + ",";
+            }
+            csvContent += "\n";
+        });
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", `シフト確定データ_${currentStore.name}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 🎨 カスタムスタンプ管理
+    // ─────────────────────────────────────────────────────────────
+    function updateCustomStamps() {
+        const map = {
+            half:    "stamp_half",
+            out:     "stamp_out",
+            bereave: "stamp_bereave",
+            special: "stamp_special",
+        };
+        Object.entries(map).forEach(([key, stampId]) => {
+            const checkbox = document.getElementById(`stamp_enable_${key}`);
+            const stampEl  = document.getElementById(stampId);
+            if (checkbox && stampEl) {
+                stampEl.style.display = checkbox.checked ? "" : "none";
+            }
+        });
+        saveStoreCustomRules();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 📝 備考欄の表示切り替え
+    // ─────────────────────────────────────────────────────────────
+    function onRemarksColChange() {
+        renderTable();
+        saveStoreCustomRules();
+    }
+
+    function isRemarksEnabled() {
+        const el = document.getElementById("enableRemarksCol");
+        return el ? el.checked : false;
+    }
+
+    function isKibouAsOffEnabled() {
+        const el = document.getElementById("enableKibouAsOff");
+        return el ? el.checked : false;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 💾 カスタムルールをstoreSettingsに保存
+    // ─────────────────────────────────────────────────────────────
+    function saveStoreCustomRules() {
+        if (!currentStore) return;
+        if (!storeSettings[currentStore.id]) storeSettings[currentStore.id] = {};
+        storeSettings[currentStore.id].noHolidayOnSat  = document.getElementById("noHolidayOnSat")?.checked ?? true;
+        storeSettings[currentStore.id].noHolidayOnSun  = document.getElementById("noHolidayOnSun")?.checked ?? true;
+        storeSettings[currentStore.id].noHolidayOnHol  = document.getElementById("noHolidayOnHol")?.checked ?? true;
+        storeSettings[currentStore.id].customRule      = document.getElementById("storeCustomRule")?.value || "";
+        storeSettings[currentStore.id].kibouAsOff      = document.getElementById("enableKibouAsOff")?.checked || false;
+        storeSettings[currentStore.id].remarksCol      = document.getElementById("enableRemarksCol")?.checked || false;
+        storeSettings[currentStore.id].consecLimit     = document.getElementById("enableConsecLimit")?.checked || false;
+        storeSettings[currentStore.id].consecLimitCount= parseInt(document.getElementById("consecLimitCount")?.value || "1");
+        storeSettings[currentStore.id].stampHalf       = document.getElementById("stamp_enable_half")?.checked || false;
+        storeSettings[currentStore.id].stampOut        = document.getElementById("stamp_enable_out")?.checked || false;
+        storeSettings[currentStore.id].stampBereave    = document.getElementById("stamp_enable_bereave")?.checked || false;
+        storeSettings[currentStore.id].stampSpecial    = document.getElementById("stamp_enable_special")?.checked || false;
+    }
+
+    // カスタムルールをUIに復元
+    function restoreStoreCustomRules() {
+        if (!currentStore) return;
+        const s = storeSettings[currentStore.id] || {};
+
+        const setCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
+        const setVal   = (id, val) => { const el = document.getElementById(id); if (el) el.value  = val || ""; };
+
+        setCheck("enableKibouAsOff",    s.kibouAsOff);
+        setCheck("enableRemarksCol",    s.remarksCol);
+        setCheck("enableConsecLimit",   s.consecLimit);
+        setCheck("noHolidayOnSat",      s.noHolidayOnSat ?? true);
+        setCheck("noHolidayOnSun",      s.noHolidayOnSun ?? true);
+        setCheck("noHolidayOnHol",      s.noHolidayOnHol ?? true);
+        const consecEl = document.getElementById("consecLimitCount");
+        if (consecEl) consecEl.value = s.consecLimitCount ?? 1;
+        setCheck("stamp_enable_half",   s.stampHalf);
+        setCheck("stamp_enable_out",    s.stampOut);
+        setCheck("stamp_enable_bereave",s.stampBereave);
+        setCheck("stamp_enable_special",s.stampSpecial);
+        setVal("storeCustomRule",       s.customRule);
+
+        updateCustomStamps();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 👥 グループ分け表示の切替
+    // ─────────────────────────────────────────────────────────────
+    function onGroupViewChange() {
+        renderTable();
+    }
+
+    function isGroupViewEnabled() {
+        const el = document.getElementById("enableGroupView");
+        return el ? el.checked : false;
+    }
+
+    function isManagerRuleEnabled() {
+        const el = document.getElementById("enableManagerRule");
+        return el ? el.checked : false;
+    }
+
+    // 役職者（店長・副店長）判定
+    function isManager(staff) {
+        const r = (staff.rank || "").trim();
+        return r === "店長" || r === "副店長";
+    }
+
+    function checkManagerConflict(targetStaffId, day, newStamp) {
+        if (!isManagerRuleEnabled()) return null;
+        const isOff = (v) => v === "公" || v === "希" || v === "有";
+        if (!isOff(newStamp)) return null;
+
+        const targetStaff = currentStaffs.find(s => s.id === targetStaffId);
+        if (!targetStaff || !isManager(targetStaff)) return null;
+
+        // 同日に既に休んでいる役職者を探す
+        const cs = getCurrentCellStates();
+        const conflicting = currentStaffs.filter(s => {
+            if (s.id === targetStaffId) return false;
+            if (!isManager(s)) return false;
+            const v = cs[`${s.id}-${day}`];
+            return isOff(v);
+        });
+        if (conflicting.length > 0) {
+            return `⚠️ ${conflicting.map(s=>s.name).join("・")}さん（${conflicting.map(s=>s.rank).join("・")}）も${day}日は休みです。役職者の同日休みは禁止ルールに違反します。\n承認しますか？`;
+        }
+        return null;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 📄 HTML形式でシフト表を出力（色分けカレンダー）
+    // ─────────────────────────────────────────────────────────────
+    function exportToHTML() {
+        if (!currentStore || currentStaffs.length === 0) return;
+
+        const weekDays = ["日", "月", "火", "水", "木", "金", "土"];
+        const isTuesdayClosed = currentStore.rule.includes("火曜") || currentStore.rule.includes("火曜日");
+
+        // スタンプの色定義
+        const stampStyle = {
+            "出": "background:#e6f7ff; color:#1890ff;",
+            "時": "background:#f9f0ff; color:#722ed1;",
+            "公": "background:#fff0f0; color:#e53e3e;",
+            "希": "background:#f6ffed; color:#52c41a;",
+            "有": "background:#fff0f6; color:#eb2f96;",
+            "研": "background:#feffe6; color:#d4b106;",
+            "必": "background:#fff1f0; color:#f5222d; font-weight:bold; border:1px solid #f5222d;",
+            "定": "background:var(--border-light); color:var(--text-secondary);",
+            "-": "color:var(--border-light);",
+        };
+
+        const groupEnabled = isGroupViewEnabled();
+        const staffToRender = [...currentStaffs];
+
+        // グループ分けする場合の順序整列
+        let groupedStaffs = null;
+        if (groupEnabled) {
+            groupedStaffs = {};
+            GROUP_ORDER.forEach(g => { groupedStaffs[g] = []; });
+            staffToRender.forEach(s => {
+                const g = s.yearsGroup || "不明";
+                if (!groupedStaffs[g]) groupedStaffs[g] = [];
+                groupedStaffs[g].push(s);
+            });
+        }
+
+        // ヘッダー行生成
+        let headerRow = `<th style="min-width:120px; position:sticky; left:0; background:#F9F9F9; z-index:2;">スタッフ名</th>`;
+        let subRow    = `<th style="position:sticky; left:0; background:#F9F9F9; z-index:2; font-size:10px; color:var(--text-secondary);">曜日</th>`;
+        let countRow  = `<th style="position:sticky; left:0; background:#F9F9F9; z-index:2; font-size:10px;">出勤数</th>`;
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateObj = new Date(currentYear, currentMonth, d);
+            const dayIdx  = dateObj.getDay();
+            const dayStr  = weekDays[dayIdx];
+            const isHol   = holidays.includes(d);
+            const isTues  = isTuesdayClosed && dayIdx === 2;
+
+            let thBg    = "#f7fafc"; let thColor = "#4a5568";
+            if (isHol)       { thBg = "#fffaf0"; thColor = "#dd6b20"; }
+            else if (dayIdx===6) { thBg = "#ebf8ff"; thColor = "#3182ce"; }
+            else if (dayIdx===0) { thBg = "#fff5f5"; thColor = "#e53e3e"; }
+            if (isTues)      { thBg = "#f7fafc"; thColor = "#a0aec0"; }
+
+            const wBorder = dayIdx === 0 ? "border-left:3px solid #f6ad55;" : "";
+
+            headerRow += `<th style="background:${thBg}; color:${thColor}; ${wBorder} padding:6px 2px; font-size:11px;">${d}</th>`;
+            subRow    += `<th style="background:${thBg}; color:${thColor}; ${wBorder} padding:4px 2px; font-size:10px;">${dayStr}</th>`;
+
+            // 出勤人数
+            const count    = countWorkers(d);
+            const required = getMinRequired(d);
+            let countTxt   = isTues ? "-" : `${count}名`;
+            let countStyle = "font-size:10px; padding:3px 2px; color:var(--text-secondary);";
+            if (!isTues && required != null) {
+                countStyle = count >= required
+                    ? "font-size:10px; padding:3px 2px; color:#22c55e; font-weight:bold;"
+                    : "font-size:10px; padding:3px 2px; background:#fee2e2; color:#dc2626; font-weight:bold;";
+            }
+            countRow += `<th style="${countStyle} ${wBorder}">${countTxt}</th>`;
+        }
+
+        // スタッフ行生成
+        function renderStaffRows(staffList) {
+            let rows = "";
+            staffList.forEach(staff => {
+                const cfg    = liveStaffConfig[staff.id] || {};
+                const isShort = (cfg.workType || "").includes("時短");
+                rows += `<tr>
+                    <td style="position:sticky; left:0; background:var(--bg-primary); z-index:1; min-width:120px; padding:6px 8px; white-space:nowrap; border:1px solid var(--border-light);">
+                        <span style="font-weight:bold; font-size:12px;">${staff.name}</span>
+                        <span style="font-size:9px; background:var(--border-light); padding:1px 4px; border-radius:3px; margin-left:4px;">${staff.rank}</span>
+                        ${isShort ? `<div style="font-size:9px; color:#722ed1;">🕒 ${cfg.startTime||"8:40"}〜${cfg.endTime||"17:40"}</div>` : ""}
+                    </td>`;
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateObj = new Date(currentYear, currentMonth, d);
+                    const dayIdx  = dateObj.getDay();
+                    const isTues  = isTuesdayClosed && dayIdx === 2;
+                    const wBorder = dayIdx === 0 ? "border-left:3px solid #f6ad55;" : "";
+                    const isHol   = holidays.includes(d);
+
+                    let cellBg = "";
+                    if (isHol)       cellBg = "background:#fffaf0;";
+                    else if (dayIdx===6) cellBg = "background:#f0f8ff;";
+                    else if (dayIdx===0) cellBg = "background:#fff5f5;";
+
+                    let val = isTues
+                        ? (getCurrentCellStates()[`${staff.id}-${d}`] || "定")
+                        : (getCurrentCellStates()[`${staff.id}-${d}`] || "-");
+                    if (isTues && val === "定") {
+                        rows += `<td style="background:var(--border-light); color:var(--text-secondary); ${wBorder} text-align:center; font-size:11px; padding:5px 2px; border:1px solid var(--border-light);">定休</td>`;
+                        continue;
+                    }
+                    const sStyle = stampStyle[val] || "";
+                    rows += `<td style="${sStyle} ${cellBg} ${wBorder} text-align:center; font-size:12px; padding:5px 2px; border:1px solid var(--border-light);">${val}</td>`;
+                }
+                rows += `</tr>`;
+            });
+            return rows;
+        }
+
+        let tableBody = "";
+        if (groupEnabled && groupedStaffs) {
+            GROUP_ORDER.forEach(g => {
+                const list = groupedStaffs[g] || [];
+                if (list.length === 0) return;
+                const gc = GROUP_COLORS[g] || GROUP_COLORS["不明"];
+                // グループ区切り行
+                tableBody += `<tr>
+                    <td colspan="${daysInMonth + 1}" style="background:${gc.bg}; border-left:4px solid ${gc.border}; color:${gc.text}; font-weight:bold; font-size:11px; padding:5px 10px; border-bottom:1px solid ${gc.border};">
+                        ${gc.label}（${list.length}名）
+                    </td></tr>`;
+                tableBody += renderStaffRows(list);
+            });
+        } else {
+            tableBody = renderStaffRows(staffToRender);
+        }
+
+        const legends = [
+            { stamp:"出", label:"出勤", style: stampStyle["出"] },
+            { stamp:"時", label:"時短", style: stampStyle["時"] },
+            { stamp:"公", label:"公休", style: stampStyle["公"] },
+            { stamp:"希", label:"希望休", style: stampStyle["希"] },
+            { stamp:"有", label:"有給", style: stampStyle["有"] },
+            { stamp:"研", label:"研修", style: stampStyle["研"] },
+            { stamp:"必", label:"絶対出勤", style: stampStyle["必"] },
+        ];
+        const legendHtml = legends.map(l =>
+            `<span style="${l.style} padding:3px 10px; border-radius:8px; font-size:11px; margin-right:6px; margin-bottom:4px; display:inline-block;">${l.stamp} ${l.label}</span>`
+        ).join("");
+
+        const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>シフト表 ${currentStore.name} ${currentYear}年${currentMonth+1}月</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; background:var(--bg-primary); color:#2d3748; padding:20px; }
+  h1 { font-size:20px; margin-bottom:4px; }
+  .meta { font-size:12px; color:var(--text-secondary); margin-bottom:12px; }
+  .legend { margin-bottom:16px; }
+  .table-wrap { overflow-x:auto; border-radius:8px; border:1px solid var(--border-light); }
+  table { border-collapse:collapse; width:100%; }
+  th { background:#F9F9F9; font-size:11px; padding:6px 2px; border:1px solid var(--border-light); }
+  @media print {
+    body { padding:10px; }
+    .no-print { display:none; }
+    .table-wrap { overflow:visible; }
+  }
+</style>
+</head>
+<body>
+  <h1>📅 ${currentStore.name} シフト表</h1>
+  <p class="meta">${currentYear}年${currentMonth+1}月 ／ 作成日: ${new Date().toLocaleDateString("ja-JP")} ／ スタッフ計${currentStaffs.length}名</p>
+  <div class="legend">${legendHtml}</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>${headerRow}</tr>
+        <tr>${subRow}</tr>
+        <tr>${countRow}</tr>
+      </thead>
+      <tbody>${tableBody}</tbody>
+    </table>
+  </div>
+  <p style="margin-top:16px; font-size:11px; color:var(--text-secondary);" class="no-print">※ Ctrl+P（Cmd+P）で印刷できます。</p>
+</body>
+</html>`;
+
+        const blob = new Blob([html], { type: "text/html;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", `シフト表_${currentStore.name}_${currentYear}年${currentMonth+1}月.html`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+
+    function recomputeFairness() {
+        staffFairnessCount = {};
+        currentStaffs.forEach(s => {
+            staffFairnessCount[s.id] = { 希: 0, 有: 0 };
+        });
+        Object.entries(getCurrentCellStates()).forEach(([key, val]) => {
+            const dashIdx = key.indexOf("-");
+            if (dashIdx === -1) return;
+            const staffId = key.slice(0, dashIdx);
+            if (!staffFairnessCount[staffId]) return;
+            if (val === "希") staffFairnessCount[staffId].希++;
+            if (val === "有") staffFairnessCount[staffId].有++;
+        });
+    }
+
+    function showFairnessReport() {
+        if (!currentStore || currentStaffs.length === 0) return;
+        recomputeFairness();
+        const maxKibou = getStoreMaxKibou();
+        const counts = currentStaffs.map(s => ({
+            id:    s.id,
+            name:  s.name,
+            rank:  s.rank,
+            kibou: (staffFairnessCount[s.id] || {}).希 || 0,
+            paid:  (staffFairnessCount[s.id] || {}).有 || 0,
+        }));
+        const avg = counts.reduce((a,b) => a + b.kibou, 0) / (counts.length || 1);
+
+        // 年間集計（全月のallCellStatesを集計）
+        const yearlyKibou = {};
+        const yearlyPaid  = {};
+        currentStaffs.forEach(s => { yearlyKibou[s.id] = 0; yearlyPaid[s.id] = 0; });
+        Object.values(allCellStates).forEach(monthData => {
+            Object.entries(monthData).forEach(([key, stamp]) => {
+                const [sid] = key.split("-");
+                if (stamp === "希" && yearlyKibou[sid] !== undefined) yearlyKibou[sid]++;
+                if (stamp === "有" && yearlyPaid[sid]  !== undefined) yearlyPaid[sid]++;
+            });
+        });
+
+        // モーダル表示
+        let existing = document.getElementById("fairnessModal");
+        if (existing) existing.remove();
+
+        const rows = counts.map(c => {
+            const flag = c.kibou > maxKibou ? `<span style="color:#e53e3e;">⚠️超過</span>` :
+                         c.kibou > avg + 1  ? `<span style="color:#d69e2e;">△多め</span>` :
+                                              `<span style="color:#38a169;">✅</span>`;
+            return `<tr style="border-bottom:1px solid var(--border-light);">
+                <td style="padding:6px 8px; font-size:12px;">${c.name}</td>
+                <td style="padding:6px 8px; font-size:11px; color:var(--text-secondary);">${c.rank}</td>
+                <td style="padding:6px 8px; text-align:center; font-size:12px;">${flag} ${c.kibou}日</td>
+                <td style="padding:6px 8px; text-align:center; font-size:12px; color:#eb2f96;">${c.paid}日</td>
+                <td style="padding:6px 8px; text-align:center; font-size:12px; color:#38a169;">${yearlyKibou[c.id] || 0}日</td>
+                <td style="padding:6px 8px; text-align:center; font-size:12px; color:#eb2f96;">${yearlyPaid[c.id] || 0}日</td>
+            </tr>`;
+        }).join("");
+
+        const modal = document.createElement("div");
+        modal.id = "fairnessModal";
+        modal.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;";
+        modal.innerHTML = `
+            <div style="background:white;border-radius:8px;padding:24px;max-width:700px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <div>
+                        <div style="font-size:16px;font-weight:bold;color:#2d3748;">📊 公平性レポート</div>
+                        <div style="font-size:12px;color:var(--text-secondary);">${currentStore.name} ／ 希望休上限: ${maxKibou}日 ／ 今月平均: ${avg.toFixed(1)}日</div>
+                    </div>
+                    <button onclick="document.getElementById('fairnessModal').remove()" style="border:none;background:#F9F9F9;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;">✕ 閉じる</button>
+                </div>
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#F9F9F9;">
+                            <th style="padding:8px;text-align:left;font-size:11px;color:var(--text-secondary);">氏名</th>
+                            <th style="padding:8px;text-align:left;font-size:11px;color:var(--text-secondary);">役職</th>
+                            <th style="padding:8px;text-align:center;font-size:11px;color:var(--text-secondary);">今月<br>希望休</th>
+                            <th style="padding:8px;text-align:center;font-size:11px;color:var(--text-secondary);">今月<br>有給</th>
+                            <th style="padding:8px;text-align:center;font-size:11px;color:#38a169;">年間<br>希望休</th>
+                            <th style="padding:8px;text-align:center;font-size:11px;color:#eb2f96;">年間<br>有給</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                <div style="margin-top:12px;font-size:10px;color:var(--text-secondary);">※年間集計はこのブラウザで表示した月のデータのみ集計されます</div>
+            </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 🚨 6連勤チェック: 出/時/会/研 が6日以上連続しているスタッフを抽出
+    // ─────────────────────────────────────────────────────────────
+    function checkConsecutiveWork(defaultThreshold) {
+        defaultThreshold = defaultThreshold || 6;
+        if (!currentStore) return [];
+        const isTuesdayClosed = currentStore.rule.includes("火曜") || currentStore.rule.includes("火曜日");
+        const issues = [];
+
+        currentStaffs.forEach(staff => {
+            if (staff.isReceptionPart) return; // 除外
+            // スタッフごとのイレギュラー連勤上限があれば優先（無効ならデフォルト）
+            const irr = (liveStaffConfig[staff.id] || {}).irregular || {};
+            const threshold = irr.maxConsecEnabled ? irr.maxConsecutive : defaultThreshold;
+            let streak = 0, streakStart = null;
+            const flush = (endDay) => {
+                if (streak >= threshold) {
+                    issues.push({ staff: staff.name, start: streakStart, end: endDay, days: streak, threshold: threshold });
+                }
+            };
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dayIdx = new Date(currentYear, currentMonth, d).getDay();
+                const isClosed = isTuesdayClosed && dayIdx === 2;
+                const v = getCurrentCellStates()[`${staff.id}-${d}`];
+                const isWork = !isClosed && v !== "公" && v !== "希" && v !== "有";
+                if (isWork) {
+                    if (streak === 0) streakStart = d;
+                    streak++;
+                } else {
+                    flush(d - 1);
+                    streak = 0;
+                }
+            }
+            flush(daysInMonth);
+        });
+        return issues;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 🤖 AIシフト調整: Anthropic API を呼び出して変更案を適用
+    // ─────────────────────────────────────────────────────────────
+    function resetApiKey() {
+        localStorage.removeItem("anthropic_api_key");
+        localStorage.removeItem("gemini_api_key");
+        updateApiKeyStatus();
+    }
+
+    function updateApiKeyStatus() {
+        const statusEl = document.getElementById("apiKeyStatus");
+        const inputArea = document.getElementById("apiKeyInputArea");
+        if (!statusEl) return;
+        const key = getStoredAIKey();
+        if (key) {
+            statusEl.innerHTML = `<span style="color:#38a169;">✅ 設定済み</span>
+                <button onclick="showApiKeyInput()" style="margin-left:8px; padding:2px 8px; font-size:10px; background:#F9F9F9; border:1px solid var(--border-light); border-radius:3px; cursor:pointer;">変更</button>
+                <button onclick="resetApiKey()" style="margin-left:4px; padding:2px 8px; font-size:10px; background:#fff5f5; border:1px solid #fed7d7; border-radius:3px; cursor:pointer; color:#e53e3e;">削除</button>`;
+            if (inputArea) inputArea.style.display = "none";
+        } else {
+            statusEl.innerHTML = `<span style="color:#e53e3e;">⚠️ 未設定</span><span style="color:var(--text-secondary); margin-left:6px; font-size:10px;">AI調整にはAnthropicまたはGemini APIキーが必要です</span>`;
+            if (inputArea) inputArea.style.display = "block";
+        }
+    }
+
+    function getStoredAIKey() {
+        return localStorage.getItem("anthropic_api_key") || localStorage.getItem("gemini_api_key") || "";
+    }
+
+    function showApiKeyInput() {
+        const inputArea = document.getElementById("apiKeyInputArea");
+        if (inputArea) inputArea.style.display = "block";
+        const input = document.getElementById("apiKeyInput");
+        if (input) input.focus();
+    }
+
+    function saveApiKey() {
+        const input = document.getElementById("apiKeyInput");
+        if (!input) return;
+        const key = input.value.trim();
+        if (!key || (!key.startsWith("sk-ant-") && !key.startsWith("AIza"))) {
+            alert("正しいAPIキーを入力してください（Anthropic: sk-ant-... / Gemini: AIza...）");
+            return;
+        }
+        if (key.startsWith("sk-ant-")) {
+            localStorage.setItem("anthropic_api_key", key);
+            localStorage.removeItem("gemini_api_key");
+        } else {
+            localStorage.setItem("gemini_api_key", key);
+            localStorage.removeItem("anthropic_api_key");
+        }
+        input.value = "";
+        updateApiKeyStatus();
+    }
+
+    function cancelApiKey() {
+        const inputArea = document.getElementById("apiKeyInputArea");
+        if (inputArea) inputArea.style.display = "none";
+        const input = document.getElementById("apiKeyInput");
+        if (input) input.value = "";
+    }
+
+    function buildAISystemMessage(restrictions) {
+        let prompt = `あなたはIDEA NOVの美容室シフト管理AIです。
+以下のルールを厳守してシフトを調整してください。
+
+【禁止事項】
+${restrictions.noSixConsec ? "- 6連勤以上は絶対禁止" : "- 6連勤制限はオフ（無視可）"}
+${restrictions.respectMinStaff ? "- 最低出勤人数を下回る日に公休・希望休を配置禁止" : "- 最低出勤人数制限はオフ"}
+- 月の希望休はスタッフ個別ルールの上限まで（未指定者は ${restrictions.monthlyKibou} 日）
+${restrictions.fairness ? "- 希望休・有休の取得はスタッフ間で公平に" : "- 公平性制約はオフ"}
+
+【スタンプの種類】
+- 出: 出勤 / 時: 時短出勤 / 会: 会議中抜け / 研: 研修中抜け
+- 公: 公休 / 希: 希望休 / 有: 有給`;
+
+        // スタッフ個別の特記事項 & 時短勤務時間 & イレギュラー設定をプロンプトに追加
+        const ruleLines = (currentStaffs || [])
+            .flatMap(s => {
+                const cfg = liveStaffConfig[s.id] || {};
+                const lines = [];
+                if ((cfg.workType || "").includes("時短")) {
+                    lines.push(`- ${s.name}: 時短スタッフ ${cfg.startTime || "8:40"}〜${cfg.endTime || "17:40"}勤務`);
+                }
+                if (cfg.note && cfg.note.trim()) {
+                    lines.push(`- ${s.name}: ${cfg.note.trim()}`);
+                }
+                // イレギュラー設定（本人希望による特例）
+                const irr = cfg.irregular || {};
+                if (irr.weeklyOffEnabled || irr.maxConsecEnabled || irr.ignoreMinStaff) {
+                    const parts = [];
+                    if (irr.weeklyOffEnabled) parts.push(`今月は週休${irr.weeklyOff}日`);
+                    if (irr.maxConsecEnabled) parts.push(`連勤上限${irr.maxConsecutive}日まで許容`);
+                    if (irr.ignoreMinStaff)   parts.push(`最低出勤人数の制約を免除`);
+                    const reasonTxt = (irr.reason && irr.reason.trim()) ? `（理由: ${irr.reason.trim()}）` : "";
+                    lines.push(`- ${s.name}: 本人希望により ${parts.join("・")}${reasonTxt}`);
+                }
+                return lines;
+            });
+        if (ruleLines.length > 0) {
+            prompt += `\n\n【スタッフ個別ルール】\n${ruleLines.join("\n")}`;
+        }
+
+        prompt += `
+
+【出力形式】
+必ずJSON形式のみで返答してください。前置きや解説は不要です：
+{
+  "changes": [
+    {"staffId": "1", "day": 12, "stamp": "希", "reason": "村山さんの希望休申請"}
+  ],
+  "alerts": [
+    "12日は最低出勤人数ギリギリのため村山さんの希望休を承認しました"
+  ],
+  "summary": "3件の変更を適用しました"
+}`;
+        return prompt;
+    }
+
+    function buildAIUserMessage(request, restrictions) {
+        const min = (currentStore && storeMinStaff[currentStore.id]) || {};
+        const staffList = currentStaffs.map(s => {
+            const cfg = liveStaffConfig[s.id] || {};
+            const maxH = cfg.maxHoliday != null ? cfg.maxHoliday : restrictions.monthlyKibou;
+            const workTypeLabel = (cfg.workType || "通常").includes("時短")
+                ? `時短スタッフ(${cfg.startTime || "8:40"}〜${cfg.endTime || "17:40"})`
+                : `通常勤務`;
+            const tags = [`${s.rank}`, `${cfg.holidayType || "完全週休2日"}`, workTypeLabel, `希望休上限${maxH}日`];
+            return `id=${s.id}: ${s.name} [${tags.join(" / ")}]`;
+        }).join("\n");
+        const fairnessSummary = currentStaffs.map(s => {
+            const f = staffFairnessCount[s.id] || { 希: 0, 有: 0 };
+            return `${s.name}(id=${s.id}): 希望休${f.希}日 / 有給${f.有}日`;
+        }).join("\n");
+
+        return `【現在のシフト状況】
+店舗: ${currentStore ? currentStore.name : "(未選択)"}
+定休日ルール: ${currentStore ? currentStore.rule : "-"}
+
+在籍スタッフ:
+${staffList}
+
+最低出勤人数: 平日${min.weekday ?? "未設定"}名 / 土曜${min.saturday ?? "未設定"}名 / 日曜${min.sunday ?? "未設定"}名 / 祝日${min.holiday ?? "未設定"}名
+
+今月の希望休/有給 取得状況:
+${fairnessSummary}
+
+現在のシフトデータ（キー "staffId-日" → スタンプ）:
+${JSON.stringify(getCurrentCellStates(), null, 2)}
+
+【スタッフからの要望】
+${request}
+${(() => {
+    const customRule = currentStore ? (storeSettings[currentStore.id] || {}).customRule || "" : "";
+    return customRule ? `\n【この店舗の独自ルール】\n${customRule}` : "";
+})()}
+
+上記の禁止事項を守りながら要望を最大限反映して changes の JSON配列を返してください。`;
+    }
+
+    async function callAIAdjust() {
+        const btn = document.getElementById("aiAdjustBtn");
+        const alertBox = document.getElementById("aiAlertBox");
+        const originalLabel = btn.textContent;
+
+        const request = document.getElementById("aiRequestInput").value.trim();
+        if (!request) {
+            alertBox.style.display = "block";
+            alertBox.innerHTML = "❌ 要望欄が空です。スタッフの要望・イレギュラーを入力してください。";
+            return;
+        }
+        if (!currentStore || currentStaffs.length === 0) {
+            alertBox.style.display = "block";
+            alertBox.innerHTML = "❌ 店舗とスタッフを先に読み込んでください。";
+            return;
+        }
+
+        const restrictions = {
+            noSixConsec:     document.getElementById("restrictSixConsec").checked,
+            respectMinStaff: document.getElementById("restrictMinStaff").checked,
+            monthlyKibou:    parseInt(document.getElementById("restrictMonthlyKibou").value, 10) || 2,
+            fairness:        document.getElementById("restrictFairness").checked,
+        };
+
+        recomputeFairness();
+
+        btn.disabled = true;
+        btn.textContent = "⏳ AI調整中...";
+        alertBox.style.display = "block";
+        alertBox.innerHTML = "⏳ AIにシフト調整を依頼しています（GAS経由）...";
+
+        try {
+            // GAS経由でAnthropic/Gemini APIを呼び出す
+            const prompt = buildAISystemMessage(restrictions) + "\n\n" + buildAIUserMessage(request, restrictions);
+            const data = await callGAS({
+                action: "aiAdjust",
+                prompt: prompt,
+                apiKey: getStoredAIKey(),
+            });
+
+            if (!data.ok) throw new Error(data.error || "AI調整に失敗しました");
+
+            const result = data.result;
+
+            // changes を getCurrentCellStates() に適用
+            let applied = 0;
+            if (Array.isArray(result.changes)) {
+                result.changes.forEach(ch => {
+                    if (ch.staffId && ch.day && ch.stamp) {
+                        getCurrentCellStates()[`${ch.staffId}-${ch.day}`] = ch.stamp;
+                        applied++;
+                    }
+                });
+            }
+
+            recomputeFairness();
+            renderTable();
+
+            const alertLines = (result.alerts || []).map(a => `• ${a}`);
+            const summary = result.summary || `${applied}件の変更を適用しました`;
+            let html = `✅ <b>${summary}</b>`;
+            if (alertLines.length > 0) html += "<br><br>" + alertLines.join("<br>");
+
+            if (restrictions.noSixConsec) {
+                const issues = checkConsecutiveWork(6);
+                if (issues.length > 0) {
+                    html += "<br><br>⚠️ <b>6連勤以上検出:</b><br>" +
+                        issues.map(i => `• ${i.staff}: ${i.start}日〜${i.end}日 (${i.days}連勤)`).join("<br>");
+                }
+            }
+            alertBox.innerHTML = html;
+
+        } catch (err) {
+            console.error("[AI Adjust]", err);
+            alertBox.innerHTML = `❌ AI調整に失敗しました。手動で調整してください。<br><small style="color:var(--text-secondary);">${err.message}</small>`;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalLabel;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 💾 シフトデータ永続化（Googleスプレッドシートへ保存・読込）
+    // ─────────────────────────────────────────────────────────────
+
+    // 保存ステータス表示
+    function setSaveStatus(msg, type) {
+        const el = document.getElementById("saveStatus");
+        if (!el) return;
+        el.textContent = msg;
+        el.style.color = type === "ok" ? "#38a169" : type === "err" ? "#e53e3e" : "#718096";
+    }
+
+    // シフトデータをGASに保存
+    // ─── fetch POST方式でGASを呼び出す（redirect:followでCORS解決） ───
+    async function callGAS(payload) {
+        const res  = await fetch(GAS_API_URL, {
+            method:   "POST",
+            mode:     "cors",
+            redirect: "follow",
+            body:     JSON.stringify(payload),
+        });
+        return await res.json();
+    }
+
+    async function saveShiftToGAS() {
+        if (!currentStore) { alert("店舗を選択してください"); return; }
+        setSaveStatus("💾 保存中...", "info");
+        try {
+            const cells = getCurrentCellStates();
+            const data  = await callGAS({
+                action:    "saveShift",
+                storeId:   currentStore.id,
+                storeName: currentStore.name,
+                year:      currentYear,
+                month:     currentMonth + 1,
+                cells:     cells
+            });
+            if (data.ok) {
+                setSaveStatus(`✅ 保存完了 ${new Date().toLocaleTimeString("ja-JP")}`, "ok");
+            } else {
+                setSaveStatus(`❌ 保存失敗: ${data.error}`, "err");
+            }
+        } catch (err) {
+            console.error("[saveShift]", err);
+            setSaveStatus("❌ 保存失敗: " + err.message, "err");
+        }
+    }
+
+    // 店舗設定をGASに保存
+    async function saveSettingsToGAS() {
+        if (!currentStore) return;
+        setSaveStatus("⚙️ 設定保存中...", "info");
+        try {
+            const extraRules = {
+                groupView:   document.getElementById("enableGroupView")?.checked || false,
+                managerRule: document.getElementById("enableManagerRule")?.checked || false,
+                kibouAsOff:  document.getElementById("enableKibouAsOff")?.checked || false,
+                remarksCol:  document.getElementById("enableRemarksCol")?.checked || false,
+                stampHalf:   document.getElementById("stamp_enable_half")?.checked || false,
+                stampOut:    document.getElementById("stamp_enable_out")?.checked || false,
+                stampBereave:document.getElementById("stamp_enable_bereave")?.checked || false,
+                stampSpecial:document.getElementById("stamp_enable_special")?.checked || false,
+                customRule:  document.getElementById("storeCustomRule")?.value || "",
+                noHolidayOnSat: document.getElementById("noHolidayOnSat")?.checked ?? true,
+                noHolidayOnSun: document.getElementById("noHolidayOnSun")?.checked ?? true,
+                noHolidayOnHol: document.getElementById("noHolidayOnHol")?.checked ?? true,
+            };
+            const data = await callGAS({
+                action:        "saveSettings",
+                storeId:       currentStore.id,
+                storeName:     currentStore.name,
+                minStaff:      storeMinStaff[currentStore.id] || {},
+                storeSettings: storeSettings[currentStore.id] || {},
+                staffConfig:   liveStaffConfig,
+                extraRules:    extraRules
+            });
+            if (data.ok) {
+                setSaveStatus(`✅ 設定保存完了 ${new Date().toLocaleTimeString("ja-JP")}`, "ok");
+            } else {
+                setSaveStatus(`❌ 設定保存失敗: ${data.error}`, "err");
+            }
+        } catch (err) {
+            console.error("[saveSettings]", err);
+            setSaveStatus("❌ 設定保存失敗: " + err.message, "err");
+        }
+    }
+
+    // シフトデータをGASから読込
+    async function loadShiftFromGAS(storeId, year, month) {
+        try {
+            const url = `${GAS_API_URL}?action=loadShift&storeId=${encodeURIComponent(storeId)}&year=${year}&month=${month}`;
+            const res  = await fetch(url, { method: "GET", redirect: "follow" });
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error || "読込失敗");
+            const key = `${year}-${month}`;
+            if (!allCellStates[key]) allCellStates[key] = {};
+            Object.assign(allCellStates[key], data.cells || {});
+            return true;
+        } catch (err) {
+            console.error("[loadShift]", err);
+            return false;
+        }
+    }
+
+    // 店舗設定をGASから読込
+    async function loadSettingsFromGAS(storeId) {
+        try {
+            const url  = `${GAS_API_URL}?action=loadSettings&storeId=${encodeURIComponent(storeId)}`;
+            const res  = await fetch(url, { method: "GET", redirect: "follow" });
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error || "設定読込失敗");
+            const s = data.settings || {};
+
+            // 最低出勤人数
+            if (s.minStaff) {
+                storeMinStaff[storeId] = s.minStaff;
+                const min = s.minStaff;
+                document.getElementById("minStaffWeekday").value  = min.weekday  ?? "";
+                document.getElementById("minStaffSaturday").value = min.saturday ?? "";
+                document.getElementById("minStaffSunday").value   = min.sunday   ?? "";
+                document.getElementById("minStaffHoliday").value  = min.holiday  ?? "";
+            }
+            // 希望休上限
+            if (s.storeSettings) {
+                storeSettings[storeId] = s.storeSettings;
+                document.getElementById("storeMaxKibou").value = (s.storeSettings.maxKibou ?? 2);
+            }
+            // スタッフ個別設定
+            if (s.staffConfig) {
+                Object.assign(liveStaffConfig, s.staffConfig);
+            }
+            // 追加ルール
+            if (s.extraRules) {
+                const gv = document.getElementById("enableGroupView");
+                const mr = document.getElementById("enableManagerRule");
+                if (gv) gv.checked = s.extraRules.groupView   || false;
+                if (mr) mr.checked = s.extraRules.managerRule || false;
+            }
+            // カスタムルール復元
+            restoreStoreCustomRules();
+            return true;
+        } catch (err) {
+            console.error("[loadSettings]", err);
+            return false;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 🛰️ 起動時に GAS Web API からスプレッドシートを直接ロード
+    //    URL 未設定時は何もせず、CSV手動インポートにフォールバック
+    // ─────────────────────────────────────────────────────────────
+    async function loadFromGAS() {
+        const storeStatus = document.getElementById("storeLoadStatus");
+        const staffStatus = document.getElementById("staffLoadStatus");
+
+        if (!GAS_API_URL || GAS_API_URL.indexOf("<<") !== -1 || GAS_API_URL.indexOf("PASTE") !== -1) {
+            console.info("[GAS] GAS_API_URL 未設定。CSV手動インポートを使用してください。");
+            return;
+        }
+
+        storeStatus.textContent = "⏳ GASから取得中...";
+        staffStatus.textContent = "⏳ GASから取得中...";
+
+        try {
+            const res = await fetch(GAS_API_URL, { method: "GET", redirect: "follow" });
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            const data = await res.json();
+            if (!data || data.ok === false) {
+                throw new Error((data && data.error) ? data.error : "GAS error");
+            }
+            if (!Array.isArray(data.store) || !Array.isArray(data.staff)) {
+                throw new Error("レスポンス形式が想定外: store / staff 配列が含まれていません");
+            }
+
+            const okStore = importStoreFromRows(data.store, "gas");
+            const okStaff = importStaffFromRows(data.staff, "gas");
+
+            if (okStore && okStaff) {
+                const alertBox = document.getElementById("alertBox");
+                alertBox.style.display = "block";
+                alertBox.innerHTML = `🛰️ GAS API から自動取得しました（店舗:${storeMaster.length} / 社員:${staffMaster.length}名）`;
+
+                // 店舗選択後に設定・シフトデータを自動読込
+                if (currentStore) {
+                    setSaveStatus("📥 設定を読込中...", "info");
+                    await loadSettingsFromGAS(currentStore.id);
+                    await loadShiftFromGAS(currentStore.id, currentYear, currentMonth + 1);
+                    renderStaffRulesPanel();
+                    renderTable();
+                    setSaveStatus("✅ データ読込完了", "ok");
+                }
+            }
+        } catch (err) {
+            console.error("[GAS] 取得失敗", err);
+            storeStatus.textContent = "❌ GAS取得失敗";
+            storeStatus.className = "status-badge status-none";
+            staffStatus.textContent = "❌ GAS取得失敗";
+            staffStatus.className = "status-badge status-none";
+            const alertBox = document.getElementById("alertBox");
+            alertBox.style.display = "block";
+            alertBox.innerHTML = `⚠️ GAS API からの取得に失敗しました：${err.message}<br>CSV手動インポートに切り替えてください。`;
+        }
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+        updateMonthDisplay();
+        updateApiKeyStatus();
+        loadFromGAS();
+    });
+</script>
+
+</body>
+</html>
