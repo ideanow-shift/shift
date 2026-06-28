@@ -24,6 +24,7 @@ const STAFF_SHEET_NAME = 'Sheet1';
 const SHIFT_DATA_SHEET_NAME = 'ShiftData';
 const SHIFT_SETTINGS_SHEET_NAME = 'ShiftSettings';
 const USE_SUPABASE_CORE_MASTERS_PROPERTY = 'SHIFT_USE_SUPABASE_CORE_MASTERS';
+const USE_SUPABASE_SETTINGS_PROPERTY = 'SHIFT_USE_SUPABASE_SETTINGS';
 
 function doGet(e) {
   let payload;
@@ -251,22 +252,54 @@ function toStaffRows_(employees, storesById, positionsById) {
 }
 
 function supabaseRequest_(resource, query) {
+  return supabaseFetch_(resource, {
+    method: 'get',
+    query: query
+  });
+}
+
+function supabaseUpsert_(resource, query, payload) {
+  return supabaseFetch_(resource, {
+    method: 'post',
+    query: query,
+    payload: payload,
+    prefer: 'resolution=merge-duplicates,return=representation'
+  });
+}
+
+function supabasePatch_(resource, query, payload) {
+  return supabaseFetch_(resource, {
+    method: 'patch',
+    query: query,
+    payload: payload,
+    prefer: 'return=representation'
+  });
+}
+
+function supabaseFetch_(resource, options) {
   const props = PropertiesService.getScriptProperties();
   const baseUrl = String(props.getProperty('SUPABASE_URL') || '').replace(/\/+$/, '');
   const serviceRoleKey = props.getProperty('SUPABASE_SERVICE_ROLE_KEY');
   if (!baseUrl || !serviceRoleKey) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY is not configured.');
 
-  const params = Object.keys(query || {}).map(function(key) {
-    return encodeURIComponent(key) + '=' + encodeURIComponent(String(query[key]));
-  }).join('&');
+  const query = options && options.query ? options.query : {};
+  const params = buildQueryString_(query);
   const url = baseUrl + '/rest/v1/' + encodeURIComponent(resource) + (params ? '?' + params : '');
+  const headers = {
+    apikey: serviceRoleKey,
+    Authorization: 'Bearer ' + serviceRoleKey,
+    Accept: 'application/json'
+  };
+  if (options && options.payload !== undefined) {
+    headers['Content-Type'] = 'application/json';
+  }
+  if (options && options.prefer) {
+    headers.Prefer = options.prefer;
+  }
   const response = UrlFetchApp.fetch(url, {
-    method: 'get',
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: 'Bearer ' + serviceRoleKey,
-      Accept: 'application/json'
-    },
+    method: options && options.method ? options.method : 'get',
+    headers: headers,
+    payload: options && options.payload !== undefined ? JSON.stringify(options.payload) : undefined,
     muteHttpExceptions: true
   });
   const code = response.getResponseCode();
@@ -275,6 +308,12 @@ function supabaseRequest_(resource, query) {
     throw new Error('Supabase ' + resource + ' HTTP ' + code + ': ' + text.slice(0, 240));
   }
   return JSON.parse(text || '[]');
+}
+
+function buildQueryString_(query) {
+  return Object.keys(query || {}).map(function(key) {
+    return encodeURIComponent(key) + '=' + encodeURIComponent(String(query[key]));
+  }).join('&');
 }
 
 function indexById_(rows) {
@@ -333,7 +372,38 @@ function loadShift_(params) {
 
 function saveSettings_(request) {
   const storeId = requireValue_(request.storeId, 'storeId');
-  const record = {
+  const record = buildSettingsRecord_(request);
+  if (shouldUseSupabaseSettings_()) {
+    try {
+      saveSettingsToSupabase_(record);
+      saveRecord_(SHIFT_SETTINGS_SHEET_NAME, settingsKey_(storeId), record);
+      return { ok: true, source: 'supabase', updatedAt: record.updatedAt };
+    } catch (err) {
+      Logger.log('Supabase settings save failed. Falling back to Sheets: ' + err);
+    }
+  }
+  saveRecord_(SHIFT_SETTINGS_SHEET_NAME, settingsKey_(storeId), record);
+  return { ok: true, source: 'sheets', updatedAt: record.updatedAt };
+}
+
+function loadSettings_(params) {
+  const storeId = requireValue_(params.storeId, 'storeId');
+  if (shouldUseSupabaseSettings_()) {
+    try {
+      const record = loadSettingsFromSupabase_(String(storeId));
+      if (record) return settingsPayload_(record, 'supabase');
+    } catch (err) {
+      Logger.log('Supabase settings load failed. Falling back to Sheets: ' + err);
+    }
+  }
+  const record = loadRecord_(SHIFT_SETTINGS_SHEET_NAME, settingsKey_(storeId));
+  if (!record) return { ok: true, settings: {} };
+  return settingsPayload_(record, 'sheets');
+}
+
+function buildSettingsRecord_(request) {
+  const storeId = requireValue_(request.storeId, 'storeId');
+  return {
     storeId: String(storeId),
     storeName: String(request.storeName || ''),
     minStaff: request.minStaff || {},
@@ -342,16 +412,12 @@ function saveSettings_(request) {
     extraRules: request.extraRules || {},
     updatedAt: new Date().toISOString()
   };
-  saveRecord_(SHIFT_SETTINGS_SHEET_NAME, settingsKey_(storeId), record);
-  return { ok: true, updatedAt: record.updatedAt };
 }
 
-function loadSettings_(params) {
-  const storeId = requireValue_(params.storeId, 'storeId');
-  const record = loadRecord_(SHIFT_SETTINGS_SHEET_NAME, settingsKey_(storeId));
-  if (!record) return { ok: true, settings: {} };
+function settingsPayload_(record, source) {
   return {
     ok: true,
+    source: source || '',
     settings: {
       minStaff: record.minStaff || {},
       storeSettings: record.storeSettings || {},
@@ -360,6 +426,203 @@ function loadSettings_(params) {
       updatedAt: record.updatedAt || ''
     }
   };
+}
+
+function shouldUseSupabaseSettings_() {
+  const props = PropertiesService.getScriptProperties();
+  const flag = String(props.getProperty(USE_SUPABASE_SETTINGS_PROPERTY) || 'true').toLowerCase();
+  return flag !== 'false' &&
+    Boolean(props.getProperty('SUPABASE_URL')) &&
+    Boolean(props.getProperty('SUPABASE_SERVICE_ROLE_KEY'));
+}
+
+function saveSettingsToSupabase_(record) {
+  const storeId = String(record.storeId || '').trim();
+  const minStaff = record.minStaff || {};
+  const storeSettings = record.storeSettings || {};
+  const extraRules = record.extraRules || {};
+  const enabledExtraStamps = {
+    half: Boolean(storeSettings.stampHalf),
+    out: Boolean(storeSettings.stampOut),
+    bereave: Boolean(storeSettings.stampBereave),
+    special: Boolean(storeSettings.stampSpecial),
+    groupView: Boolean(extraRules.groupView),
+    managerRule: Boolean(extraRules.managerRule)
+  };
+
+  supabaseUpsert_('shift_store_settings', { on_conflict: 'store_id' }, [{
+    store_id: storeId,
+    weekday_min_staff: toInteger_(minStaff.weekday, 0),
+    saturday_min_staff: toInteger_(minStaff.saturday, 0),
+    sunday_min_staff: toInteger_(minStaff.sunday, 0),
+    holiday_min_staff: toInteger_(minStaff.holiday, 0),
+    max_requested_days: toInteger_(storeSettings.maxKibou, 2),
+    no_holiday_on_saturday: storeSettings.noHolidayOnSat !== false,
+    no_holiday_on_sunday: storeSettings.noHolidayOnSun !== false,
+    no_holiday_on_holiday: storeSettings.noHolidayOnHol !== false,
+    enable_requested_off_as_off: Boolean(storeSettings.kibouAsOff),
+    enable_remarks_column: Boolean(storeSettings.remarksCol),
+    enable_consecutive_holiday_limit: Boolean(storeSettings.consecLimit),
+    consecutive_holiday_limit_count: toInteger_(storeSettings.consecLimitCount, 1),
+    enabled_extra_stamps: enabledExtraStamps,
+    custom_rule: String(storeSettings.customRule || '')
+  }]);
+
+  supabasePatch_('shift_staff_rules', { store_id: 'eq.' + storeId }, { is_active: false });
+
+  const employeeIdsForStore = indexStringSet_(listEmployeeIdsForStore_(storeId));
+  const staffRows = Object.keys(record.staffConfig || {}).map(function(employeeId) {
+    const cfg = record.staffConfig[employeeId] || {};
+    return {
+      employee_id: employeeId,
+      store_id: storeId,
+      holiday_type: encodeHolidayType_(cfg.holidayType),
+      work_type: encodeWorkType_(cfg.workType),
+      start_time: normalizeTimeValue_(cfg.startTime),
+      end_time: normalizeTimeValue_(cfg.endTime),
+      max_requested_days: toInteger_(cfg.maxHoliday, 2),
+      fixed_weekdays: Array.isArray(cfg.fixedWeekdays) ? cfg.fixedWeekdays.map(Number) : [],
+      sunday_unavailable: Boolean(cfg.noSunday),
+      note: String(cfg.note || ''),
+      irregular_rules: cfg.irregular || {},
+      is_active: true
+    };
+  }).filter(function(row) {
+    return row.employee_id && row.store_id && (!Object.keys(employeeIdsForStore).length || employeeIdsForStore[row.employee_id]);
+  });
+
+  if (staffRows.length) {
+    supabaseUpsert_('shift_staff_rules', { on_conflict: 'employee_id,store_id' }, staffRows);
+  }
+}
+
+function listEmployeeIdsForStore_(storeId) {
+  return supabaseRequest_('employees', {
+    select: 'id',
+    store_id: 'eq.' + storeId,
+    is_active: 'eq.true',
+    limit: '2000'
+  }).map(function(employee) {
+    return employee.id;
+  }).filter(String);
+}
+
+function indexStringSet_(values) {
+  return (values || []).reduce(function(index, value) {
+    index[String(value)] = true;
+    return index;
+  }, {});
+}
+
+function loadSettingsFromSupabase_(storeId) {
+  const storeRows = supabaseRequest_('shift_store_settings', {
+    select: '*',
+    store_id: 'eq.' + storeId,
+    limit: '1'
+  });
+  const staffRows = supabaseRequest_('shift_staff_rules', {
+    select: '*',
+    store_id: 'eq.' + storeId,
+    is_active: 'eq.true',
+    limit: '2000'
+  });
+  if (!storeRows.length && !staffRows.length) return null;
+
+  const row = storeRows[0] || {};
+  const extraStamps = row.enabled_extra_stamps || {};
+  const storeSettings = {
+    maxKibou: row.max_requested_days == null ? 2 : Number(row.max_requested_days),
+    noHolidayOnSat: row.no_holiday_on_saturday !== false,
+    noHolidayOnSun: row.no_holiday_on_sunday !== false,
+    noHolidayOnHol: row.no_holiday_on_holiday !== false,
+    customRule: row.custom_rule || '',
+    kibouAsOff: Boolean(row.enable_requested_off_as_off),
+    remarksCol: Boolean(row.enable_remarks_column),
+    consecLimit: Boolean(row.enable_consecutive_holiday_limit),
+    consecLimitCount: row.consecutive_holiday_limit_count == null ? 1 : Number(row.consecutive_holiday_limit_count),
+    stampHalf: Boolean(extraStamps.half),
+    stampOut: Boolean(extraStamps.out),
+    stampBereave: Boolean(extraStamps.bereave),
+    stampSpecial: Boolean(extraStamps.special)
+  };
+
+  const staffConfig = {};
+  staffRows.forEach(function(rule) {
+    staffConfig[rule.employee_id] = {
+      holidayType: decodeHolidayType_(rule.holiday_type),
+      workType: decodeWorkType_(rule.work_type),
+      startTime: stripSeconds_(rule.start_time) || '8:40',
+      endTime: stripSeconds_(rule.end_time) || '17:40',
+      maxHoliday: rule.max_requested_days == null ? 2 : Number(rule.max_requested_days),
+      note: rule.note || '',
+      noSunday: Boolean(rule.sunday_unavailable),
+      fixedWeekdays: Array.isArray(rule.fixed_weekdays) ? rule.fixed_weekdays.map(Number) : [],
+      irregular: rule.irregular_rules || {}
+    };
+  });
+
+  return {
+    storeId: storeId,
+    minStaff: {
+      weekday: row.weekday_min_staff == null ? '' : Number(row.weekday_min_staff),
+      saturday: row.saturday_min_staff == null ? '' : Number(row.saturday_min_staff),
+      sunday: row.sunday_min_staff == null ? '' : Number(row.sunday_min_staff),
+      holiday: row.holiday_min_staff == null ? '' : Number(row.holiday_min_staff)
+    },
+    storeSettings: storeSettings,
+    staffConfig: staffConfig,
+    extraRules: {
+      groupView: Boolean(extraStamps.groupView),
+      managerRule: Boolean(extraStamps.managerRule)
+    },
+    updatedAt: row.updated_at || ''
+  };
+}
+
+function encodeHolidayType_(value) {
+  const text = String(value || '');
+  if (text.indexOf('隔') !== -1) return 'alternate_two_days';
+  if (text.indexOf('完全') !== -1) return 'full_two_days';
+  return text ? 'custom' : 'full_two_days';
+}
+
+function decodeHolidayType_(value) {
+  if (value === 'alternate_two_days') return '隔週休2日';
+  if (value === 'full_two_days') return '完全週休2日';
+  return '完全週休2日';
+}
+
+function encodeWorkType_(value) {
+  const text = String(value || '');
+  if (text.indexOf('時短') !== -1) return 'short_time';
+  if (text.indexOf('受付') !== -1 || text.toLowerCase().indexOf('reception') !== -1) return 'reception_part';
+  if (text.indexOf('通常') !== -1) return 'regular';
+  return text ? 'custom' : 'regular';
+}
+
+function decodeWorkType_(value) {
+  if (value === 'short_time') return '時短';
+  if (value === 'reception_part') return '受付パート';
+  return '通常';
+}
+
+function normalizeTimeValue_(value) {
+  const text = String(value || '').trim();
+  if (!text) return null;
+  const match = text.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  return ('0' + match[1]).slice(-2) + ':' + match[2] + ':00';
+}
+
+function stripSeconds_(value) {
+  const text = String(value || '').trim();
+  const match = text.match(/^(\d{1,2}):(\d{2})/);
+  return match ? Number(match[1]) + ':' + match[2] : '';
+}
+
+function toInteger_(value, fallback) {
+  const num = Number(value);
+  return Number.isFinite(num) ? Math.max(0, Math.floor(num)) : fallback;
 }
 
 function adjustShiftWithAI_(request) {
