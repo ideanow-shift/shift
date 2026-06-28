@@ -23,6 +23,7 @@ const STORE_SHEET_NAME = '';
 const STAFF_SHEET_NAME = 'Sheet1';
 const SHIFT_DATA_SHEET_NAME = 'ShiftData';
 const SHIFT_SETTINGS_SHEET_NAME = 'ShiftSettings';
+const USE_SUPABASE_CORE_MASTERS_PROPERTY = 'SHIFT_USE_SUPABASE_CORE_MASTERS';
 
 function doGet(e) {
   let payload;
@@ -37,11 +38,7 @@ function doGet(e) {
       return jsonOutput_(payload);
     }
 
-    payload = {
-      ok: true,
-      store: readSheet_(STORE_SHEET_ID, STORE_SHEET_NAME),
-      staff: readSheet_(STAFF_SHEET_ID, STAFF_SHEET_NAME),
-    };
+    payload = loadMasters_();
   } catch (err) {
     payload = { ok: false, error: String(err && err.message ? err.message : err) };
   }
@@ -91,11 +88,216 @@ function readSheet_(ssId, sheetName) {
  * GAS エディタから手動で叩いて疎通確認するためのテスト関数
  * 実行 → ログで件数とヘッダーを確認
  */
+function loadMasters_() {
+  if (shouldUseSupabaseCoreMasters_()) {
+    try {
+      const masters = loadSupabaseCoreMasters_();
+      return {
+        ok: true,
+        source: 'supabase',
+        store: masters.store,
+        staff: masters.staff
+      };
+    } catch (err) {
+      Logger.log('Supabase core master load failed. Falling back to Sheets: ' + err);
+    }
+  }
+
+  return {
+    ok: true,
+    source: 'sheets',
+    store: readSheet_(STORE_SHEET_ID, STORE_SHEET_NAME),
+    staff: readSheet_(STAFF_SHEET_ID, STAFF_SHEET_NAME)
+  };
+}
+
+function shouldUseSupabaseCoreMasters_() {
+  const props = PropertiesService.getScriptProperties();
+  const flag = String(props.getProperty(USE_SUPABASE_CORE_MASTERS_PROPERTY) || 'true').toLowerCase();
+  return flag !== 'false' &&
+    Boolean(props.getProperty('SUPABASE_URL')) &&
+    Boolean(props.getProperty('SUPABASE_SERVICE_ROLE_KEY'));
+}
+
+function loadSupabaseCoreMasters_() {
+  const stores = supabaseRequest_('stores', {
+    select: 'id,store_no,store_id,store_name,area,store_type,is_active,updated_at',
+    order: 'store_no.asc',
+    limit: '500'
+  });
+  const employees = supabaseRequest_('employees', {
+    select: 'id,employee_id,full_name,email,birth_date,employment_status,employment_type,store_id,position_id,joined_on,retired_on,is_active,source_row',
+    order: 'employee_id.asc',
+    limit: '2000'
+  });
+  const positions = supabaseRequest_('positions', {
+    select: 'id,position_name',
+    order: 'position_no.asc',
+    limit: '500'
+  });
+
+  const storesById = indexById_(stores);
+  const positionsById = indexById_(positions);
+  return {
+    store: toStoreRows_(stores),
+    staff: toStaffRows_(employees, storesById, positionsById)
+  };
+}
+
+function toStoreRows_(stores) {
+  const header = [
+    '店舗番号',
+    '店舗名',
+    '定休日ルール',
+    '平日営業開始時間',
+    '土曜日営業開始時間',
+    '日曜日営業開始時間',
+    '祝日営業開始時間',
+    'オープン日',
+    '坪数',
+    'm2',
+    '家賃(共益費など込)',
+    '坪単価',
+    'セット面',
+    'シャンプー台',
+    '席単価',
+    '所属',
+    '状況',
+    '特徴',
+    '閉店日'
+  ];
+  const rows = stores
+    .filter(function(store) { return store && store.is_active !== false; })
+    .map(function(store) {
+      const source = store.source_row || {};
+      return [
+        store.store_no || store.store_id || store.id || '',
+        store.store_name || '',
+        source.closed_rule || source.regular_holiday || '年中無休',
+        source.weekday_open || '8:40～17:40',
+        source.saturday_open || '8:40～17:40',
+        source.sunday_open || '8:40～17:40',
+        source.holiday_open || '8:40～17:40',
+        source.opened_on || '',
+        source.tsubo || '',
+        source.square_meter || '',
+        source.rent || '',
+        source.unit_price_per_tsubo || '',
+        source.seats || '',
+        source.shampoo_stands || '',
+        source.sales_per_seat || '',
+        source.company_name || '',
+        store.is_active === false ? '閉店' : '現行',
+        source.feature || '',
+        source.closed_on || ''
+      ];
+    });
+  return [header].concat(rows);
+}
+
+function toStaffRows_(employees, storesById, positionsById) {
+  const header = [
+    '社員番号',
+    '所属会社',
+    '所属店舗',
+    '役職',
+    '雇用形態',
+    '現職',
+    '美容師免許取得者',
+    '氏名',
+    'フリガナ・姓',
+    'フリガナ・名',
+    '性別',
+    '生年月日',
+    '出身',
+    '美容学校',
+    '入社年月日',
+    '中途入社',
+    '退職日'
+  ];
+  const rows = employees
+    .filter(function(employee) { return employee && employee.is_active !== false; })
+    .map(function(employee) {
+      const source = employee.source_row || {};
+      const store = storesById[employee.store_id] || {};
+      const position = positionsById[employee.position_id] || {};
+      return [
+        employee.employee_id || '',
+        source.company_name || source.corporation_name || '',
+        store.store_name || source.assigned_location || '',
+        position.position_name || source.position_name || '',
+        employee.employment_type || source.employment_type || '',
+        employee.employment_status || source.employment_status || '現職',
+        source.has_beautician_license || source.license || '○',
+        employee.full_name || '',
+        source.kana_last_name || '',
+        source.kana_first_name || '',
+        source.gender || '',
+        formatDateValue_(source.birth_date || employee.birth_date || ''),
+        source.birthplace || '',
+        source.beauty_school || '',
+        formatDateValue_(employee.joined_on || source.joined_on || ''),
+        source.mid_career || '',
+        formatDateValue_(employee.retired_on || source.retired_on || '')
+      ];
+    });
+  return [header].concat(rows);
+}
+
+function supabaseRequest_(resource, query) {
+  const props = PropertiesService.getScriptProperties();
+  const baseUrl = String(props.getProperty('SUPABASE_URL') || '').replace(/\/+$/, '');
+  const serviceRoleKey = props.getProperty('SUPABASE_SERVICE_ROLE_KEY');
+  if (!baseUrl || !serviceRoleKey) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY is not configured.');
+
+  const params = Object.keys(query || {}).map(function(key) {
+    return encodeURIComponent(key) + '=' + encodeURIComponent(String(query[key]));
+  }).join('&');
+  const url = baseUrl + '/rest/v1/' + encodeURIComponent(resource) + (params ? '?' + params : '');
+  const response = UrlFetchApp.fetch(url, {
+    method: 'get',
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: 'Bearer ' + serviceRoleKey,
+      Accept: 'application/json'
+    },
+    muteHttpExceptions: true
+  });
+  const code = response.getResponseCode();
+  const text = response.getContentText();
+  if (code < 200 || code >= 300) {
+    throw new Error('Supabase ' + resource + ' HTTP ' + code + ': ' + text.slice(0, 240));
+  }
+  return JSON.parse(text || '[]');
+}
+
+function indexById_(rows) {
+  return (rows || []).reduce(function(index, row) {
+    if (row && row.id) index[row.id] = row;
+    return index;
+  }, {});
+}
+
+function formatDateValue_(value) {
+  if (!value) return '';
+  if (value instanceof Date) {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy/MM/dd');
+  }
+  return String(value).slice(0, 10).replace(/-/g, '/');
+}
+
 function testRead() {
   const store = readSheet_(STORE_SHEET_ID, STORE_SHEET_NAME);
   const staff = readSheet_(STAFF_SHEET_ID, STAFF_SHEET_NAME);
   Logger.log('store rows = ' + store.length + ', header = ' + JSON.stringify(store[0]));
   Logger.log('staff rows = ' + staff.length + ', header = ' + JSON.stringify(staff[0]));
+}
+
+function testLoadMasters() {
+  const payload = loadMasters_();
+  Logger.log('source = ' + payload.source);
+  Logger.log('store rows = ' + payload.store.length + ', header = ' + JSON.stringify(payload.store[0]));
+  Logger.log('staff rows = ' + payload.staff.length + ', header = ' + JSON.stringify(payload.staff[0]));
 }
 
 function saveShift_(request) {
