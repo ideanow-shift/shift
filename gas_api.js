@@ -164,7 +164,9 @@ function toStoreRows_(stores) {
     '所属',
     '状況',
     '特徴',
-    '閉店日'
+    '閉店日',
+    'core_store_id',
+    'store_id'
   ];
   const rows = stores
     .filter(function(store) { return store && store.is_active !== false; })
@@ -189,7 +191,9 @@ function toStoreRows_(stores) {
         source.company_name || '',
         store.is_active === false ? '閉店' : '現行',
         source.feature || '',
-        source.closed_on || ''
+        source.closed_on || '',
+        store.id || '',
+        store.store_id || ''
       ];
     });
   return [header].concat(rows);
@@ -213,7 +217,8 @@ function toStaffRows_(employees, storesById, positionsById) {
     '美容学校',
     '入社年月日',
     '中途入社',
-    '退職日'
+    '退職日',
+    'core_employee_id'
   ];
   const rows = employees
     .filter(function(employee) { return employee && employee.is_active !== false; })
@@ -238,7 +243,8 @@ function toStaffRows_(employees, storesById, positionsById) {
         source.beauty_school || '',
         formatDateValue_(employee.joined_on || source.joined_on || ''),
         source.mid_career || '',
-        formatDateValue_(employee.retired_on || source.retired_on || '')
+        formatDateValue_(employee.retired_on || source.retired_on || ''),
+        employee.id || ''
       ];
     });
   return [header].concat(rows);

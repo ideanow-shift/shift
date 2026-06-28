@@ -1108,6 +1108,7 @@
             return false;
         }
 
+        const coreStoreIdIdx = findCol(rawHeaders, "core_store_id", "NOV_店舗ID", "store_id");
         storeMaster = [];
         rows.slice(1).forEach((row) => {
             const name = (row[nameIdx] || "").trim();
@@ -1119,7 +1120,7 @@
             }
 
             storeMaster.push({
-                id: (storeMaster.length + 1).toString(),
+                id: coreStoreIdIdx !== -1 && row[coreStoreIdIdx] ? row[coreStoreIdIdx].trim() : (storeMaster.length + 1).toString(),
                 name: name,
                 rule:    (ruleIdx    !== -1 && row[ruleIdx])    ? row[ruleIdx].trim()    : "年中無休",
                 weekday: (weekdayIdx !== -1 && row[weekdayIdx]) ? row[weekdayIdx].trim() : "1",
@@ -1188,6 +1189,7 @@
             return false;
         }
 
+        const coreEmployeeIdIdx = findCol(rawHeaders, "core_employee_id", "employee_id");
         staffMaster = [];
         rows.slice(1).forEach((row) => {
             const store  = (row[resolvedStore]  || "").trim();
@@ -1224,7 +1226,7 @@
             }
 
             staffMaster.push({
-                id: (staffMaster.length + 1).toString(),
+                id: coreEmployeeIdIdx !== -1 && row[coreEmployeeIdIdx] ? row[coreEmployeeIdIdx].trim() : (staffMaster.length + 1).toString(),
                 name:  name,
                 store: store,
                 rank:  rank,
