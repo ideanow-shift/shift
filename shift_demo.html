@@ -638,7 +638,7 @@
                     oninput="saveStoreCustomRules()"></textarea>
                 <div style="font-size:10px; color:var(--text-secondary); margin-top:3px;">ここに書いた内容はAI調整時に自動でプロンプトに追加されます</div>
 
-                <button onclick="saveSettingsToGAS()"
+                <button id="saveStoreSettingsBtn" type="button"
                     style="width:100%; margin-top:12px; padding:8px; background:#F9F9F9; border:1px solid var(--border-light); border-radius:8px; font-size:12px; cursor:pointer;">
                     ⚙️ 店舗設定を保存する
                 </button>
@@ -3137,6 +3137,16 @@ ${(() => {
         el.style.color = type === "ok" ? "#38a169" : type === "err" ? "#e53e3e" : "#718096";
     }
 
+    function bindStoreSettingsButton() {
+        const btn = document.getElementById("saveStoreSettingsBtn");
+        if (!btn || btn.dataset.bound === "1") return;
+        btn.dataset.bound = "1";
+        btn.addEventListener("click", function(event) {
+            event.preventDefault();
+            saveSettingsToGAS();
+        });
+    }
+
     // シフトデータをGASに保存
     // ─── fetch POST方式でGASを呼び出す（redirect:followでCORS解決） ───
     async function callGAS(payload) {
@@ -3175,7 +3185,17 @@ ${(() => {
 
     // 店舗設定をGASに保存
     async function saveSettingsToGAS() {
-        if (!currentStore) return;
+        if (!currentStore) {
+            setSaveStatus("❌ 店舗を選択してください", "err");
+            alert("店舗を選択してください");
+            return;
+        }
+        const btn = document.getElementById("saveStoreSettingsBtn");
+        const originalLabel = btn ? btn.textContent : "";
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = "⚙️ 設定保存中...";
+        }
         setSaveStatus("⚙️ 設定保存中...", "info");
         try {
             const extraRules = {
@@ -3202,13 +3222,19 @@ ${(() => {
                 extraRules:    extraRules
             });
             if (data.ok) {
-                setSaveStatus(`✅ 設定保存完了 ${new Date().toLocaleTimeString("ja-JP")}`, "ok");
+                const source = data.source ? ` / ${data.source}` : "";
+                setSaveStatus(`✅ 設定保存完了${source} ${new Date().toLocaleTimeString("ja-JP")}`, "ok");
             } else {
                 setSaveStatus(`❌ 設定保存失敗: ${data.error}`, "err");
             }
         } catch (err) {
             console.error("[saveSettings]", err);
             setSaveStatus("❌ 設定保存失敗: " + err.message, "err");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalLabel || "⚙️ 店舗設定を保存する";
+            }
         }
     }
 
@@ -3330,6 +3356,7 @@ ${(() => {
     }
 
     window.addEventListener("DOMContentLoaded", () => {
+        bindStoreSettingsButton();
         updateMonthDisplay();
         updateApiKeyStatus();
         loadFromGAS();
