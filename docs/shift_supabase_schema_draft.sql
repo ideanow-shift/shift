@@ -252,6 +252,18 @@ comment on table public.shift_schedules is '店舗・年月ごとのシフト表
 comment on table public.shift_schedule_cells is '社員x日付のシフトセル。';
 comment on table public.shift_requests is '希望休、有休、出勤希望などの申請。';
 comment on table public.shift_generation_runs is '自動生成、AI調整、再生成、移行の実行履歴。';
+
+-- Service-role access for GAS backend.
+-- RLS is enabled, but the GAS Web API uses the Supabase service_role key as a protected backend credential.
+grant usage on schema public to service_role;
+grant select, insert, update, delete on table public.shift_store_settings to service_role;
+grant select, insert, update, delete on table public.shift_staff_rules to service_role;
+grant select, insert, update, delete on table public.shift_schedules to service_role;
+grant select, insert, update, delete on table public.shift_schedule_cells to service_role;
+grant select, insert, update, delete on table public.shift_requests to service_role;
+grant select, insert, update, delete on table public.shift_generation_runs to service_role;
+grant select, insert, update, delete on table public.shift_audit_logs to service_role;
+
 comment on table public.shift_audit_logs is '保存、確定、公開、手修正、AI適用の監査ログ。';
 
 -- Phase 1 policy note:
