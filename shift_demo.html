@@ -1262,13 +1262,21 @@
         });
     }
 
+    function isShiftTargetStore(store) {
+        const name = (store && store.name || "").trim();
+        if (!name) return false;
+        const excludedNames = ["本部", "ダッシュボード設定", "管理", "テスト"];
+        return !excludedNames.some(excluded => name.includes(excluded));
+    }
+
     function buildStoreSelector() {
         if (storeMaster.length > 0) {
             const selector = document.getElementById("storeSelector");
             selector.innerHTML = `<option value="">▼ 表示する店舗を選んでください ▼</option>` + 
                 storeMaster.map(s => `<option value="${s.id}" data-name="${s.name}">${s.name}</option>`).join("");
             
-            selector.selectedIndex = 1;
+            const firstShiftStoreIndex = storeMaster.findIndex(isShiftTargetStore);
+            selector.selectedIndex = firstShiftStoreIndex >= 0 ? firstShiftStoreIndex + 1 : 1;
             changeStore();
         }
     }
@@ -1671,7 +1679,7 @@
         const tbody = document.querySelector("#shiftTable tbody");
         if (!currentStore) return;
 
-        let headerHtml = `<tr><th style="min-width: 260px;">スタッフ名 [計 ${currentStaffs.length}名] / ダッシュボード設定</th>`;
+        let headerHtml = `<tr><th style="min-width: 260px;">スタッフ名 [計 ${currentStaffs.length}名] / ${currentStore.name}</th>`;
         let subHeaderHtml = `<tr><th>曜日</th>`;
         let countHeaderHtml = `<tr><th style="font-size:10px;">出勤人数</th>`;
         const weekDays = ["日", "月", "火", "水", "木", "金", "土"];
