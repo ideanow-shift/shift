@@ -3231,7 +3231,9 @@ ${(() => {
             });
             if (data.ok) {
                 const source = data.source ? ` / ${data.source}` : "";
-                setSaveStatus(`✅ 設定保存完了${source} ${new Date().toLocaleTimeString("ja-JP")}`, "ok");
+                const reason = data.fallbackReason ? `（Supabase未保存: ${data.fallbackReason}）` : "";
+                const statusType = data.source === "sheets" && data.fallbackReason ? "err" : "ok";
+                setSaveStatus(`✅ 設定保存完了${source} ${new Date().toLocaleTimeString("ja-JP")} ${reason}`, statusType);
             } else {
                 setSaveStatus(`❌ 設定保存失敗: ${data.error}`, "err");
             }

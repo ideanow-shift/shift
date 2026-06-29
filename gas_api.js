@@ -373,17 +373,22 @@ function loadShift_(params) {
 function saveSettings_(request) {
   const storeId = requireValue_(request.storeId, 'storeId');
   const record = buildSettingsRecord_(request);
+  let supabaseError = '';
   if (shouldUseSupabaseSettings_()) {
     try {
       saveSettingsToSupabase_(record);
       saveRecord_(SHIFT_SETTINGS_SHEET_NAME, settingsKey_(storeId), record);
       return { ok: true, source: 'supabase', updatedAt: record.updatedAt };
     } catch (err) {
-      Logger.log('Supabase settings save failed. Falling back to Sheets: ' + err);
+      supabaseError = String(err && err.message ? err.message : err);
+      Logger.log('Supabase settings save failed. Falling back to Sheets: ' + supabaseError);
     }
+  } else {
+    supabaseError = getSupabaseSettingsDisabledReason_();
+    Logger.log('Supabase settings save skipped. Falling back to Sheets: ' + supabaseError);
   }
   saveRecord_(SHIFT_SETTINGS_SHEET_NAME, settingsKey_(storeId), record);
-  return { ok: true, source: 'sheets', updatedAt: record.updatedAt };
+  return { ok: true, source: 'sheets', updatedAt: record.updatedAt, fallbackReason: supabaseError };
 }
 
 function loadSettings_(params) {
@@ -434,6 +439,16 @@ function shouldUseSupabaseSettings_() {
   return flag !== 'false' &&
     Boolean(props.getProperty('SUPABASE_URL')) &&
     Boolean(props.getProperty('SUPABASE_SERVICE_ROLE_KEY'));
+}
+
+function getSupabaseSettingsDisabledReason_() {
+  const props = PropertiesService.getScriptProperties();
+  const missing = [];
+  const flag = String(props.getProperty(USE_SUPABASE_SETTINGS_PROPERTY) || 'true').toLowerCase();
+  if (flag === 'false') missing.push(USE_SUPABASE_SETTINGS_PROPERTY + '=false');
+  if (!props.getProperty('SUPABASE_URL')) missing.push('SUPABASE_URL missing');
+  if (!props.getProperty('SUPABASE_SERVICE_ROLE_KEY')) missing.push('SUPABASE_SERVICE_ROLE_KEY missing');
+  return missing.length ? missing.join(', ') : 'unknown reason';
 }
 
 function saveSettingsToSupabase_(record) {
