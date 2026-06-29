@@ -1230,7 +1230,7 @@
                 holidayType: "完全週休2日",
                 workType:    empTypeIdx !== -1 && (row[empTypeIdx] || "").includes("時短") ? "時短" : "通常",
                 hasLicense: licenseIdx !== -1
-                    ? (row[licenseIdx] || "").trim() === "〇"
+                    ? !["×", "x", "X", "なし", "無", "false", "0"].includes((row[licenseIdx] || "").trim())
                     : true,  // 列がない場合はカウント対象とする
                 isReceptionPart: empTypeIdx !== -1
                     ? (row[empTypeIdx] || "").trim() === "レセプションパート"
