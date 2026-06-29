@@ -25,6 +25,7 @@ const SHIFT_DATA_SHEET_NAME = 'ShiftData';
 const SHIFT_SETTINGS_SHEET_NAME = 'ShiftSettings';
 const USE_SUPABASE_CORE_MASTERS_PROPERTY = 'SHIFT_USE_SUPABASE_CORE_MASTERS';
 const USE_SUPABASE_SETTINGS_PROPERTY = 'SHIFT_USE_SUPABASE_SETTINGS';
+const USE_SUPABASE_SHIFT_DATA_PROPERTY = 'SHIFT_USE_SUPABASE_SHIFT_DATA';
 
 function doGet(e) {
   let payload;
@@ -276,6 +277,14 @@ function supabasePatch_(resource, query, payload) {
   });
 }
 
+function supabaseDelete_(resource, query) {
+  return supabaseFetch_(resource, {
+    method: 'delete',
+    query: query,
+    prefer: 'return=representation'
+  });
+}
+
 function supabaseFetch_(resource, options) {
   const props = PropertiesService.getScriptProperties();
   const baseUrl = String(props.getProperty('SUPABASE_URL') || '').replace(/\/+$/, '');
@@ -357,17 +366,41 @@ function saveShift_(request) {
     cells: request.cells || {},
     updatedAt: new Date().toISOString()
   };
+
+  let supabaseError = '';
+  if (shouldUseSupabaseShiftData_()) {
+    try {
+      const result = saveShiftToSupabase_(record);
+      saveRecord_(SHIFT_DATA_SHEET_NAME, shiftKey_(storeId, year, month), record);
+      return { ok: true, source: 'supabase', updatedAt: result.updatedAt || record.updatedAt };
+    } catch (err) {
+      supabaseError = String(err && err.message ? err.message : err);
+      Logger.log('Supabase shift save failed. Falling back to Sheets: ' + supabaseError);
+    }
+  } else {
+    supabaseError = getSupabaseShiftDataDisabledReason_();
+    Logger.log('Supabase shift save skipped. Falling back to Sheets: ' + supabaseError);
+  }
+
   saveRecord_(SHIFT_DATA_SHEET_NAME, shiftKey_(storeId, year, month), record);
-  return { ok: true, updatedAt: record.updatedAt };
+  return { ok: true, source: 'sheets', updatedAt: record.updatedAt, fallbackReason: supabaseError };
 }
 
 function loadShift_(params) {
   const storeId = requireValue_(params.storeId, 'storeId');
   const year = requireValue_(params.year, 'year');
   const month = requireValue_(params.month, 'month');
+  if (shouldUseSupabaseShiftData_()) {
+    try {
+      const record = loadShiftFromSupabase_(String(storeId), Number(year), Number(month));
+      if (record) return { ok: true, source: 'supabase', cells: record.cells || {}, updatedAt: record.updatedAt || '' };
+    } catch (err) {
+      Logger.log('Supabase shift load failed. Falling back to Sheets: ' + err);
+    }
+  }
   const record = loadRecord_(SHIFT_DATA_SHEET_NAME, shiftKey_(storeId, year, month));
-  if (!record) return { ok: true, cells: {}, updatedAt: '' };
-  return { ok: true, cells: record.cells || {}, updatedAt: record.updatedAt || '' };
+  if (!record) return { ok: true, source: 'sheets', cells: {}, updatedAt: '' };
+  return { ok: true, source: 'sheets', cells: record.cells || {}, updatedAt: record.updatedAt || '' };
 }
 
 function saveSettings_(request) {
@@ -449,6 +482,154 @@ function getSupabaseSettingsDisabledReason_() {
   if (!props.getProperty('SUPABASE_URL')) missing.push('SUPABASE_URL missing');
   if (!props.getProperty('SUPABASE_SERVICE_ROLE_KEY')) missing.push('SUPABASE_SERVICE_ROLE_KEY missing');
   return missing.length ? missing.join(', ') : 'unknown reason';
+}
+
+function shouldUseSupabaseShiftData_() {
+  const props = PropertiesService.getScriptProperties();
+  const flag = String(props.getProperty(USE_SUPABASE_SHIFT_DATA_PROPERTY) || 'true').toLowerCase();
+  return flag !== 'false' &&
+    Boolean(props.getProperty('SUPABASE_URL')) &&
+    Boolean(props.getProperty('SUPABASE_SERVICE_ROLE_KEY'));
+}
+
+function getSupabaseShiftDataDisabledReason_() {
+  const props = PropertiesService.getScriptProperties();
+  const missing = [];
+  const flag = String(props.getProperty(USE_SUPABASE_SHIFT_DATA_PROPERTY) || 'true').toLowerCase();
+  if (flag === 'false') missing.push(USE_SUPABASE_SHIFT_DATA_PROPERTY + '=false');
+  if (!props.getProperty('SUPABASE_URL')) missing.push('SUPABASE_URL missing');
+  if (!props.getProperty('SUPABASE_SERVICE_ROLE_KEY')) missing.push('SUPABASE_SERVICE_ROLE_KEY missing');
+  return missing.length ? missing.join(', ') : 'unknown reason';
+}
+
+function saveShiftToSupabase_(record) {
+  const storeId = String(record.storeId || '').trim();
+  const year = Number(record.year);
+  const month = Number(record.month);
+  const cells = record.cells || {};
+  const scheduleRows = supabaseUpsert_('shift_schedules', { on_conflict: 'store_id,year,month' }, [{
+    store_id: storeId,
+    year: year,
+    month: month,
+    status: 'draft',
+    source: 'manual',
+    metadata: {
+      store_name: record.storeName || '',
+      saved_from: 'gas_web_api'
+    }
+  }]);
+  const schedule = scheduleRows && scheduleRows[0];
+  if (!schedule || !schedule.id) throw new Error('Supabase shift_schedules upsert returned no id.');
+
+  supabaseDelete_('shift_schedule_cells', { schedule_id: 'eq.' + schedule.id });
+
+  const cellRows = Object.keys(cells).map(function(key) {
+    const parsed = parseShiftCellKey_(key);
+    const stamp = encodeShiftStamp_(cells[key]);
+    if (!parsed || !stamp) return null;
+    return {
+      schedule_id: schedule.id,
+      employee_id: parsed.employeeId,
+      work_date: formatShiftDate_(year, month, parsed.day),
+      stamp: stamp,
+      source: 'manual',
+      metadata: {
+        ui_key: key,
+        ui_stamp: String(cells[key] || '')
+      }
+    };
+  }).filter(Boolean);
+
+  if (cellRows.length) {
+    supabaseUpsert_('shift_schedule_cells', { on_conflict: 'schedule_id,employee_id,work_date' }, cellRows);
+  }
+  return { updatedAt: schedule.updated_at || record.updatedAt };
+}
+
+function loadShiftFromSupabase_(storeId, year, month) {
+  const scheduleRows = supabaseRequest_('shift_schedules', {
+    select: 'id,updated_at',
+    store_id: 'eq.' + storeId,
+    year: 'eq.' + Number(year),
+    month: 'eq.' + Number(month),
+    limit: '1'
+  });
+  const schedule = scheduleRows[0];
+  if (!schedule || !schedule.id) return null;
+
+  const cellRows = supabaseRequest_('shift_schedule_cells', {
+    select: 'employee_id,work_date,stamp,metadata',
+    schedule_id: 'eq.' + schedule.id,
+    limit: '5000'
+  });
+  const cells = {};
+  cellRows.forEach(function(row) {
+    const day = dayFromDateString_(row.work_date);
+    const stamp = decodeShiftStamp_(row.stamp);
+    if (!row.employee_id || !day || !stamp) return;
+    cells[String(row.employee_id) + '-' + day] = stamp;
+  });
+  return { cells: cells, updatedAt: schedule.updated_at || '' };
+}
+
+function parseShiftCellKey_(key) {
+  const text = String(key || '');
+  const dash = text.lastIndexOf('-');
+  if (dash <= 0) return null;
+  const employeeId = text.slice(0, dash);
+  const day = Number(text.slice(dash + 1));
+  if (!employeeId || !Number.isFinite(day) || day < 1 || day > 31) return null;
+  return { employeeId: employeeId, day: day };
+}
+
+function formatShiftDate_(year, month, day) {
+  return [Number(year), ('0' + Number(month)).slice(-2), ('0' + Number(day)).slice(-2)].join('-');
+}
+
+function dayFromDateString_(value) {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? Number(match[3]) : 0;
+}
+
+function encodeShiftStamp_(stamp) {
+  const text = String(stamp || '').trim();
+  const map = {
+    '出': 'work',
+    '必': 'required_work',
+    '公': 'manual_off',
+    '希': 'requested_off',
+    '有': 'paid_leave',
+    '時': 'short_time',
+    '研': 'training',
+    '会': 'meeting',
+    '半': 'half_day',
+    '外': 'outside',
+    '忌': 'bereavement',
+    '特': 'special_leave',
+    '定': 'closed'
+  };
+  return map[text] || '';
+}
+
+function decodeShiftStamp_(stamp) {
+  const map = {
+    work: '出',
+    required_work: '必',
+    off: '公',
+    manual_off: '公',
+    requested_off: '希',
+    paid_leave: '有',
+    ng_work: '公',
+    short_time: '時',
+    training: '研',
+    meeting: '会',
+    half_day: '半',
+    outside: '外',
+    bereavement: '忌',
+    special_leave: '特',
+    closed: '定'
+  };
+  return map[String(stamp || '')] || '';
 }
 
 function saveSettingsToSupabase_(record) {
