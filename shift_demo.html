@@ -3350,13 +3350,14 @@ ${(() => {
                 throw new Error("レスポンス形式が想定外: store / staff 配列が含まれていません");
             }
 
-            const okStore = importStoreFromRows(data.store, data.source || "api");
-            const okStaff = importStaffFromRows(data.staff, data.source || "api");
+            const sourceLabel = data.source || backendLabel;
+            const okStore = importStoreFromRows(data.store, sourceLabel);
+            const okStaff = importStaffFromRows(data.staff, sourceLabel);
 
             if (okStore && okStaff) {
                 const alertBox = document.getElementById("alertBox");
                 alertBox.style.display = "block";
-                alertBox.innerHTML = `🛰️ ${backendLabel} から自動取得しました（店舗:${storeMaster.length} / 社員:${staffMaster.length}名）`;
+                alertBox.innerHTML = `🛰️ ${sourceLabel} から自動取得しました（店舗:${storeMaster.length} / 社員:${staffMaster.length}名）`;
 
                 // 店舗選択後に設定・シフトデータを自動読込
                 if (currentStore) {
@@ -3365,7 +3366,7 @@ ${(() => {
                     await loadShiftFromGAS(currentStore.id, currentYear, currentMonth + 1);
                     renderStaffRulesPanel();
                     renderTable();
-                    setSaveStatus("✅ データ読込完了", "ok");
+                    setSaveStatus(`✅ データ読込完了 / ${sourceLabel}`, "ok");
                 }
             }
         } catch (err) {
