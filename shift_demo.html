@@ -806,12 +806,22 @@
 
 <script>
     // ─────────────────────────────────────────────────────────────
-    // 🛰️ GAS Web API デプロイ URL
-    //    gas_api.js を Apps Script に貼り付けてデプロイし、
-    //    発行された「…/exec」で終わる URL に差し替えてください。
+    // 🛰️ Backend API URL
+    //    SHIFT_API_URL に Supabase Edge Function URL を入れるとGASから切替。
+    //    空欄のままなら既存GASを退避用バックエンドとして使います。
     // ─────────────────────────────────────────────────────────────
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwuWtbvMdGItD1tmRB38Lg503JJV5DG-slsModeZsawbRprHSySotNCOx9mNyHMvGmh/exec";
-    // ※ GASに saveShift / loadShift 関数追加後、同じURLのまま使用可能
+    const SHIFT_API_URL = "";
+
+    function getBackendApiUrl() {
+        return (SHIFT_API_URL && SHIFT_API_URL.indexOf("<<") === -1 && SHIFT_API_URL.indexOf("PASTE") === -1)
+            ? SHIFT_API_URL
+            : GAS_API_URL;
+    }
+
+    function getBackendLabel() {
+        return getBackendApiUrl() === SHIFT_API_URL ? "Supabase Edge" : "GAS";
+    }
 
     // ─────────────────────────────────────────────────────────────
     // 📅 2026〜2027年の祝日定義（YYYY-M-D 形式）
@@ -3158,7 +3168,7 @@ ${(() => {
     // シフトデータをGASに保存
     // ─── fetch POST方式でGASを呼び出す（redirect:followでCORS解決） ───
     async function callGAS(payload) {
-        const res  = await fetch(GAS_API_URL, {
+        const res  = await fetch(getBackendApiUrl(), {
             method:   "POST",
             mode:     "cors",
             redirect: "follow",
@@ -3254,7 +3264,7 @@ ${(() => {
     // シフトデータをGASから読込
     async function loadShiftFromGAS(storeId, year, month) {
         try {
-            const url = `${GAS_API_URL}?action=loadShift&storeId=${encodeURIComponent(storeId)}&year=${year}&month=${month}`;
+            const url = `${getBackendApiUrl()}?action=loadShift&storeId=${encodeURIComponent(storeId)}&year=${year}&month=${month}`;
             const res  = await fetch(url, { method: "GET", redirect: "follow" });
             const data = await res.json();
             if (!data.ok) throw new Error(data.error || "読込失敗");
@@ -3271,7 +3281,7 @@ ${(() => {
     // 店舗設定をGASから読込
     async function loadSettingsFromGAS(storeId) {
         try {
-            const url  = `${GAS_API_URL}?action=loadSettings&storeId=${encodeURIComponent(storeId)}`;
+            const url  = `${getBackendApiUrl()}?action=loadSettings&storeId=${encodeURIComponent(storeId)}`;
             const res  = await fetch(url, { method: "GET", redirect: "follow" });
             const data = await res.json();
             if (!data.ok) throw new Error(data.error || "設定読込失敗");
@@ -3319,32 +3329,34 @@ ${(() => {
         const storeStatus = document.getElementById("storeLoadStatus");
         const staffStatus = document.getElementById("staffLoadStatus");
 
-        if (!GAS_API_URL || GAS_API_URL.indexOf("<<") !== -1 || GAS_API_URL.indexOf("PASTE") !== -1) {
-            console.info("[GAS] GAS_API_URL 未設定。CSV手動インポートを使用してください。");
+        const backendApiUrl = getBackendApiUrl();
+        const backendLabel = getBackendLabel();
+        if (!backendApiUrl || backendApiUrl.indexOf("<<") !== -1 || backendApiUrl.indexOf("PASTE") !== -1) {
+            console.info("[API] Backend API URL 未設定。CSV手動インポートを使用してください。");
             return;
         }
 
-        storeStatus.textContent = "⏳ GASから取得中...";
-        staffStatus.textContent = "⏳ GASから取得中...";
+        storeStatus.textContent = `⏳ ${backendLabel}から取得中...`;
+        staffStatus.textContent = `⏳ ${backendLabel}から取得中...`;
 
         try {
-            const res = await fetch(GAS_API_URL, { method: "GET", redirect: "follow" });
+            const res = await fetch(getBackendApiUrl(), { method: "GET", redirect: "follow" });
             if (!res.ok) throw new Error("HTTP " + res.status);
             const data = await res.json();
             if (!data || data.ok === false) {
-                throw new Error((data && data.error) ? data.error : "GAS error");
+                throw new Error((data && data.error) ? data.error : "Backend API error");
             }
             if (!Array.isArray(data.store) || !Array.isArray(data.staff)) {
                 throw new Error("レスポンス形式が想定外: store / staff 配列が含まれていません");
             }
 
-            const okStore = importStoreFromRows(data.store, "gas");
-            const okStaff = importStaffFromRows(data.staff, "gas");
+            const okStore = importStoreFromRows(data.store, data.source || "api");
+            const okStaff = importStaffFromRows(data.staff, data.source || "api");
 
             if (okStore && okStaff) {
                 const alertBox = document.getElementById("alertBox");
                 alertBox.style.display = "block";
-                alertBox.innerHTML = `🛰️ GAS API から自動取得しました（店舗:${storeMaster.length} / 社員:${staffMaster.length}名）`;
+                alertBox.innerHTML = `🛰️ ${backendLabel} から自動取得しました（店舗:${storeMaster.length} / 社員:${staffMaster.length}名）`;
 
                 // 店舗選択後に設定・シフトデータを自動読込
                 if (currentStore) {
@@ -3357,14 +3369,14 @@ ${(() => {
                 }
             }
         } catch (err) {
-            console.error("[GAS] 取得失敗", err);
-            storeStatus.textContent = "❌ GAS取得失敗";
+            console.error("[API] 取得失敗", err);
+            storeStatus.textContent = `❌ ${backendLabel}取得失敗`;
             storeStatus.className = "status-badge status-none";
-            staffStatus.textContent = "❌ GAS取得失敗";
+            staffStatus.textContent = `❌ ${backendLabel}取得失敗`;
             staffStatus.className = "status-badge status-none";
             const alertBox = document.getElementById("alertBox");
             alertBox.style.display = "block";
-            alertBox.innerHTML = `⚠️ GAS API からの取得に失敗しました：${err.message}<br>CSV手動インポートに切り替えてください。`;
+            alertBox.innerHTML = `⚠️ ${backendLabel} からの取得に失敗しました：${err.message}<br>CSV手動インポートに切り替えてください。`;
         }
     }
 
