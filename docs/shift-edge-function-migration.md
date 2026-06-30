@@ -32,11 +32,7 @@ API契約は既存GASと合わせる。
 
 ## 必要なSecrets
 
-Supabase Edge Function側に次を設定する。
-
-```powershell
-supabase secrets set SUPABASE_URL=https://nkmxevmioczcmnldreyo.supabase.co SUPABASE_SERVICE_ROLE_KEY=<legacy service_role JWT> --project-ref nkmxevmioczcmnldreyo
-```
+`SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` はSupabase Edge Functions側で予約済みの標準環境変数として提供されるため、`supabase secrets set` では登録しない。
 
 AI調整をサーバー側キーで使う場合のみ追加する。
 
