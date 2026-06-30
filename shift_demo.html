@@ -811,7 +811,7 @@
     //    空欄のままなら既存GASを退避用バックエンドとして使います。
     // ─────────────────────────────────────────────────────────────
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwuWtbvMdGItD1tmRB38Lg503JJV5DG-slsModeZsawbRprHSySotNCOx9mNyHMvGmh/exec";
-    const SHIFT_API_URL = "";
+    const SHIFT_API_URL = "https://nkmxevmioczcmnldreyo.supabase.co/functions/v1/shift-api";
 
     function getBackendApiUrl() {
         return (SHIFT_API_URL && SHIFT_API_URL.indexOf("<<") === -1 && SHIFT_API_URL.indexOf("PASTE") === -1)
