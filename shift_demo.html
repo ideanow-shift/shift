@@ -818,7 +818,7 @@
                 AI調整（毎月）
             </div>
             <div class="ai-panel-note">
-                APIキーは画面入力またはGASのスクリプトプロパティで利用します
+                APIキーは画面入力またはBackend側の環境変数で利用します
             </div>
 
             <textarea id="aiRequestInput" rows="3" placeholder="スタッフの要望・イレギュラーをここに入力してください&#10;例：村山さん12日希望休、19日コンテストで田中・佐藤中抜け"
@@ -909,7 +909,7 @@
 
 <script>
     // ─────────────────────────────────────────────────────────────
-    // gas Backend API URL
+    // Backend API URL
     //    SHIFT_API_URL に Supabase Edge Function URL を入れるとGASから切替。
     //    空欄のままなら既存GASを退避用バックエンドとして使います。
     // ─────────────────────────────────────────────────────────────
@@ -1475,7 +1475,7 @@
         renderTable();
         restoreStoreCustomRules();
 
-        // GASから設定・シフトデータを非同期読込
+        // Backend APIから設定・シフトデータを非同期読込
         (async () => {
             setSaveStatus("読込中...", "info");
             await loadSettingsFromGAS(currentStore.id);
@@ -3267,10 +3267,10 @@ ${(() => {
         btn.disabled = true;
         btn.textContent = "AI調整中...";
         alertBox.style.display = "block";
-        alertBox.innerHTML = "AIにシフト調整を依頼しています（GAS経由）...";
+        alertBox.innerHTML = "AIにシフト調整を依頼しています（Backend API経由）...";
 
         try {
-            // GAS経由でAnthropic/Gemini APIを呼び出す
+            // Backend API経由でAnthropic/Gemini APIを呼び出す
             const prompt = buildAISystemMessage(restrictions) + "\n\n" + buildAIUserMessage(request, restrictions);
             const data = await callGAS({
                 action: "aiAdjust",
@@ -3320,7 +3320,7 @@ ${(() => {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // シフトデータ永続化（Googleスプレッドシートへ保存・読込）
+    // シフトデータ永続化（Backend APIへ保存・読込）
     // ─────────────────────────────────────────────────────────────
 
     // 保存ステータス表示
@@ -3341,8 +3341,8 @@ ${(() => {
         });
     }
 
-    // シフトデータをGASに保存
-    // ─── fetch POST方式でGASを呼び出す（redirect:followでCORS解決） ───
+    // シフトデータをBackend APIに保存
+    // ─── fetch POST方式でBackend APIを呼び出す ───
     async function callGAS(payload) {
         const res  = await fetch(getBackendApiUrl(), {
             method:   "POST",
@@ -3380,7 +3380,7 @@ ${(() => {
         }
     }
 
-    // 店舗設定をGASに保存
+    // 店舗設定をBackend APIに保存
     async function saveSettingsToGAS() {
         if (!currentStore) {
             setSaveStatus("店舗を選択してください", "err");
@@ -3437,7 +3437,7 @@ ${(() => {
         }
     }
 
-    // シフトデータをGASから読込
+    // シフトデータをBackend APIから読込
     async function loadShiftFromGAS(storeId, year, month) {
         try {
             const url = `${getBackendApiUrl()}?action=loadShift&storeId=${encodeURIComponent(storeId)}&year=${year}&month=${month}`;
@@ -3454,7 +3454,7 @@ ${(() => {
         }
     }
 
-    // 店舗設定をGASから読込
+    // 店舗設定をBackend APIから読込
     async function loadSettingsFromGAS(storeId) {
         try {
             const url  = `${getBackendApiUrl()}?action=loadSettings&storeId=${encodeURIComponent(storeId)}`;
@@ -3498,7 +3498,7 @@ ${(() => {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // gas 起動時に GAS Web API からスプレッドシートを直接ロード
+    // 起動時にBackend APIからマスタデータを直接ロード
     //    URL 未設定時は何もせず、CSV手動インポートにフォールバック
     // ─────────────────────────────────────────────────────────────
     async function loadFromGAS() {
@@ -3533,7 +3533,7 @@ ${(() => {
             if (okStore && okStaff) {
                 const alertBox = document.getElementById("alertBox");
                 alertBox.style.display = "block";
-                alertBox.innerHTML = `gas ${sourceLabel} から自動取得しました（店舗:${storeMaster.length} / 社員:${staffMaster.length}名）`;
+                alertBox.innerHTML = `${sourceLabel} から自動取得しました（店舗:${storeMaster.length} / 社員:${staffMaster.length}名）`;
 
                 // 店舗選択後に設定・シフトデータを自動読込
                 if (currentStore) {
