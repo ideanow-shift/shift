@@ -471,9 +471,9 @@
             <option value="">店舗を選択</option>
         </select>
         <div style="display: flex; align-items: center; gap: 4px; background: #F9F9F9; border-radius: 8px; padding: 4px 8px; border: 1px solid var(--border-light);">
-            <button onclick="changeMonth(-1)" style="border: none; background: transparent; cursor: pointer; padding: 4px 8px; font-size: 14px; border-radius: 8px; color: var(--text-secondary);" title="前月">◀</button>
+            <button onclick="changeMonth(-1)" style="border: none; background: transparent; cursor: pointer; padding: 4px 8px; font-size: 14px; border-radius: 8px; color: var(--text-secondary);" title="前月">前月</button>
             <span id="currentMonthLabel" style="font-weight: 500; font-size: 14px; min-width: 92px; text-align: center; color: var(--text-primary);">2026年6月</span>
-            <button onclick="changeMonth(1)" style="border: none; background: transparent; cursor: pointer; padding: 4px 8px; font-size: 14px; border-radius: 8px; color: var(--text-secondary);" title="次月">▶</button>
+            <button onclick="changeMonth(1)" style="border: none; background: transparent; cursor: pointer; padding: 4px 8px; font-size: 14px; border-radius: 8px; color: var(--text-secondary);" title="次月">次月</button>
         </div>
     </div>
 </div>
@@ -481,29 +481,29 @@
 <div class="stamp-box">
     <div style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 8px;">スタンプを選んでタップ：</div>
     <div class="stamp-list" id="stampList">
-        <div class="stamp st-work active" onclick="selectStamp('出', this)">✅ 出勤</div>
-        <div class="stamp st-off" onclick="selectStamp('公', this)">❌ 公休</div>
-        <div class="stamp st-req" onclick="selectStamp('希', this)">⭐ 希望休</div>
-        <div class="stamp st-paid" onclick="selectStamp('有', this)">💴 有給</div>
-        <div class="stamp st-train" onclick="selectStamp('研', this)">✨ 研修</div>
-        <div class="stamp st-must" onclick="selectStamp('必', this)">🔴 絶対出勤</div>
+        <div class="stamp st-work active" onclick="selectStamp('出', this)">出勤</div>
+        <div class="stamp st-off" onclick="selectStamp('公', this)">公休</div>
+        <div class="stamp st-req" onclick="selectStamp('希', this)">希望休</div>
+        <div class="stamp st-paid" onclick="selectStamp('有', this)">有給</div>
+        <div class="stamp st-train" onclick="selectStamp('研', this)">研修</div>
+        <div class="stamp st-must" onclick="selectStamp('必', this)">絶対出勤</div>
         <!-- カスタムスタンプ（店舗設定でONにすると表示） -->
-        <div class="stamp st-half" onclick="selectStamp('半', this)" id="stamp_half" style="display:none;">🕐 半休</div>
-        <div class="stamp st-out" onclick="selectStamp('外', this)" id="stamp_out" style="display:none;">🚗 外勤</div>
-        <div class="stamp st-bereave" onclick="selectStamp('忌', this)" id="stamp_bereave" style="display:none;">🙏 忌引</div>
-        <div class="stamp st-special" onclick="selectStamp('特', this)" id="stamp_special" style="display:none;">📋 特休</div>
+        <div class="stamp st-half" onclick="selectStamp('半', this)" id="stamp_half" style="display:none;">半休</div>
+        <div class="stamp st-out" onclick="selectStamp('外', this)" id="stamp_out" style="display:none;">外勤</div>
+        <div class="stamp st-bereave" onclick="selectStamp('忌', this)" id="stamp_bereave" style="display:none;">忌引</div>
+        <div class="stamp st-special" onclick="selectStamp('特', this)" id="stamp_special" style="display:none;">特休</div>
     </div>
 </div>
 
 <div class="main-layout">
-    <button class="mobile-sidebar-toggle" onclick="toggleSidebar(this)">⚙️ 設定・ルールを開く</button>
+    <button class="mobile-sidebar-toggle" onclick="toggleSidebar(this)">設定・ルールを開く</button>
     <div class="sidebar mobile-collapsed">
 
         <!-- STEP 1: データ読込 -->
         <details id="step1" style="margin-bottom:12px;">
             <summary style="cursor:pointer; display:flex; align-items:center; gap:8px; padding:10px 12px; background:#F9F9F9; border-radius:8px; border:1px solid var(--border-light); font-size:13px; font-weight:500; color:var(--text-primary); list-style:none;">
                 <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">1</span>
-                📡 データ読込
+                データ読込
                 <span style="margin-left:auto; font-size:10px; color:var(--text-secondary);">初回のみ</span>
             </summary>
             <div style="padding:12px 4px 4px;">
@@ -525,7 +525,7 @@
         <details id="step2" style="margin-bottom:12px;">
             <summary style="cursor:pointer; display:flex; align-items:center; gap:8px; padding:10px 12px; background:#F9F9F9; border-radius:8px; border:1px solid var(--border-light); font-size:13px; font-weight:500; color:var(--text-primary); list-style:none;">
                 <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">2</span>
-                🏢 店舗ルール設定
+                店舗ルール設定
                 <span style="margin-left:auto; font-size:10px; color:var(--text-secondary);">初回のみ</span>
             </summary>
             <div style="padding:12px 4px 4px;">
@@ -577,37 +577,37 @@
                 <div class="file-label" style="margin-top:10px;">自動生成の公休配置ルール</div>
                 <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid var(--border-light);">
                     <input type="checkbox" id="noHolidayOnSat" checked onchange="saveStoreCustomRules()">
-                    <span>🚫 土曜日の公休配置を禁止</span>
+                    <span>土曜日の公休配置を禁止</span>
                 </label>
                 <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid var(--border-light);">
                     <input type="checkbox" id="noHolidayOnSun" checked onchange="saveStoreCustomRules()">
-                    <span>🚫 日曜日の公休配置を禁止</span>
+                    <span>日曜日の公休配置を禁止</span>
                 </label>
                 <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid var(--border-light);">
                     <input type="checkbox" id="noHolidayOnHol" checked onchange="saveStoreCustomRules()">
-                    <span>🚫 祝日の公休配置を禁止</span>
+                    <span>祝日の公休配置を禁止</span>
                 </label>
 
                 <div class="file-label" style="margin-top:10px;">追加ルール設定</div>
                 <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0; border-bottom:1px solid var(--border-light);">
                     <input type="checkbox" id="enableGroupView" onchange="onGroupViewChange()">
-                    <span>👥 入社年数グループ別に表示</span>
+                    <span>入社年数グループ別に表示</span>
                 </label>
                 <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0; border-bottom:1px solid var(--border-light);">
                     <input type="checkbox" id="enableManagerRule" onchange="renderTable()">
-                    <span>🚫 店長・副店長の同日休み禁止</span>
+                    <span>店長・副店長の同日休み禁止</span>
                 </label>
                 <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0; border-bottom:1px solid var(--border-light);">
                     <input type="checkbox" id="enableKibouAsOff" onchange="saveStoreCustomRules()">
-                    <span>📅 希望休がある週は公休を別の週へ移す</span>
+                    <span>希望休がある週は公休を別の週へ移す</span>
                 </label>
                 <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:6px 0; border-bottom:1px solid var(--border-light);">
                     <input type="checkbox" id="enableRemarksCol" onchange="onRemarksColChange()">
-                    <span>📝 備考欄を表示する（会議・研修予定など）</span>
+                    <span>備考欄を表示する（会議・研修予定など）</span>
                 </label>
                 <div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border-light);">
                     <input type="checkbox" id="enableConsecLimit" onchange="saveStoreCustomRules()" style="flex-shrink:0;">
-                    <span style="font-size:12px; flex:1;">🌙 連休は月</span>
+                    <span style="font-size:12px; flex:1;">連休は月</span>
                     <input type="number" id="consecLimitCount" min="1" max="5" value="1"
                         style="width:44px; padding:3px 6px; border:1px solid var(--border-light); border-radius:8px; font-size:12px; text-align:center;"
                         oninput="saveStoreCustomRules()">
@@ -617,19 +617,19 @@
                 <div class="file-label" style="margin-top:10px;">カスタムスタンプ設定</div>
                 <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid var(--border-light);">
                     <input type="checkbox" id="stamp_enable_half" onchange="updateCustomStamps()">
-                    <span>🕐 半休スタンプを使用する</span>
+                    <span>半休スタンプを使用する</span>
                 </label>
                 <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid var(--border-light);">
                     <input type="checkbox" id="stamp_enable_out" onchange="updateCustomStamps()">
-                    <span>🚗 外勤スタンプを使用する（セミナー・出張）</span>
+                    <span>外勤スタンプを使用する（セミナー・出張）</span>
                 </label>
                 <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid var(--border-light);">
                     <input type="checkbox" id="stamp_enable_bereave" onchange="updateCustomStamps()">
-                    <span>🙏 忌引きスタンプを使用する</span>
+                    <span>忌引きスタンプを使用する</span>
                 </label>
                 <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; padding:5px 0; border-bottom:1px solid var(--border-light);">
                     <input type="checkbox" id="stamp_enable_special" onchange="updateCustomStamps()">
-                    <span>📋 特別休暇スタンプを使用する</span>
+                    <span>特別休暇スタンプを使用する</span>
                 </label>
 
                 <div class="file-label" style="margin-top:10px;">独自ルール（AI調整に自動反映）</div>
@@ -640,7 +640,7 @@
 
                 <button id="saveStoreSettingsBtn" type="button"
                     style="width:100%; margin-top:12px; padding:8px; background:#F9F9F9; border:1px solid var(--border-light); border-radius:8px; font-size:12px; cursor:pointer;">
-                    ⚙️ 店舗設定を保存する
+                    店舗設定を保存する
                 </button>
             </div>
         </details>
@@ -649,7 +649,7 @@
         <details id="step3" style="margin-bottom:12px;">
             <summary style="cursor:pointer; display:flex; align-items:center; gap:8px; padding:10px 12px; background:#F9F9F9; border-radius:8px; border:1px solid var(--border-light); font-size:13px; font-weight:500; color:var(--text-primary); list-style:none;">
                 <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">3</span>
-                👤 スタッフ個別ルール
+                スタッフ個別ルール
                 <span style="margin-left:auto; font-size:10px; color:var(--text-secondary);">必要時のみ</span>
             </summary>
             <div style="padding:12px 4px 4px;">
@@ -663,7 +663,7 @@
         <details id="step4" style="margin-bottom:12px;">
             <summary style="cursor:pointer; display:flex; align-items:center; gap:8px; padding:10px 12px; background:#fff5f5; border-radius:8px; border:1px solid #fed7d7; font-size:13px; font-weight:bold; color:#c53030; list-style:none;">
                 <span style="background:#c53030; color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">4</span>
-                📅 固定条件入力（毎月）
+                固定条件入力（毎月）
                 <span style="margin-left:auto; font-size:10px; color:#fc8181;">生成前に入力</span>
             </summary>
             <div style="padding:12px 4px 4px;">
@@ -700,11 +700,11 @@
         <div style="background:#f0fff4; border:1px solid #9ae6b4; border-radius:8px; padding:12px; margin-bottom:12px;">
             <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold; color:#276749; margin-bottom:10px;">
                 <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">5</span>
-                ⚡ シフト自動生成（毎月）
+                シフト自動生成（毎月）
             </div>
             <button onclick="generateShift()"
                 class="action-button">
-                ⚡ シフトを自動生成する
+                シフトを自動生成する
             </button>
         </div>
 
@@ -712,20 +712,20 @@
         <div class="ai-panel">
             <div class="ai-panel-title">
                 <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">6</span>
-                🤖 AI調整（毎月）
+                AI調整（毎月）
             </div>
             <div class="ai-panel-note">
-                🔒 APIキーは画面入力またはGASのスクリプトプロパティで利用します
+                APIキーは画面入力またはGASのスクリプトプロパティで利用します
             </div>
 
             <textarea id="aiRequestInput" rows="3" placeholder="スタッフの要望・イレギュラーをここに入力してください&#10;例：村山さん12日希望休、19日コンテストで田中・佐藤中抜け"
                 style="width:100%; padding:8px; border:1px solid var(--border-light); border-radius:8px; font-size:12px; resize:vertical; box-sizing:border-box; font-family:inherit; background:white;"></textarea>
             <button id="aiAdjustBtn" onclick="callAIAdjust()"
                 class="action-button secondary" style="margin-top:8px;">
-                🤖 AIでシフトを調整する
+                AIでシフトを調整する
             </button>
             <details style="margin-top:8px; background:white; padding:8px 10px; border-radius:8px; font-size:12px; border:1px solid var(--border-light);">
-                <summary style="cursor:pointer; font-weight:bold; color:var(--text-secondary);">⚙️ 禁止事項・ルール設定</summary>
+                <summary style="cursor:pointer; font-weight:bold; color:var(--text-secondary);">禁止事項・ルール設定</summary>
                 <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
                     <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
                         <input type="checkbox" id="restrictSixConsec" checked>
@@ -753,10 +753,10 @@
         <div style="background:#FFFFFF; border:1px solid var(--border-light); border-radius:8px; padding:12px; margin-bottom:12px;">
             <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:10px;">
                 <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">7</span>
-                ✏️ 手入力による微調整
+                手入力による微調整
             </div>
             <div style="font-size:12px; color:var(--text-primary); line-height:1.7; background:var(--surface-muted); border-radius:8px; padding:10px; border:1px solid var(--border-light);">
-                <div style="margin-bottom:6px;">📌 <b>スタンプの使い方</b></div>
+                <div style="margin-bottom:6px;"><b>スタンプの使い方</b></div>
                 <div>① 上部のスタンプを選ぶ</div>
                 <div>② シフト表のセルをクリック</div>
                 <div>③ もう一度クリックで解除</div>
@@ -767,7 +767,7 @@
             </div>
             <button onclick="showFairnessReport()"
                 class="action-button secondary" style="margin-top:10px; min-height:36px; font-size:12px;">
-                📊 公平性レポートを表示
+                公平性レポートを表示
             </button>
         </div>
 
@@ -775,19 +775,19 @@
         <div style="background:#FFFFFF; border:1px solid var(--border-light); border-radius:8px; padding:12px;">
             <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:10px;">
                 <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">8</span>
-                💾 保存・出力
+                保存・出力
             </div>
             <button onclick="saveShiftToGAS()"
                 class="action-button" style="margin-bottom:6px; font-size:13px;">
-                💾 シフトを保存する
+                シフトを保存する
             </button>
             <button onclick="exportToHTML()"
                 class="action-button secondary" style="margin-bottom:6px; min-height:36px; font-size:12px;">
-                🖨️ シフト表をHTML出力
+                シフト表をHTML出力
             </button>
             <button onclick="exportToCSV()"
                 class="action-button secondary" style="min-height:36px; font-size:12px;">
-                📥 CSVを書き出す
+                CSVを書き出す
             </button>
             <div id="saveStatus" style="font-size:11px; color:var(--text-secondary); margin-top:6px; text-align:center;"></div>
         </div>
@@ -806,7 +806,7 @@
 
 <script>
     // ─────────────────────────────────────────────────────────────
-    // 🛰️ Backend API URL
+    // gas Backend API URL
     //    SHIFT_API_URL に Supabase Edge Function URL を入れるとGASから切替。
     //    空欄のままなら既存GASを退避用バックエンドとして使います。
     // ─────────────────────────────────────────────────────────────
@@ -824,7 +824,7 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 📅 2026〜2027年の祝日定義（YYYY-M-D 形式）
+    // 2026〜2027年の祝日定義（YYYY-M-D 形式）
     // ─────────────────────────────────────────────────────────────
     const HOLIDAYS = {
         "2026-1-1": "元日",
@@ -887,15 +887,15 @@
     // 入社年数グループの表示順と色設定（renderTable / exportToHTML で共用）
     const GROUP_ORDER = ["6年目以上", "3〜5年目", "2年目", "1年目", "不明"];
     const GROUP_COLORS = {
-        "6年目以上": { bg: "#ebf8ff", border: "#3182ce", text: "#2b6cb0", label: "🎖️ 6年目以上（リーダー層）" },
-        "3〜5年目":  { bg: "#f0fff4", border: "#38a169", text: "#276749", label: "⭐ 3〜5年目（中堅）" },
-        "2年目":     { bg: "#fefcbf", border: "#d69e2e", text: "#744210", label: "🌱 2年目" },
-        "1年目":     { bg: "#fff5f5", border: "#fc8181", text: "#9b2c2c", label: "🌸 1年目" },
+        "6年目以上": { bg: "#ebf8ff", border: "#3182ce", text: "#2b6cb0", label: "6年目以上（リーダー層）" },
+        "3〜5年目":  { bg: "#f0fff4", border: "#38a169", text: "#276749", label: "3〜5年目（中堅）" },
+        "2年目":     { bg: "#fefcbf", border: "#d69e2e", text: "#744210", label: "2年目" },
+        "1年目":     { bg: "#fff5f5", border: "#fc8181", text: "#9b2c2c", label: "1年目" },
         "不明":      { bg: "#f7fafc", border: "#a0aec0", text: "#4a5568", label: "— 入社年不明" },
     };
 
     // ─────────────────────────────────────────────────────────────
-    // 📅 年月切り替えユーティリティ
+    // 年月切り替えユーティリティ
     // ─────────────────────────────────────────────────────────────
     function getCurrentMonthKey() {
         return `${currentYear}-${currentMonth + 1}`;
@@ -932,10 +932,10 @@
         // 月切替時にシフトデータを非同期読込
         if (currentStore) {
             (async () => {
-                setSaveStatus("📥 読込中...", "info");
+                setSaveStatus("読込中...", "info");
                 await loadShiftFromGAS(currentStore.id, currentYear, currentMonth + 1);
                 renderTable();
-                setSaveStatus("✅ 読込完了", "ok");
+                setSaveStatus("読込完了", "ok");
             })();
         }
     }
@@ -1087,7 +1087,7 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 🏢 1. 店舗設備情報のインポート
+    // 1. 店舗設備情報のインポート
     // 代表の列順マスタ:
     //   店舗名/定休日ルール/平日営業時間/土曜日営業時間/日曜日営業時間/祝日営業時間
     //   /オープン日/坪数㎡/家賃(共益費など込)/坪単価/セット面/シャンプー台/席単価/所属/状況/特徴
@@ -1136,8 +1136,8 @@
         });
 
         const status = document.getElementById("storeLoadStatus");
-        const tag = sourceLabel === "gas" ? "🛰️" : "✅";
-        status.textContent = `${tag} ${storeMaster.length}店舗 読込済`;
+        const tag = sourceLabel === "gas" ? "gas " : "";
+        status.textContent = `${tag}${storeMaster.length}店舗 読込済`;
         status.className = "status-badge status-ok";
 
         buildStoreSelector();
@@ -1160,7 +1160,7 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 👥 2. 社員名簿マスタのインポート
+    // 2. 社員名簿マスタのインポート
     // 代表の列順マスタ:
     //   社員番号/所属会社/所属店舗/役職/雇用形態/現職/美容師免許取得者/氏名/フリガナ・姓
     //   /フリガナ・名/性別/生年月日/出身美容学校/入社年月日/中途入社/退職日
@@ -1249,8 +1249,8 @@
         });
 
         const status = document.getElementById("staffLoadStatus");
-        const tag = sourceLabel === "gas" ? "🛰️" : "✅";
-        status.textContent = `${tag} ${staffMaster.length}名 読込済`;
+        const tag = sourceLabel === "gas" ? "gas " : "";
+        status.textContent = `${tag}${staffMaster.length}名 読込済`;
         status.className = "status-badge status-ok";
 
         if (currentStore) changeStore();
@@ -1374,12 +1374,12 @@
 
         // GASから設定・シフトデータを非同期読込
         (async () => {
-            setSaveStatus("📥 読込中...", "info");
+            setSaveStatus("読込中...", "info");
             await loadSettingsFromGAS(currentStore.id);
             await loadShiftFromGAS(currentStore.id, currentYear, currentMonth + 1);
             renderStaffRulesPanel();
             renderTable();
-            setSaveStatus("✅ 読込完了", "ok");
+            setSaveStatus("読込完了", "ok");
         })();
     }
 
@@ -1390,13 +1390,13 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 📱 モバイル: サイドバー開閉 & スタッフ行のアコーディオン
+    // モバイル: サイドバー開閉 & スタッフ行のアコーディオン
     // ─────────────────────────────────────────────────────────────
     function toggleSidebar(btn) {
         const sidebar = document.querySelector(".sidebar");
         if (!sidebar) return;
         const isCollapsed = sidebar.classList.toggle("mobile-collapsed");
-        if (btn) btn.textContent = isCollapsed ? "⚙️ 設定・ルールを開く" : "✕ 設定・ルールを閉じる";
+        if (btn) btn.textContent = isCollapsed ? "設定・ルールを開く" : "設定・ルールを閉じる";
     }
 
     function toggleStaffRowExpand(staffId, event) {
@@ -1406,7 +1406,7 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 👤 スタッフ個別ルール: サイドバーパネルの描画と更新
+    // スタッフ個別ルール: サイドバーパネルの描画と更新
     //   liveStaffConfig (= staffRules) と双方向同期する。
     // ─────────────────────────────────────────────────────────────
     function renderStaffRulesPanel() {
@@ -1489,7 +1489,7 @@
         const opts = (current, values) => values.map(v => `<option value="${v}" ${current==v?'selected':''}>${v}</option>`).join("");
         return `
             <div style="margin-top: 8px; background: var(--surface-muted); border: 1px dashed var(--border-light); border-radius: 8px; padding: 6px 8px; font-size: 11px;">
-                <div style="font-size: 10px; color: var(--text-secondary); font-weight: 600; margin-bottom: 6px;">⚠️ イレギュラー設定（本人希望）</div>
+                <div style="font-size: 10px; color: var(--text-secondary); font-weight: 600; margin-bottom: 6px;">イレギュラー設定（本人希望）</div>
 
                 <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                     <input type="checkbox" ${irr.weeklyOffEnabled?'checked':''} onchange="updateStaffIrregular('${staffId}','weeklyOffEnabled', this.checked)">
@@ -1550,7 +1550,7 @@
         // チェックボックス変更時はパネル全体を再描画（dropdown の有効/無効を反映）
         // 理由テキスト編集時は再描画でフォーカスを失うが、blur 時の onchange なので問題なし
         renderStaffRulesPanel();
-        renderTable(); // ⚠️ マーク表示更新のため
+        renderTable(); // 注意 マーク表示更新のため
     }
 
     function updateStaffRule(staffId, field, value) {
@@ -1618,7 +1618,7 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 👥 最低出勤人数: 設定・カウント・判定ヘルパー
+    // 最低出勤人数: 設定・カウント・判定ヘルパー
     // ─────────────────────────────────────────────────────────────
     function updateMinStaff(key, value) {
         if (!currentStore) return;
@@ -1777,7 +1777,7 @@
 
                 const isShortStaff = (config.workType || "").includes("時短");
                 const workTimeLine = isShortStaff
-                    ? `<div style="font-size:9px; color:#722ed1; font-weight:bold; margin-top:2px;">🕒 ${config.startTime || "8:40"}〜${config.endTime || "17:40"}</div>`
+                    ? `<div style="font-size:9px; color:#722ed1; font-weight:bold; margin-top:2px;">勤務 ${config.startTime || "8:40"}〜${config.endTime || "17:40"}</div>`
                     : "";
                 const irrCfg = config.irregular || {};
                 const isIrregular = !!(irrCfg.weeklyOffEnabled || irrCfg.maxConsecEnabled || irrCfg.ignoreMinStaff);
@@ -1789,10 +1789,10 @@
                     ? `イレギュラー設定中: ${irregularParts.join("・")}${irrCfg.reason ? `\n理由: ${irrCfg.reason}` : ""}`
                     : "";
                 const irregularMark = isIrregular
-                    ? `<span title="${irrTitle.replace(/"/g, "&quot;")}" style="margin-left:4px; cursor:help;">⚠️</span>`
+                    ? `<span title="${irrTitle.replace(/"/g, "&quot;")}" style="margin-left:4px; cursor:help;">注意</span>`
                     : "";
                 const irregularLine = isIrregular
-                    ? `<div style="font-size:9px; color:#c05621; font-weight:bold; margin-top:2px;">⚠️ ${irregularParts.join(" / ")}</div>`
+                    ? `<div style="font-size:9px; color:#c05621; font-weight:bold; margin-top:2px;">注意 ${irregularParts.join(" / ")}</div>`
                     : "";
 
                 bodyHtml += `<tr data-staff-id="${staff.id}">
@@ -1901,7 +1901,7 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // ⚡ シフト自動生成（完全クリーン実装）
+    // シフト自動生成（完全クリーン実装）
     //   絶対ルール: 日曜〜土曜の各週で 定休 + 公 + 希 + 有 = 2日以上
     //   保証:
     //     - 各日の出勤者は最低 2 名（minWorkers）
@@ -2438,10 +2438,10 @@
 
       console.log(`[generateShift] ${currentYear}年${currentMonth + 1}月 / 総スタッフ${totalStaff}名 / 週目標${TARGET_OFF}日休み（日別最低出勤人数はサイドバー設定を使用）`);
       if (violations.length === 0 && lowDays.length === 0) {
-        console.log("✅ 全週2日休み・全日最低出勤人数を達成");
+        console.log("全週2日休み・全日最低出勤人数を達成");
       } else {
-        if (violations.length > 0) console.warn("⚠️ 週休不足:", violations.join(", "));
-        if (lowDays.length > 0) console.warn("⚠️ 出勤者不足:", lowDays.join(", "));
+        if (violations.length > 0) console.warn("注意 週休不足:", violations.join(", "));
+        if (lowDays.length > 0) console.warn("注意 出勤者不足:", lowDays.join(", "));
       }
 
       autoGeneratedOffKeys[monthKey] = Array.from(newAutoOff);
@@ -2452,8 +2452,8 @@
         ab.style.display = "block";
         const ok = violations.length === 0 && lowDays.length === 0;
         ab.innerHTML = ok
-          ? `⚡ シフト生成完了（${currentYear}年${currentMonth + 1}月）: 全週2日休み・サイドバー設定の日別最低出勤人数を保証`
-          : `⚠️ 生成完了（${currentYear}年${currentMonth + 1}月） — 週休不足${violations.length}件 / 出勤者不足${lowDays.length}日 (Console確認)`;
+          ? `シフト生成完了（${currentYear}年${currentMonth + 1}月）: 全週2日休み・サイドバー設定の日別最低出勤人数を保証`
+          : `注意 生成完了（${currentYear}年${currentMonth + 1}月） — 週休不足${violations.length}件 / 出勤者不足${lowDays.length}日 (Console確認)`;
       }
     }
 
@@ -2495,7 +2495,7 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 🎨 カスタムスタンプ管理
+    // カスタムスタンプ管理
     // ─────────────────────────────────────────────────────────────
     function updateCustomStamps() {
         const map = {
@@ -2515,7 +2515,7 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 📝 備考欄の表示切り替え
+    // 備考欄の表示切り替え
     // ─────────────────────────────────────────────────────────────
     function onRemarksColChange() {
         renderTable();
@@ -2533,7 +2533,7 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 💾 カスタムルールをstoreSettingsに保存
+    // カスタムルールをstoreSettingsに保存
     // ─────────────────────────────────────────────────────────────
     function saveStoreCustomRules() {
         if (!currentStore) return;
@@ -2578,7 +2578,7 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 👥 グループ分け表示の切替
+    // グループ分け表示の切替
     // ─────────────────────────────────────────────────────────────
     function onGroupViewChange() {
         renderTable();
@@ -2617,13 +2617,13 @@
             return isOff(v);
         });
         if (conflicting.length > 0) {
-            return `⚠️ ${conflicting.map(s=>s.name).join("・")}さん（${conflicting.map(s=>s.rank).join("・")}）も${day}日は休みです。役職者の同日休みは禁止ルールに違反します。\n承認しますか？`;
+            return `注意 ${conflicting.map(s=>s.name).join("・")}さん（${conflicting.map(s=>s.rank).join("・")}）も${day}日は休みです。役職者の同日休みは禁止ルールに違反します。\n承認しますか？`;
         }
         return null;
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 📄 HTML形式でシフト表を出力（色分けカレンダー）
+    // HTML形式でシフト表を出力（色分けカレンダー）
     // ─────────────────────────────────────────────────────────────
     function exportToHTML() {
         if (!currentStore || currentStaffs.length === 0) return;
@@ -2705,7 +2705,7 @@
                     <td style="position:sticky; left:0; background:var(--bg-primary); z-index:1; min-width:120px; padding:6px 8px; white-space:nowrap; border:1px solid var(--border-light);">
                         <span style="font-weight:bold; font-size:12px;">${staff.name}</span>
                         <span style="font-size:9px; background:var(--border-light); padding:1px 4px; border-radius:3px; margin-left:4px;">${staff.rank}</span>
-                        ${isShort ? `<div style="font-size:9px; color:#722ed1;">🕒 ${cfg.startTime||"8:40"}〜${cfg.endTime||"17:40"}</div>` : ""}
+                        ${isShort ? `<div style="font-size:9px; color:#722ed1;">勤務 ${cfg.startTime||"8:40"}〜${cfg.endTime||"17:40"}</div>` : ""}
                     </td>`;
 
                 for (let d = 1; d <= daysInMonth; d++) {
@@ -2787,7 +2787,7 @@
 </style>
 </head>
 <body>
-  <h1>📅 ${currentStore.name} シフト表</h1>
+  <h1>${currentStore.name} シフト表</h1>
   <p class="meta">${currentYear}年${currentMonth+1}月 ／ 作成日: ${new Date().toLocaleDateString("ja-JP")} ／ スタッフ計${currentStaffs.length}名</p>
   <div class="legend">${legendHtml}</div>
   <div class="table-wrap">
@@ -2859,9 +2859,9 @@
         if (existing) existing.remove();
 
         const rows = counts.map(c => {
-            const flag = c.kibou > maxKibou ? `<span style="color:#e53e3e;">⚠️超過</span>` :
+            const flag = c.kibou > maxKibou ? `<span style="color:#e53e3e;">超過</span>` :
                          c.kibou > avg + 1  ? `<span style="color:#d69e2e;">△多め</span>` :
-                                              `<span style="color:#38a169;">✅</span>`;
+                                              `<span style="color:#38a169;"></span>`;
             return `<tr style="border-bottom:1px solid var(--border-light);">
                 <td style="padding:6px 8px; font-size:12px;">${c.name}</td>
                 <td style="padding:6px 8px; font-size:11px; color:var(--text-secondary);">${c.rank}</td>
@@ -2879,7 +2879,7 @@
             <div style="background:white;border-radius:8px;padding:24px;max-width:700px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                     <div>
-                        <div style="font-size:16px;font-weight:bold;color:#2d3748;">📊 公平性レポート</div>
+                        <div style="font-size:16px;font-weight:bold;color:#2d3748;">公平性レポート</div>
                         <div style="font-size:12px;color:var(--text-secondary);">${currentStore.name} ／ 希望休上限: ${maxKibou}日 ／ 今月平均: ${avg.toFixed(1)}日</div>
                     </div>
                     <button onclick="document.getElementById('fairnessModal').remove()" style="border:none;background:#F9F9F9;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;">✕ 閉じる</button>
@@ -2904,7 +2904,7 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 🚨 6連勤チェック: 出/時/会/研 が6日以上連続しているスタッフを抽出
+    // 6連勤チェック: 出/時/会/研 が6日以上連続しているスタッフを抽出
     // ─────────────────────────────────────────────────────────────
     function checkConsecutiveWork(defaultThreshold) {
         defaultThreshold = defaultThreshold || 6;
@@ -2942,7 +2942,7 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 🤖 AIシフト調整: Anthropic API を呼び出して変更案を適用
+    // AIシフト調整: Anthropic API を呼び出して変更案を適用
     // ─────────────────────────────────────────────────────────────
     function resetApiKey() {
         localStorage.removeItem("anthropic_api_key");
@@ -2956,12 +2956,12 @@
         if (!statusEl) return;
         const key = getStoredAIKey();
         if (key) {
-            statusEl.innerHTML = `<span style="color:#38a169;">✅ 設定済み</span>
+            statusEl.innerHTML = `<span style="color:#38a169;"> 設定済み</span>
                 <button onclick="showApiKeyInput()" style="margin-left:8px; padding:2px 8px; font-size:10px; background:#F9F9F9; border:1px solid var(--border-light); border-radius:3px; cursor:pointer;">変更</button>
                 <button onclick="resetApiKey()" style="margin-left:4px; padding:2px 8px; font-size:10px; background:#fff5f5; border:1px solid #fed7d7; border-radius:3px; cursor:pointer; color:#e53e3e;">削除</button>`;
             if (inputArea) inputArea.style.display = "none";
         } else {
-            statusEl.innerHTML = `<span style="color:#e53e3e;">⚠️ 未設定</span><span style="color:var(--text-secondary); margin-left:6px; font-size:10px;">AI調整にはAnthropicまたはGemini APIキーが必要です</span>`;
+            statusEl.innerHTML = `<span style="color:#e53e3e;">注意 未設定</span><span style="color:var(--text-secondary); margin-left:6px; font-size:10px;">AI調整にはAnthropicまたはGemini APIキーが必要です</span>`;
             if (inputArea) inputArea.style.display = "block";
         }
     }
@@ -3109,12 +3109,12 @@ ${(() => {
         const request = document.getElementById("aiRequestInput").value.trim();
         if (!request) {
             alertBox.style.display = "block";
-            alertBox.innerHTML = "❌ 要望欄が空です。スタッフの要望・イレギュラーを入力してください。";
+            alertBox.innerHTML = "要望欄が空です。スタッフの要望・イレギュラーを入力してください。";
             return;
         }
         if (!currentStore || currentStaffs.length === 0) {
             alertBox.style.display = "block";
-            alertBox.innerHTML = "❌ 店舗とスタッフを先に読み込んでください。";
+            alertBox.innerHTML = "店舗とスタッフを先に読み込んでください。";
             return;
         }
 
@@ -3128,9 +3128,9 @@ ${(() => {
         recomputeFairness();
 
         btn.disabled = true;
-        btn.textContent = "⏳ AI調整中...";
+        btn.textContent = "AI調整中...";
         alertBox.style.display = "block";
-        alertBox.innerHTML = "⏳ AIにシフト調整を依頼しています（GAS経由）...";
+        alertBox.innerHTML = "AIにシフト調整を依頼しています（GAS経由）...";
 
         try {
             // GAS経由でAnthropic/Gemini APIを呼び出す
@@ -3161,13 +3161,13 @@ ${(() => {
 
             const alertLines = (result.alerts || []).map(a => `• ${a}`);
             const summary = result.summary || `${applied}件の変更を適用しました`;
-            let html = `✅ <b>${summary}</b>`;
+            let html = `<b>${summary}</b>`;
             if (alertLines.length > 0) html += "<br><br>" + alertLines.join("<br>");
 
             if (restrictions.noSixConsec) {
                 const issues = checkConsecutiveWork(6);
                 if (issues.length > 0) {
-                    html += "<br><br>⚠️ <b>6連勤以上検出:</b><br>" +
+                    html += "<br><br>注意 <b>6連勤以上検出:</b><br>" +
                         issues.map(i => `• ${i.staff}: ${i.start}日〜${i.end}日 (${i.days}連勤)`).join("<br>");
                 }
             }
@@ -3175,7 +3175,7 @@ ${(() => {
 
         } catch (err) {
             console.error("[AI Adjust]", err);
-            alertBox.innerHTML = `❌ AI調整に失敗しました。手動で調整してください。<br><small style="color:var(--text-secondary);">${err.message}</small>`;
+            alertBox.innerHTML = `AI調整に失敗しました。手動で調整してください。<br><small style="color:var(--text-secondary);">${err.message}</small>`;
         } finally {
             btn.disabled = false;
             btn.textContent = originalLabel;
@@ -3183,7 +3183,7 @@ ${(() => {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 💾 シフトデータ永続化（Googleスプレッドシートへ保存・読込）
+    // シフトデータ永続化（Googleスプレッドシートへ保存・読込）
     // ─────────────────────────────────────────────────────────────
 
     // 保存ステータス表示
@@ -3218,7 +3218,7 @@ ${(() => {
 
     async function saveShiftToGAS() {
         if (!currentStore) { alert("店舗を選択してください"); return; }
-        setSaveStatus("💾 保存中...", "info");
+        setSaveStatus("保存中...", "info");
         try {
             const cells = getCurrentCellStates();
             const data  = await callGAS({
@@ -3233,20 +3233,20 @@ ${(() => {
                 const source = data.source ? ` / ${data.source}` : "";
                 const reason = data.fallbackReason ? `（Supabase未保存: ${data.fallbackReason}）` : "";
                 const statusType = data.source === "sheets" && data.fallbackReason ? "err" : "ok";
-                setSaveStatus(`✅ 保存完了${source} ${new Date().toLocaleTimeString("ja-JP")} ${reason}`, statusType);
+                setSaveStatus(`保存完了${source} ${new Date().toLocaleTimeString("ja-JP")} ${reason}`, statusType);
             } else {
-                setSaveStatus(`❌ 保存失敗: ${data.error}`, "err");
+                setSaveStatus(`保存失敗: ${data.error}`, "err");
             }
         } catch (err) {
             console.error("[saveShift]", err);
-            setSaveStatus("❌ 保存失敗: " + err.message, "err");
+            setSaveStatus("保存失敗: " + err.message, "err");
         }
     }
 
     // 店舗設定をGASに保存
     async function saveSettingsToGAS() {
         if (!currentStore) {
-            setSaveStatus("❌ 店舗を選択してください", "err");
+            setSaveStatus("店舗を選択してください", "err");
             alert("店舗を選択してください");
             return;
         }
@@ -3254,9 +3254,9 @@ ${(() => {
         const originalLabel = btn ? btn.textContent : "";
         if (btn) {
             btn.disabled = true;
-            btn.textContent = "⚙️ 設定保存中...";
+            btn.textContent = "設定保存中...";
         }
-        setSaveStatus("⚙️ 設定保存中...", "info");
+        setSaveStatus("設定保存中...", "info");
         try {
             const extraRules = {
                 groupView:   document.getElementById("enableGroupView")?.checked || false,
@@ -3285,17 +3285,17 @@ ${(() => {
                 const source = data.source ? ` / ${data.source}` : "";
                 const reason = data.fallbackReason ? `（Supabase未保存: ${data.fallbackReason}）` : "";
                 const statusType = data.source === "sheets" && data.fallbackReason ? "err" : "ok";
-                setSaveStatus(`✅ 設定保存完了${source} ${new Date().toLocaleTimeString("ja-JP")} ${reason}`, statusType);
+                setSaveStatus(`設定保存完了${source} ${new Date().toLocaleTimeString("ja-JP")} ${reason}`, statusType);
             } else {
-                setSaveStatus(`❌ 設定保存失敗: ${data.error}`, "err");
+                setSaveStatus(`設定保存失敗: ${data.error}`, "err");
             }
         } catch (err) {
             console.error("[saveSettings]", err);
-            setSaveStatus("❌ 設定保存失敗: " + err.message, "err");
+            setSaveStatus("設定保存失敗: " + err.message, "err");
         } finally {
             if (btn) {
                 btn.disabled = false;
-                btn.textContent = originalLabel || "⚙️ 店舗設定を保存する";
+                btn.textContent = originalLabel || "店舗設定を保存する";
             }
         }
     }
@@ -3361,7 +3361,7 @@ ${(() => {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 🛰️ 起動時に GAS Web API からスプレッドシートを直接ロード
+    // gas 起動時に GAS Web API からスプレッドシートを直接ロード
     //    URL 未設定時は何もせず、CSV手動インポートにフォールバック
     // ─────────────────────────────────────────────────────────────
     async function loadFromGAS() {
@@ -3375,8 +3375,8 @@ ${(() => {
             return;
         }
 
-        storeStatus.textContent = `⏳ ${backendLabel}から取得中...`;
-        staffStatus.textContent = `⏳ ${backendLabel}から取得中...`;
+        storeStatus.textContent = `${backendLabel}から取得中...`;
+        staffStatus.textContent = `${backendLabel}から取得中...`;
 
         try {
             const res = await fetch(getBackendApiUrl(), { method: "GET", redirect: "follow" });
@@ -3396,27 +3396,27 @@ ${(() => {
             if (okStore && okStaff) {
                 const alertBox = document.getElementById("alertBox");
                 alertBox.style.display = "block";
-                alertBox.innerHTML = `🛰️ ${sourceLabel} から自動取得しました（店舗:${storeMaster.length} / 社員:${staffMaster.length}名）`;
+                alertBox.innerHTML = `gas ${sourceLabel} から自動取得しました（店舗:${storeMaster.length} / 社員:${staffMaster.length}名）`;
 
                 // 店舗選択後に設定・シフトデータを自動読込
                 if (currentStore) {
-                    setSaveStatus("📥 設定を読込中...", "info");
+                    setSaveStatus("設定を読込中...", "info");
                     await loadSettingsFromGAS(currentStore.id);
                     await loadShiftFromGAS(currentStore.id, currentYear, currentMonth + 1);
                     renderStaffRulesPanel();
                     renderTable();
-                    setSaveStatus(`✅ データ読込完了 / ${sourceLabel}`, "ok");
+                    setSaveStatus(`データ読込完了 / ${sourceLabel}`, "ok");
                 }
             }
         } catch (err) {
             console.error("[API] 取得失敗", err);
-            storeStatus.textContent = `❌ ${backendLabel}取得失敗`;
+            storeStatus.textContent = `${backendLabel}取得失敗`;
             storeStatus.className = "status-badge status-none";
-            staffStatus.textContent = `❌ ${backendLabel}取得失敗`;
+            staffStatus.textContent = `${backendLabel}取得失敗`;
             staffStatus.className = "status-badge status-none";
             const alertBox = document.getElementById("alertBox");
             alertBox.style.display = "block";
-            alertBox.innerHTML = `⚠️ ${backendLabel} からの取得に失敗しました：${err.message}<br>CSV手動インポートに切り替えてください。`;
+            alertBox.innerHTML = `注意 ${backendLabel} からの取得に失敗しました：${err.message}<br>CSV手動インポートに切り替えてください。`;
         }
     }
 
