@@ -910,20 +910,20 @@
 <script>
     // ─────────────────────────────────────────────────────────────
     // Backend API URL
-    //    SHIFT_API_URL に Supabase Edge Function URL を入れるとGASから切替。
-    //    空欄のままなら既存GASを退避用バックエンドとして使います。
+    //    SHIFT_API_URL に Supabase Edge Function URL を入れるとSupabaseを使用。
+    //    空欄のままなら退避用バックエンドを使用します。
     // ─────────────────────────────────────────────────────────────
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwuWtbvMdGItD1tmRB38Lg503JJV5DG-slsModeZsawbRprHSySotNCOx9mNyHMvGmh/exec";
+    const BACKUP_API_URL = "https://script.google.com/macros/s/AKfycbwuWtbvMdGItD1tmRB38Lg503JJV5DG-slsModeZsawbRprHSySotNCOx9mNyHMvGmh/exec";
     const SHIFT_API_URL = "https://nkmxevmioczcmnldreyo.supabase.co/functions/v1/shift-api";
 
     function getBackendApiUrl() {
         return (SHIFT_API_URL && SHIFT_API_URL.indexOf("<<") === -1 && SHIFT_API_URL.indexOf("PASTE") === -1)
             ? SHIFT_API_URL
-            : GAS_API_URL;
+            : BACKUP_API_URL;
     }
 
     function getBackendLabel() {
-        return getBackendApiUrl() === SHIFT_API_URL ? "Supabase Edge" : "GAS";
+        return getBackendApiUrl() === SHIFT_API_URL ? "Supabase Edge" : "Backup API";
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -1239,7 +1239,7 @@
         });
 
         const status = document.getElementById("storeLoadStatus");
-        const tag = sourceLabel === "gas" ? "gas " : "";
+        const tag = "";
         status.textContent = `${tag}${storeMaster.length}店舗 読込済`;
         status.className = "status-badge status-ok";
 
@@ -1352,7 +1352,7 @@
         });
 
         const status = document.getElementById("staffLoadStatus");
-        const tag = sourceLabel === "gas" ? "gas " : "";
+        const tag = "";
         status.textContent = `${tag}${staffMaster.length}名 読込済`;
         status.className = "status-badge status-ok";
 
