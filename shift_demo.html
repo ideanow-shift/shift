@@ -923,7 +923,16 @@
     }
 
     function getBackendLabel() {
-        return getBackendApiUrl() === SHIFT_API_URL ? "Supabase Edge" : "Backup API";
+        return getBackendApiUrl() === SHIFT_API_URL ? "Supabase" : "Backup API";
+    }
+
+    function formatBackendSourceLabel(source) {
+        const value = String(source || "").trim().toLowerCase();
+        if (!value) return "";
+        if (value === "supabase-edge" || value === "supabase") return "Supabase";
+        if (value === "sheets") return "Sheets";
+        if (value === "backup api" || value === "backup-api") return "Backup API";
+        return source;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -3367,7 +3376,7 @@ ${(() => {
                 cells:     cells
             });
             if (data.ok) {
-                const source = data.source ? ` / ${data.source}` : "";
+                const source = data.source ? ` / ${formatBackendSourceLabel(data.source)}` : "";
                 const reason = data.fallbackReason ? `（Supabase未保存: ${data.fallbackReason}）` : "";
                 const statusType = data.source === "sheets" && data.fallbackReason ? "err" : "ok";
                 setSaveStatus(`保存完了${source} ${new Date().toLocaleTimeString("ja-JP")} ${reason}`, statusType);
@@ -3419,7 +3428,7 @@ ${(() => {
                 extraRules:    extraRules
             });
             if (data.ok) {
-                const source = data.source ? ` / ${data.source}` : "";
+                const source = data.source ? ` / ${formatBackendSourceLabel(data.source)}` : "";
                 const reason = data.fallbackReason ? `（Supabase未保存: ${data.fallbackReason}）` : "";
                 const statusType = data.source === "sheets" && data.fallbackReason ? "err" : "ok";
                 setSaveStatus(`設定保存完了${source} ${new Date().toLocaleTimeString("ja-JP")} ${reason}`, statusType);
@@ -3526,7 +3535,7 @@ ${(() => {
                 throw new Error("レスポンス形式が想定外: store / staff 配列が含まれていません");
             }
 
-            const sourceLabel = data.source || backendLabel;
+            const sourceLabel = formatBackendSourceLabel(data.source || backendLabel);
             const okStore = importStoreFromRows(data.store, sourceLabel);
             const okStaff = importStaffFromRows(data.staff, sourceLabel);
 
