@@ -1297,6 +1297,29 @@
     //   社員番号/所属会社/所属店舗/役職/雇用形態/現職/美容師免許取得者/氏名/フリガナ・姓
     //   /フリガナ・名/性別/生年月日/出身美容学校/入社年月日/中途入社/退職日
     // ─────────────────────────────────────────────────────────────
+    function normalizeStaffRoleText(value) {
+        return String(value || "")
+            .replace(/[\s　/／・･_-]/g, "")
+            .toLowerCase();
+    }
+
+    function isReceptionPartStaff(rank, employmentType) {
+        const normalized = normalizeStaffRoleText(`${rank || ""}${employmentType || ""}`);
+        return normalized.includes("レセプション")
+            || normalized.includes("受付")
+            || normalized.includes("reception");
+    }
+
+    function getInitialWorkType(employmentType, isReceptionPart) {
+        if (isReceptionPart) return "受付パート";
+        return String(employmentType || "").includes("時短") ? "時短" : "通常";
+    }
+
+    function getDisplayRank(rank, employmentType) {
+        if (isReceptionPartStaff(rank, employmentType)) return "レセプション";
+        return rank || "スタッフ";
+    }
+
     function importStaffFromRows(rows, sourceLabel) {
         if (!rows || rows.length < 2) {
             alert(`社員名簿データが見つかりませんでした。(source: ${sourceLabel || "?"})`);
@@ -1332,6 +1355,9 @@
             const store  = (row[resolvedStore]  || "").trim();
             const name   = (row[resolvedName]   || "").trim();
             const rank   = (row[resolvedRank]   || "").trim() || "スタッフ";
+            const empType = empTypeIdx !== -1 ? (row[empTypeIdx] || "").trim() : "";
+            const isReceptionPart = isReceptionPartStaff(rank, empType);
+            const displayRank = getDisplayRank(rank, empType);
             const active = (row[resolvedActive] || "").trim();
             const retire = (retireIdx !== -1 ? row[retireIdx] || "" : "").trim();
 
@@ -1366,17 +1392,15 @@
                 id: coreEmployeeIdIdx !== -1 && row[coreEmployeeIdIdx] ? row[coreEmployeeIdIdx].trim() : (staffMaster.length + 1).toString(),
                 name:  name,
                 store: store,
-                rank:  rank,
+                rank:  displayRank,
                 joinDate: joinDateStr,
                 yearsGroup: yearsGroup,
                 holidayType: "完全週休2日",
-                workType:    empTypeIdx !== -1 && (row[empTypeIdx] || "").includes("時短") ? "時短" : "通常",
+                workType:    getInitialWorkType(empType, isReceptionPart),
                 hasLicense: licenseIdx !== -1
                     ? !["×", "x", "X", "なし", "無", "false", "0"].includes((row[licenseIdx] || "").trim())
                     : true,  // 列がない場合はカウント対象とする
-                isReceptionPart: empTypeIdx !== -1
-                    ? (row[empTypeIdx] || "").trim() === "レセプションパート"
-                    : false
+                isReceptionPart: isReceptionPart
             });
         });
 
@@ -1620,6 +1644,7 @@
                         <select data-field="workType" onchange="updateStaffRule('${staff.id}','workType', this.value)" style="font-size: 11px; padding: 2px 4px; border: 1px solid var(--border-light); border-radius: 8px;">
                             <option value="通常" ${workType.includes("通常")?'selected':''}>通常勤務</option>
                             <option value="時短" ${workType.includes("時短")?'selected':''}>時短スタッフ</option>
+                            <option value="受付パート" ${workType.includes("受付")?'selected':''}>受付パート</option>
                         </select>
                     </div>
                     <div style="margin-top:6px;">
@@ -1982,6 +2007,7 @@
                             <select class="staff-select" data-staff-field="workType" onchange="updateStaffRule('${staff.id}','workType', this.value)">
                                 <option value="通常" ${config.workType.includes("通常")?'selected':''}>通常勤務</option>
                                 <option value="時短" ${config.workType.includes("時短")?'selected':''}>時短スタッフ</option>
+                                <option value="受付パート" ${config.workType.includes("受付")?'selected':''}>受付パート</option>
                             </select>
                         </div>
                     </td>`;
@@ -3127,7 +3153,7 @@
                 <button onclick="resetApiKey()" style="margin-left:4px; padding:2px 8px; font-size:10px; background:#fff5f5; border:1px solid #fed7d7; border-radius:3px; cursor:pointer; color:#e53e3e;">削除</button>`;
             if (inputArea) inputArea.style.display = "none";
         } else {
-            statusEl.innerHTML = `<span style="color:#e53e3e;">注意 未設定</span><span style="color:var(--text-secondary); margin-left:6px; font-size:10px;">AI調整にはAnthropicまたはGemini APIキーが必要です</span>`;
+            statusEl.innerHTML = `<span style="color:#e53e3e;">注意 未設定</span><span style="color:var(--text-secondary); margin-left:6px; font-size:10px;">画面入力キー、またはBackend側のAI APIキーを使用します</span>`;
             if (inputArea) inputArea.style.display = "block";
         }
     }
@@ -3181,14 +3207,17 @@ ${restrictions.fairness ? "- 希望休・有休の取得はスタッフ間で公
 
 【スタンプの種類】
 - 出: 出勤 / 時: 時短出勤 / 会: 会議中抜け / 研: 研修中抜け
-- 公: 公休 / 希: 希望休 / 有: 有給`;
+- 公: 公休 / 希: 希望休 / 有: 有給
+- レセプション/受付パートはシフト作成・AI調整対象外（原則、公休扱い）`;
 
         // スタッフ個別の特記事項 & 時短勤務時間 & イレギュラー設定をプロンプトに追加
         const ruleLines = (currentStaffs || [])
             .flatMap(s => {
                 const cfg = liveStaffConfig[s.id] || {};
                 const lines = [];
-                if ((cfg.workType || "").includes("時短")) {
+                if ((cfg.workType || "").includes("受付") || s.isReceptionPart) {
+                    lines.push(`- ${s.name}: レセプション/受付パート（シフト作成・AI調整対象外）`);
+                } else if ((cfg.workType || "").includes("時短")) {
                     lines.push(`- ${s.name}: 時短スタッフ ${cfg.startTime || "8:40"}〜${cfg.endTime || "17:40"}勤務`);
                 }
                 if (cfg.note && cfg.note.trim()) {
@@ -3231,9 +3260,12 @@ ${restrictions.fairness ? "- 希望休・有休の取得はスタッフ間で公
         const staffList = currentStaffs.map(s => {
             const cfg = liveStaffConfig[s.id] || {};
             const maxH = cfg.maxHoliday != null ? cfg.maxHoliday : restrictions.monthlyKibou;
-            const workTypeLabel = (cfg.workType || "通常").includes("時短")
-                ? `時短スタッフ(${cfg.startTime || "8:40"}〜${cfg.endTime || "17:40"})`
-                : `通常勤務`;
+            const workType = cfg.workType || "通常";
+            const workTypeLabel = workType.includes("受付") || s.isReceptionPart
+                ? `受付パート（シフト作成対象外）`
+                : workType.includes("時短")
+                    ? `時短スタッフ(${cfg.startTime || "8:40"}〜${cfg.endTime || "17:40"})`
+                    : `通常勤務`;
             const tags = [`${s.rank}`, `${cfg.holidayType || "完全週休2日"}`, workTypeLabel, `希望休上限${maxH}日`];
             return `id=${s.id}: ${s.name} [${tags.join(" / ")}]`;
         }).join("\n");
@@ -3347,7 +3379,15 @@ ${(() => {
 
         } catch (err) {
             console.error("[AI Adjust]", err);
-            alertBox.innerHTML = `AI調整に失敗しました。手動で調整してください。<br><small style="color:var(--text-secondary);">${err.message}</small>`;
+            const message = err && err.message ? err.message : String(err);
+            if (message.includes("AI APIキー") || message.includes("API key")) {
+                showApiKeyInput();
+                updateApiKeyStatus();
+            }
+            const guidance = message.includes("AI APIキー")
+                ? "AI APIキーが未設定です。画面のAPIキー欄へ入力するか、Backend側の環境変数を設定してください。"
+                : "AI調整に失敗しました。手動で調整してください。";
+            alertBox.innerHTML = `${guidance}<br><small style="color:var(--text-secondary);">${message}</small>`;
         } finally {
             btn.disabled = false;
             btn.textContent = originalLabel;

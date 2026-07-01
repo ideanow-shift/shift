@@ -443,7 +443,11 @@ async function adjustShiftWithAI(request: JsonRecord) {
   const actorEmployeeId = extractActorEmployeeId(request);
   const apiKey = text(request.apiKey || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("GEMINI_API_KEY")).trim();
   if (!apiKey) {
-    return { ok: false, error: "AI APIキーが未設定です。画面でAPIキーを入力するか、Edge Function secretsに ANTHROPIC_API_KEY または GEMINI_API_KEY を設定してください。" };
+    return {
+      ok: false,
+      needsApiKey: true,
+      error: "AI APIキーが未設定です。画面でAPIキーを入力するか、Edge Function secretsに ANTHROPIC_API_KEY または GEMINI_API_KEY を設定してください。",
+    };
   }
   const aiText = apiKey.startsWith("sk-ant-")
     ? await callAnthropic(apiKey, prompt)
