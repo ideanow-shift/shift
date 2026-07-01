@@ -225,6 +225,21 @@ async function saveShift(request: JsonRecord) {
     await supabaseUpsert("shift_schedule_cells", { on_conflict: "schedule_id,employee_id,work_date" }, cellRows);
   }
 
+  await writeAuditLog({
+    store_id: storeId,
+    schedule_id: text(schedule.id),
+    action: "save_shift",
+    target_table: "shift_schedules",
+    target_id: text(schedule.id),
+    metadata: {
+      year,
+      month,
+      store_name: text(request.storeName),
+      cell_count: cellRows.length,
+      saved_from: "supabase_edge_function",
+    },
+  });
+
   return { ok: true, source: "supabase-edge", updatedAt: text(schedule.updated_at || new Date().toISOString()) };
 }
 
@@ -319,6 +334,19 @@ async function saveSettings(request: JsonRecord) {
   if (staffRows.length) {
     await supabaseUpsert("shift_staff_rules", { on_conflict: "employee_id,store_id" }, staffRows);
   }
+
+  await writeAuditLog({
+    store_id: storeId,
+    action: "save_settings",
+    target_table: "shift_store_settings",
+    target_id: text(storeRows[0]?.id) || null,
+    metadata: {
+      store_name: text(request.storeName),
+      staff_rule_count: staffRows.length,
+      min_staff: minStaff,
+      saved_from: "supabase_edge_function",
+    },
+  });
 
   return { ok: true, source: "supabase-edge", updatedAt: text(storeRows[0]?.updated_at || new Date().toISOString()) };
 }
@@ -466,6 +494,29 @@ async function supabasePatch(resource: string, query: Query, payload: unknown) {
     payload,
     prefer: "return=representation",
   });
+}
+
+async function supabaseInsert(resource: string, payload: unknown) {
+  return supabaseFetch(resource, {
+    method: "POST",
+    payload,
+    prefer: "return=representation",
+  });
+}
+
+async function writeAuditLog(entry: JsonRecord) {
+  try {
+    const metadata = asRecord(entry.metadata);
+    await supabaseInsert("shift_audit_logs", [{
+      ...entry,
+      metadata: {
+        ...metadata,
+        logged_from: "shift-api",
+      },
+    }]);
+  } catch (err) {
+    console.warn("[shift_audit_logs] skipped:", errorMessage(err));
+  }
 }
 
 async function supabaseDelete(resource: string, query: Query) {
