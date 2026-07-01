@@ -593,7 +593,7 @@
         <button class="quick-action" type="button" onclick="openManagerStep('step3')">スタッフ設定</button>
         <button class="quick-action" type="button" onclick="openManagerStep('step4')">固定条件</button>
         <button class="quick-action primary" type="button" onclick="generateShift()">自動生成</button>
-        <button class="quick-action" type="button" onclick="saveShiftToGAS()">保存</button>
+        <button class="quick-action" type="button" onclick="saveShiftToBackend()">保存</button>
         <button class="quick-action" type="button" onclick="scrollToShiftTable()">表へ移動</button>
     </div>
 </div>
@@ -880,7 +880,7 @@
                 <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">8</span>
                 保存・出力
             </div>
-            <button onclick="saveShiftToGAS()"
+            <button onclick="saveShiftToBackend()"
                 class="action-button" style="margin-bottom:6px; font-size:13px;">
                 シフトを保存する
             </button>
@@ -1036,7 +1036,7 @@
         if (currentStore) {
             (async () => {
                 setSaveStatus("読込中...", "info");
-                await loadShiftFromGAS(currentStore.id, currentYear, currentMonth + 1);
+                await loadShiftFromBackend(currentStore.id, currentYear, currentMonth + 1);
                 renderTable();
                 setSaveStatus("読込完了", "ok");
             })();
@@ -1478,8 +1478,8 @@
         // Backend APIから設定・シフトデータを非同期読込
         (async () => {
             setSaveStatus("読込中...", "info");
-            await loadSettingsFromGAS(currentStore.id);
-            await loadShiftFromGAS(currentStore.id, currentYear, currentMonth + 1);
+            await loadSettingsFromBackend(currentStore.id);
+            await loadShiftFromBackend(currentStore.id, currentYear, currentMonth + 1);
             renderStaffRulesPanel();
             renderTable();
             setSaveStatus("読込完了", "ok");
@@ -3272,7 +3272,7 @@ ${(() => {
         try {
             // Backend API経由でAnthropic/Gemini APIを呼び出す
             const prompt = buildAISystemMessage(restrictions) + "\n\n" + buildAIUserMessage(request, restrictions);
-            const data = await callGAS({
+            const data = await callBackend({
                 action: "aiAdjust",
                 prompt: prompt,
                 apiKey: getStoredAIKey(),
@@ -3337,13 +3337,13 @@ ${(() => {
         btn.dataset.bound = "1";
         btn.addEventListener("click", function(event) {
             event.preventDefault();
-            saveSettingsToGAS();
+            saveSettingsToBackend();
         });
     }
 
     // シフトデータをBackend APIに保存
     // ─── fetch POST方式でBackend APIを呼び出す ───
-    async function callGAS(payload) {
+    async function callBackend(payload) {
         const res  = await fetch(getBackendApiUrl(), {
             method:   "POST",
             mode:     "cors",
@@ -3353,12 +3353,12 @@ ${(() => {
         return await res.json();
     }
 
-    async function saveShiftToGAS() {
+    async function saveShiftToBackend() {
         if (!currentStore) { alert("店舗を選択してください"); return; }
         setSaveStatus("保存中...", "info");
         try {
             const cells = getCurrentCellStates();
-            const data  = await callGAS({
+            const data  = await callBackend({
                 action:    "saveShift",
                 storeId:   currentStore.id,
                 storeName: currentStore.name,
@@ -3381,7 +3381,7 @@ ${(() => {
     }
 
     // 店舗設定をBackend APIに保存
-    async function saveSettingsToGAS() {
+    async function saveSettingsToBackend() {
         if (!currentStore) {
             setSaveStatus("店舗を選択してください", "err");
             alert("店舗を選択してください");
@@ -3409,7 +3409,7 @@ ${(() => {
                 noHolidayOnSun: document.getElementById("noHolidayOnSun")?.checked ?? true,
                 noHolidayOnHol: document.getElementById("noHolidayOnHol")?.checked ?? true,
             };
-            const data = await callGAS({
+            const data = await callBackend({
                 action:        "saveSettings",
                 storeId:       currentStore.id,
                 storeName:     currentStore.name,
@@ -3438,7 +3438,7 @@ ${(() => {
     }
 
     // シフトデータをBackend APIから読込
-    async function loadShiftFromGAS(storeId, year, month) {
+    async function loadShiftFromBackend(storeId, year, month) {
         try {
             const url = `${getBackendApiUrl()}?action=loadShift&storeId=${encodeURIComponent(storeId)}&year=${year}&month=${month}`;
             const res  = await fetch(url, { method: "GET", redirect: "follow" });
@@ -3455,7 +3455,7 @@ ${(() => {
     }
 
     // 店舗設定をBackend APIから読込
-    async function loadSettingsFromGAS(storeId) {
+    async function loadSettingsFromBackend(storeId) {
         try {
             const url  = `${getBackendApiUrl()}?action=loadSettings&storeId=${encodeURIComponent(storeId)}`;
             const res  = await fetch(url, { method: "GET", redirect: "follow" });
@@ -3501,7 +3501,7 @@ ${(() => {
     // 起動時にBackend APIからマスタデータを直接ロード
     //    URL 未設定時は何もせず、CSV手動インポートにフォールバック
     // ─────────────────────────────────────────────────────────────
-    async function loadFromGAS() {
+    async function loadFromBackend() {
         const storeStatus = document.getElementById("storeLoadStatus");
         const staffStatus = document.getElementById("staffLoadStatus");
 
@@ -3538,8 +3538,8 @@ ${(() => {
                 // 店舗選択後に設定・シフトデータを自動読込
                 if (currentStore) {
                     setSaveStatus("設定を読込中...", "info");
-                    await loadSettingsFromGAS(currentStore.id);
-                    await loadShiftFromGAS(currentStore.id, currentYear, currentMonth + 1);
+                    await loadSettingsFromBackend(currentStore.id);
+                    await loadShiftFromBackend(currentStore.id, currentYear, currentMonth + 1);
                     renderStaffRulesPanel();
                     renderTable();
                     setSaveStatus(`データ読込完了 / ${sourceLabel}`, "ok");
@@ -3562,7 +3562,7 @@ ${(() => {
         updateSelectedStampBadge();
         updateMonthDisplay();
         updateApiKeyStatus();
-        loadFromGAS();
+        loadFromBackend();
     });
 </script>
 
