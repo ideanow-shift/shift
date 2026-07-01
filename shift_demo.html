@@ -3285,6 +3285,11 @@ ${(() => {
                 action: "aiAdjust",
                 prompt: prompt,
                 apiKey: getStoredAIKey(),
+                storeId: currentStore.id,
+                storeName: currentStore.name,
+                year: currentYear,
+                month: currentMonth + 1,
+                requestText: request,
             });
 
             if (!data.ok) throw new Error(data.error || "AI調整に失敗しました");

@@ -441,7 +441,26 @@ async function adjustShiftWithAI(request: JsonRecord) {
   const aiText = apiKey.startsWith("sk-ant-")
     ? await callAnthropic(apiKey, prompt)
     : await callGemini(apiKey, prompt);
-  return { ok: true, source: "supabase-edge", result: parseAIJson(aiText) };
+  const result = parseAIJson(aiText);
+  const generationLogged = await writeGenerationRun({
+    store_id: text(request.storeId) || null,
+    year: toInteger(request.year, new Date().getFullYear()),
+    month: toInteger(request.month, new Date().getMonth() + 1),
+    run_type: "ai_adjust",
+    input_snapshot: {
+      store_name: text(request.storeName),
+      request_text: text(request.requestText),
+      prompt_chars: prompt.length,
+      provider: apiKey.startsWith("sk-ant-") ? "anthropic" : "gemini",
+    },
+    result_summary: {
+      summary: result.summary,
+      change_count: result.changes.length,
+      alert_count: result.alerts.length,
+    },
+    warnings: result.alerts,
+  });
+  return { ok: true, source: "supabase-edge", result, generationLogged };
 }
 
 async function callAnthropic(apiKey: string, prompt: string) {
@@ -527,6 +546,17 @@ async function writeAuditLog(entry: JsonRecord) {
     return true;
   } catch (err) {
     console.warn("[shift_audit_logs] skipped:", errorMessage(err));
+    return false;
+  }
+}
+
+async function writeGenerationRun(entry: JsonRecord) {
+  try {
+    if (!entry.store_id) return false;
+    await supabaseInsert("shift_generation_runs", [entry]);
+    return true;
+  } catch (err) {
+    console.warn("[shift_generation_runs] skipped:", errorMessage(err));
     return false;
   }
 }
