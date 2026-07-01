@@ -89,6 +89,14 @@
             border-radius: var(--radius-md);
             padding: var(--spacing-lg);
             height: fit-content;
+            max-height: calc(100vh - 24px);
+            overflow-y: auto;
+            position: sticky;
+            top: 12px;
+        }
+        .sidebar details > summary:hover {
+            border-color: var(--color-bassa);
+            background: var(--surface-soft) !important;
         }
 
         .section-title {
@@ -140,6 +148,55 @@
             padding: var(--spacing-lg);
             margin-bottom: var(--spacing-lg);
         }
+        .stamp-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-sm);
+        }
+        .stamp-title {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        .selected-stamp-badge {
+            padding: 4px 10px;
+            border: 1px solid var(--color-bassa);
+            border-radius: var(--radius-md);
+            background: var(--surface-soft);
+            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .manager-action-strip {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+            margin-top: var(--spacing-md);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border-light);
+        }
+        .quick-action {
+            min-height: 36px;
+            padding: 7px 12px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            background: #FFFFFF;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .quick-action.primary {
+            border-color: var(--color-bassa);
+            background: var(--color-bassa);
+            color: #FFFFFF;
+        }
+        .quick-action:hover { background: var(--surface-muted); }
+        .quick-action.primary:hover { background: var(--color-bassa-hover); }
         .stamp-list { display: flex; gap: var(--spacing-sm); flex-wrap: wrap; }
         .stamp {
             padding: 6px var(--spacing-md);
@@ -187,7 +244,39 @@
             border-radius: var(--radius-md);
             padding: var(--spacing-lg);
         }
-        .table-wrapper { overflow-x: auto; }
+        .table-wrapper {
+            overflow: auto;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            max-height: calc(100vh - 220px);
+            background: #FFFFFF;
+        }
+        #shiftTable th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 4;
+            background: #F9F9F9;
+            box-shadow: 2px 0 4px rgba(31,31,31,0.05);
+        }
+        #shiftTable .staff-info-cell {
+            position: sticky;
+            left: 0;
+            z-index: 3;
+            box-shadow: 2px 0 4px rgba(31,31,31,0.05);
+        }
+        #shiftTable tbody tr:hover td {
+            background-color: #FFF7F8;
+        }
+        #shiftTable tbody tr:hover .staff-info-cell {
+            background-color: #FFFFFF;
+        }
+        .cell-clickable {
+            cursor: pointer;
+            transition: background-color 120ms ease, box-shadow 120ms ease;
+        }
+        .cell-clickable:hover {
+            box-shadow: inset 0 0 0 2px var(--color-bassa);
+        }
         table { width: 100%; border-collapse: collapse; text-align: center; }
         th, td {
             padding: var(--spacing-sm);
@@ -413,6 +502,9 @@
             #storeSelector { width: 100%; box-sizing: border-box; }
             .btn { padding: var(--spacing-md) var(--spacing-lg); min-height: 44px; }
             .stamp-box { padding: var(--spacing-md); }
+            .stamp-header { align-items: flex-start; flex-direction: column; }
+            .manager-action-strip { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+            .quick-action { flex: 0 0 auto; }
             .stamp-list { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
             .stamp { flex-shrink: 0; padding: var(--spacing-sm) var(--spacing-md); font-size: 12px; min-height: 36px; }
             .main-layout { grid-template-columns: 1fr; gap: var(--spacing-sm); }
@@ -479,7 +571,10 @@
 </div>
 
 <div class="stamp-box">
-    <div style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 8px;">スタンプを選んでタップ：</div>
+    <div class="stamp-header">
+        <div class="stamp-title">スタンプを選んでシフト表をクリック</div>
+        <div id="selectedStampBadge" class="selected-stamp-badge">選択中: 出勤</div>
+    </div>
     <div class="stamp-list" id="stampList">
         <div class="stamp st-work active" onclick="selectStamp('出', this)">出勤</div>
         <div class="stamp st-off" onclick="selectStamp('公', this)">公休</div>
@@ -492,6 +587,14 @@
         <div class="stamp st-out" onclick="selectStamp('外', this)" id="stamp_out" style="display:none;">外勤</div>
         <div class="stamp st-bereave" onclick="selectStamp('忌', this)" id="stamp_bereave" style="display:none;">忌引</div>
         <div class="stamp st-special" onclick="selectStamp('特', this)" id="stamp_special" style="display:none;">特休</div>
+    </div>
+    <div class="manager-action-strip">
+        <button class="quick-action" type="button" onclick="openManagerStep('step2')">店舗ルール</button>
+        <button class="quick-action" type="button" onclick="openManagerStep('step3')">スタッフ設定</button>
+        <button class="quick-action" type="button" onclick="openManagerStep('step4')">固定条件</button>
+        <button class="quick-action primary" type="button" onclick="generateShift()">自動生成</button>
+        <button class="quick-action" type="button" onclick="saveShiftToGAS()">保存</button>
+        <button class="quick-action" type="button" onclick="scrollToShiftTable()">表へ移動</button>
     </div>
 </div>
 
@@ -1383,10 +1486,44 @@
         })();
     }
 
+    function stampLabel(stampType) {
+        const labels = {
+            "出": "出勤",
+            "公": "公休",
+            "希": "希望休",
+            "有": "有給",
+            "研": "研修",
+            "必": "絶対出勤",
+            "半": "半休",
+            "外": "外勤",
+            "忌": "忌引",
+            "特": "特休",
+        };
+        return labels[stampType] || stampType;
+    }
+
+    function updateSelectedStampBadge() {
+        const badge = document.getElementById("selectedStampBadge");
+        if (badge) badge.textContent = "選択中: " + stampLabel(selectedStamp);
+    }
+
+    function openManagerStep(stepId) {
+        const el = document.getElementById(stepId);
+        if (!el) return;
+        el.open = true;
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function scrollToShiftTable() {
+        const el = document.querySelector(".content-area");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
     function selectStamp(stampType, element) {
         selectedStamp = stampType;
         document.querySelectorAll(".stamp").forEach(s => s.classList.remove("active"));
         element.classList.add("active");
+        updateSelectedStampBadge();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -3422,6 +3559,7 @@ ${(() => {
 
     window.addEventListener("DOMContentLoaded", () => {
         bindStoreSettingsButton();
+        updateSelectedStampBadge();
         updateMonthDisplay();
         updateApiKeyStatus();
         loadFromGAS();
