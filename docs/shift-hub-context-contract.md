@@ -1,12 +1,16 @@
 # シフトアプリ HUB Context Contract
 
-作成日: 2026-07-01
+更新日: 2026-07-02
 対象: NOV HUB -> シフト自動生成アプリ
 
-## 目的
+## OS回答反映済み方針
 
-NOV HUBからシフト自動生成アプリを開くときに、ログイン中ユーザーと権限判定に必要な最小contextを渡す。
-シフトアプリ側はこのcontextをBackend APIへ同梱し、Edge Function側で監査ログ・生成履歴・将来の権限判定に利用する。
+- シフト側の正本社員IDは `employees.id`。
+- シフト側の正本店舗IDは `stores.id`。
+- `core_employee_id` は `employees.id` の実体として扱う。
+- `core_store_id` は `stores.id` の実体として扱う。
+- `current_store_id` はHUBから固定で渡す値ではなく、シフトアプリ内の現在選択店舗として扱う。
+- 初期店舗は `primaryStoreId` を優先する。
 
 ## 渡し方
 
@@ -18,93 +22,81 @@ https://ideanow-shift.github.io/shift/shift_demo.html?hub_context=<base64url(JSO
 
 互換用に `context` も読み取るが、正式名称は `hub_context` とする。
 
-## エンコード
-
-- JSONをUTF-8で文字列化
-- Base64URLエンコード
-- `+` は `-`、`/` は `_`、末尾の `=` は省略可
-
 ## 推奨JSON schema
 
 ```json
 {
   "employeeId": "00000000-0000-4000-8000-000000000000",
-  "employeeNo": "1234",
+  "supabaseEmployeeId": "00000000-0000-4000-8000-000000000000",
   "firebaseUid": "firebase-user-uid",
   "email": "user@example.com",
+  "fullName": "山田 太郎",
+  "roleKeys": ["store_manager"],
   "roles": ["store_manager"],
-  "storeIds": ["00000000-0000-4000-8000-000000000001"],
   "primaryStoreId": "00000000-0000-4000-8000-000000000001",
+  "storeAssignments": [
+    {
+      "storeId": "00000000-0000-4000-8000-000000000001",
+      "roleKeys": ["store_manager"]
+    }
+  ],
   "source": "nov_hub",
-  "issuedAt": "2026-07-01T00:00:00.000Z"
+  "issuedAt": "2026-07-02T00:00:00.000Z"
 }
 ```
 
-## 必須フィールド
+## シフト側で吸収する互換キー
 
-短期では必須は `employeeId` のみ。
+社員ID:
 
 - `employeeId`
-  - `public.employees.id`
-  - UUID
-  - 監査ログの `actor_employee_id` と生成履歴の `executed_by` に使う
+- `supabaseEmployeeId`
+- `employee_id`
+- `supabase_employee_id`
+- `coreEmployeeId`
+- `core_employee_id`
 
-## 推奨フィールド
+Firebase UID:
 
 - `firebaseUid`
-  - 将来Backend側でFirebase ID token検証をするための補助情報
+- `firebase_uid`
+
+権限:
+
+- `roleKeys`
+- `role_keys`
 - `roles`
-  - `store_manager` / `area_manager` / `backoffice` / `super_admin` など
-  - 最終的にはBackend側で `employee_roles` / `roles` を再照会して確定する
-- `storeIds`
-  - 操作可能店舗の候補
-  - 最終的にはBackend側で再検証する
+
+店舗:
+
 - `primaryStoreId`
-  - HUBから開いた時の初期表示店舗候補
-- `issuedAt`
-  - context発行時刻
-  - 将来、有効期限チェックに使う
+- `primary_store_id`
+- `storeIds`
+- `store_ids`
+- `storeAssignments`
+- `store_assignments`
 
-## シフトアプリ側の現在の実装
+## 権限方針
 
-`shift_demo.html` は以下を行う。
+短期はEdge Function + service_role経由で保存する。フロントへservice_roleは出さない。
+中長期はHUB認証、Edge Function、RLS/再検証へ寄せる。
 
-- `hub_context` または `context` を読み取る
-- Base64URLとしてdecodeする
-- JSON parseに失敗した場合は空contextとして扱う
-- `saveShift` / `saveSettings` / `aiAdjust` のpayloadへ `hubContext` を同梱する
+推奨ロール:
 
-## Edge Function側の現在の実装
+- `staff`: 自分のシフト閲覧、希望提出
+- `store_manager`: 自店舗の作成・編集・保存・確定
+- `area_manager`: 担当店舗範囲の閲覧・編集
+- `fc_owner`: 自法人・自店舗範囲の閲覧、必要に応じて編集
+- `backoffice`: 全店舗管理
+- `super_admin`: 全店舗管理
+- `executive`: 原則閲覧中心
 
-`shift-api` は以下をactor候補として扱う。
+## Edge Functionでの利用
 
-- `request.actorEmployeeId`
-- `request.employeeId`
-- `hubContext.employeeId`
-- `hubContext.employee_id`
-- `hubContext.coreEmployeeId`
-- `hubContext.core_employee_id`
-
-UUID形式の場合のみ採用する。
-
-保存先:
+現時点では `hubContext` を保存・設定・AI調整payloadへ同梱し、以下に利用する。
 
 - `shift_audit_logs.actor_employee_id`
 - `shift_generation_runs.executed_by`
+- metadataの `hub_context_present`
 
-metadata:
-
-- `hub_context_present: true/false`
-
-## セキュリティ方針
-
-`hub_context` はフロントURLに載るため、信頼済み情報として扱わない。
-短期では監査ログ補助として使う。
-中期以降はBackend側でFirebase ID token / employee id / rolesを再検証し、contextは入力ヒントとしてのみ扱う。
-
-## 次に実装すること
-
-1. HUB側で上記schemaの `hub_context` を生成する。
-2. シフトアプリ側で `primaryStoreId` があれば初期店舗選択に使う。
-3. Edge Function側で `employee_roles` / `roles` を照会し、操作権限を判定する。
-4. Firebase ID token検証方式を決める。
+権限判定は次段階で `employee_roles.scope_type = store` / `scope_id = stores.id` を照会して実装する。

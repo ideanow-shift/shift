@@ -772,8 +772,14 @@ function extractActorEmployeeId(request: JsonRecord) {
   const candidates = [
     request.actorEmployeeId,
     request.employeeId,
+    request.supabaseEmployeeId,
+    request.employee_id,
+    request.supabase_employee_id,
+    hubContext.actorEmployeeId,
     hubContext.employeeId,
+    hubContext.supabaseEmployeeId,
     hubContext.employee_id,
+    hubContext.supabase_employee_id,
     hubContext.coreEmployeeId,
     hubContext.core_employee_id,
   ];

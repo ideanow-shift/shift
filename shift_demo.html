@@ -953,7 +953,71 @@
         }
     }
 
-    const HUB_CONTEXT = parseHubContext();
+    function arrayFromContextValue(value) {
+        if (Array.isArray(value)) return value;
+        if (value == null || value === "") return [];
+        if (typeof value === "string") return value.split(/[;,]/).map(v => v.trim()).filter(Boolean);
+        return [value];
+    }
+
+    function firstTextValue(...values) {
+        for (const value of values) {
+            if (value != null && String(value).trim()) return String(value).trim();
+        }
+        return "";
+    }
+
+    function normalizeRoleKeys(...values) {
+        const keys = [];
+        values.flatMap(arrayFromContextValue).forEach(item => {
+            if (typeof item === "string") {
+                keys.push(item);
+                return;
+            }
+            if (item && typeof item === "object") {
+                keys.push(firstTextValue(item.roleKey, item.role_key, item.key, item.name, item.role));
+            }
+        });
+        return [...new Set(keys.map(key => String(key).trim()).filter(Boolean))];
+    }
+
+    function normalizeStoreAssignments(value) {
+        return arrayFromContextValue(value).map(item => {
+            if (typeof item === "string") return { storeId: item, roleKeys: [] };
+            const record = item && typeof item === "object" ? item : {};
+            return {
+                storeId: firstTextValue(record.storeId, record.store_id, record.scopeId, record.scope_id, record.id),
+                storeNo: firstTextValue(record.storeNo, record.store_no),
+                storeName: firstTextValue(record.storeName, record.store_name, record.name),
+                roleKeys: normalizeRoleKeys(record.roleKeys, record.role_keys, record.roles),
+            };
+        }).filter(item => item.storeId || item.storeNo || item.storeName);
+    }
+
+    function normalizeHubContext(context) {
+        const raw = context && typeof context === "object" ? context : {};
+        const storeAssignments = normalizeStoreAssignments(raw.storeAssignments || raw.store_assignments);
+        const roleKeys = normalizeRoleKeys(raw.roleKeys, raw.role_keys, raw.roles);
+        const storeIds = [
+            ...arrayFromContextValue(raw.storeIds || raw.store_ids),
+            ...storeAssignments.map(item => item.storeId),
+        ].map(value => String(value || "").trim()).filter(Boolean);
+        const primaryStoreId = firstTextValue(raw.primaryStoreId, raw.primary_store_id, raw.current_store_id);
+        return {
+            ...raw,
+            employeeId: firstTextValue(raw.employeeId, raw.supabaseEmployeeId, raw.employee_id, raw.supabase_employee_id, raw.coreEmployeeId, raw.core_employee_id),
+            supabaseEmployeeId: firstTextValue(raw.supabaseEmployeeId, raw.employeeId, raw.supabase_employee_id, raw.employee_id, raw.coreEmployeeId, raw.core_employee_id),
+            firebaseUid: firstTextValue(raw.firebaseUid, raw.firebase_uid),
+            email: firstTextValue(raw.email),
+            roleKeys,
+            roles: Array.isArray(raw.roles) ? raw.roles : roleKeys,
+            primaryStoreId,
+            storeIds: [...new Set(storeIds)],
+            storeAssignments,
+        };
+    }
+
+    const HUB_CONTEXT = normalizeHubContext(parseHubContext());
 
     // ─────────────────────────────────────────────────────────────
     // 2026〜2027年の祝日定義（YYYY-M-D 形式）
@@ -1246,6 +1310,8 @@
         }
 
         const coreStoreIdIdx = findCol(rawHeaders, "core_store_id", "NOV_店舗ID", "store_id");
+        const storeNoIdx = findCol(rawHeaders, "店舗番号", "store_no");
+        const externalStoreIdIdx = findCol(rawHeaders, "store_id");
         storeMaster = [];
         rows.slice(1).forEach((row) => {
             const name = (row[nameIdx] || "").trim();
@@ -1258,6 +1324,8 @@
 
             storeMaster.push({
                 id: coreStoreIdIdx !== -1 && row[coreStoreIdIdx] ? row[coreStoreIdIdx].trim() : (storeMaster.length + 1).toString(),
+                storeNo: storeNoIdx !== -1 && row[storeNoIdx] ? row[storeNoIdx].trim() : "",
+                storeId: externalStoreIdIdx !== -1 && row[externalStoreIdIdx] ? row[externalStoreIdIdx].trim() : "",
                 name: name,
                 rule:    (ruleIdx    !== -1 && row[ruleIdx])    ? row[ruleIdx].trim()    : "年中無休",
                 weekday: (weekdayIdx !== -1 && row[weekdayIdx]) ? row[weekdayIdx].trim() : "1",
@@ -1435,14 +1503,39 @@
         return !excludedNames.some(excluded => name.includes(excluded));
     }
 
+    function getHubStoreCandidates() {
+        return [
+            HUB_CONTEXT.primaryStoreId,
+            ...arrayFromContextValue(HUB_CONTEXT.storeIds),
+            ...arrayFromContextValue(HUB_CONTEXT.storeAssignments).flatMap(item => [
+                item && item.storeId,
+                item && item.storeNo,
+                item && item.storeName,
+            ]),
+        ].map(value => String(value || "").trim()).filter(Boolean);
+    }
+
+    function findHubPreferredStoreIndex() {
+        const candidates = getHubStoreCandidates();
+        if (candidates.length === 0) return -1;
+        return storeMaster.findIndex(store => candidates.some(candidate =>
+            candidate === String(store.id || "")
+            || candidate === String(store.storeId || "")
+            || candidate === String(store.storeNo || "")
+            || candidate === String(store.name || "")
+        ));
+    }
+
     function buildStoreSelector() {
         if (storeMaster.length > 0) {
             const selector = document.getElementById("storeSelector");
             selector.innerHTML = `<option value="">▼ 表示する店舗を選んでください ▼</option>` + 
                 storeMaster.map(s => `<option value="${s.id}" data-name="${s.name}">${s.name}</option>`).join("");
             
+            const hubStoreIndex = findHubPreferredStoreIndex();
             const firstShiftStoreIndex = storeMaster.findIndex(isShiftTargetStore);
-            selector.selectedIndex = firstShiftStoreIndex >= 0 ? firstShiftStoreIndex + 1 : 1;
+            const initialIndex = hubStoreIndex >= 0 ? hubStoreIndex : firstShiftStoreIndex;
+            selector.selectedIndex = initialIndex >= 0 ? initialIndex + 1 : 1;
             changeStore();
         }
     }
