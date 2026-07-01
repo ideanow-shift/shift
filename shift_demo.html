@@ -2122,6 +2122,8 @@
       const newAutoOff = new Set();
       const newAutoMust = new Set();
       const protectedNoteOff = new Set();
+      const appliedNoteRules = [];
+      const appliedNoteRuleKeys = new Set();
 
       function setAutoOff(staffId, day) {
         const key = `${staffId}-${day}`;
@@ -2161,6 +2163,11 @@
       function normalizeNoteText(text) {
         return String(text || '')
           .replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+          .replace(/[，､]/g, '、')
+          .replace(/[／]/g, '/')
+          .replace(/[＆]/g, '&')
+          .replace(/[＋]/g, '+')
+          .replace(/[\u3000\t\r\n]+/g, ' ')
           .replace(/\s+/g, ' ')
           .trim();
       }
@@ -2176,22 +2183,93 @@
         return day >= 1 && day <= dim ? day : null;
       }
 
+      function extractWeekNumbers(text) {
+        return (String(text || '').match(/[0-9]+/g) || [])
+          .map(Number)
+          .filter(n => n >= 1 && n <= 6);
+      }
+
       function actionFromNoteText(text) {
-        if (/必ず出勤|必須出勤|出勤|必/.test(text || '')) return '必';
-        if (/公休|休み|休/.test(text || '')) return '公';
+        const value = String(text || '');
+        if (/出勤不可|出勤NG|出勤ＮＧ|公休|休み|休/.test(value)) return '公';
+        if (/必ず出勤|必須出勤|絶対出勤|出勤必須|出勤|必/.test(value)) return '必';
         return '';
       }
 
-      function applyNoteAction(staffId, day, action) {
-        if (action === '必') setAutoMust(staffId, day);
-        if (action === '公') setNoteOff(staffId, day);
+      function blankRange(text, start, length) {
+        return text.slice(0, start) + ' '.repeat(length) + text.slice(start + length);
       }
 
-      function applyNoteActionToWeekday(staffId, dow, action) {
+      function applyNoteAction(staff, day, action, sourceText = '') {
+        const staffId = typeof staff === 'object' ? staff.id : staff;
+        if (day < 1 || day > dim) return;
+        if (action === '必') setAutoMust(staffId, day);
+        if (action === '公') setNoteOff(staffId, day);
+        if (action === '必' || action === '公') {
+          const key = `${staffId}-${day}-${action}`;
+          if (!appliedNoteRuleKeys.has(key)) {
+            appliedNoteRuleKeys.add(key);
+            appliedNoteRules.push({
+              staff: typeof staff === 'object' ? staff.name : staffId,
+              day,
+              action,
+              source: sourceText.trim(),
+            });
+          }
+        }
+      }
+
+      function applyNoteActionToWeekday(staff, dow, action, sourceText = '') {
         for (let day = 1; day <= dim; day++) {
           if (new Date(currentYear, currentMonth, day).getDay() === dow) {
-            applyNoteAction(staffId, day, action);
+            applyNoteAction(staff, day, action, sourceText);
           }
+        }
+      }
+
+      function applyWeekdayWeekRules(staff, note) {
+        let remainingNote = note;
+        const weekdayLabel = '日曜日|月曜日|火曜日|水曜日|木曜日|金曜日|土曜日|日曜|月曜|火曜|水曜|木曜|金曜|土曜';
+        const actionLabel = '必ず出勤|必須出勤|絶対出勤|出勤必須|出勤不可|出勤NG|出勤ＮＧ|公休|休み|休|出勤|必';
+        const weekList = '(?:第?\\s*[0-9]+\\s*(?:週目|週)?\\s*(?:[、,・･/\\s&+]|と)*)+';
+        const patterns = [
+          new RegExp(`(${weekList})\\s*(?:週目|週)\\s*の?\\s*(${weekdayLabel})\\s*(?:は|を|に|で)?\\s*(${actionLabel})`, 'g'),
+          new RegExp(`(${weekList})\\s*の?\\s*(${weekdayLabel})\\s*(?:は|を|に|で)?\\s*(${actionLabel})`, 'g'),
+          new RegExp(`(${weekdayLabel})\\s*の?\\s*(${weekList})\\s*(?:週目|週)?\\s*(?:は|を|に|で)?\\s*(${actionLabel})`, 'g'),
+        ];
+
+        patterns.forEach(pattern => {
+          let match;
+          while ((match = pattern.exec(remainingNote)) !== null) {
+            const weekday = match[2] && weekdayToDow(match[2]) != null ? match[2] : match[1];
+            const weekText = weekday === match[1] ? match[2] : match[1];
+            const actionText = match[3];
+            const weekNumbers = extractWeekNumbers(weekText);
+            const dow = weekdayToDow(weekday);
+            const action = actionFromNoteText(actionText);
+            if (dow == null || !action || weekNumbers.length === 0) continue;
+            weekNumbers.forEach(weekNo => {
+              const day = nthWeekdayDay(weekNo, dow);
+              if (day) applyNoteAction(staff, day, action, match[0]);
+            });
+            remainingNote = blankRange(remainingNote, match.index, match[0].length);
+            pattern.lastIndex = match.index + match[0].length;
+          }
+        });
+
+        return remainingNote;
+      }
+
+      function applyEveryWeekdayRules(staff, note) {
+        const weekdayLabel = '日曜日|月曜日|火曜日|水曜日|木曜日|金曜日|土曜日|日曜|月曜|火曜|水曜|木曜|金曜|土曜';
+        const actionLabel = '必ず出勤|必須出勤|絶対出勤|出勤必須|出勤不可|出勤NG|出勤ＮＧ|公休|休み|休|出勤|必';
+        const weekdayPattern = new RegExp(`(?:毎週\\s*)?(${weekdayLabel})\\s*(?:は|を|に|で)?\\s*(${actionLabel})`, 'g');
+        let match;
+        while ((match = weekdayPattern.exec(note)) !== null) {
+          const dow = weekdayToDow(match[1]);
+          const action = actionFromNoteText(match[2]);
+          if (dow == null || !action) continue;
+          applyNoteActionToWeekday(staff, dow, action, match[0]);
         }
       }
 
@@ -2200,30 +2278,8 @@
         const note = normalizeNoteText(cfg.note);
         if (!note) return;
 
-        let remainingNote = note;
-        const weekdayLabel = '日曜日|月曜日|火曜日|水曜日|木曜日|金曜日|土曜日|日曜|月曜|火曜|水曜|木曜|金曜|土曜';
-        const actionLabel = '必ず出勤|必須出勤|出勤|必|公休|休み|休';
-        const weekPattern = new RegExp(`([0-9]+(?:[、,・･\\/\\s]+[0-9]+)*)\\s*週目\\s*の?\\s*(${weekdayLabel})\\s*(?:は|を|に)?\\s*(${actionLabel})`, 'g');
-        let match;
-        while ((match = weekPattern.exec(note)) !== null) {
-          const weekNumbers = match[1].split(/[、,・･\/\s]+/).map(Number).filter(Boolean);
-          const dow = weekdayToDow(match[2]);
-          const action = actionFromNoteText(match[3]);
-          if (dow == null || !action) continue;
-          weekNumbers.forEach(weekNo => {
-            const day = nthWeekdayDay(weekNo, dow);
-            if (day) applyNoteAction(staff.id, day, action);
-          });
-          remainingNote = remainingNote.replace(match[0], ' '.repeat(match[0].length));
-        }
-
-        const weekdayPattern = new RegExp(`(?:毎週\\s*)?(${weekdayLabel})\\s*(?:は|を|に)?\\s*(${actionLabel})`, 'g');
-        while ((match = weekdayPattern.exec(remainingNote)) !== null) {
-          const dow = weekdayToDow(match[1]);
-          const action = actionFromNoteText(match[2]);
-          if (dow == null || !action) continue;
-          applyNoteActionToWeekday(staff.id, dow, action);
-        }
+        const remainingNote = applyWeekdayWeekRules(staff, note);
+        applyEveryWeekdayRules(staff, remainingNote);
       }
 
       // 日ごとの最低出勤人数を取得
@@ -2636,6 +2692,9 @@
         if (lowDays.length > 0) console.warn("注意 出勤者不足:", lowDays.join(", "));
       }
 
+      if (appliedNoteRules.length > 0) {
+        console.log("特記事項ルール反映:", appliedNoteRules.map(r => `${r.staff}:${r.day}日=${r.action}（${r.source}）`).join(", "));
+      }
       autoGeneratedOffKeys[monthKey] = Array.from(newAutoOff);
       autoGeneratedMustKeys[monthKey] = Array.from(newAutoMust);
       renderTable();
@@ -2643,9 +2702,10 @@
       if (ab) {
         ab.style.display = "block";
         const ok = violations.length === 0 && lowDays.length === 0;
+        const noteSummary = appliedNoteRules.length > 0 ? ` / 特記事項${appliedNoteRules.length}件反映` : "";
         ab.innerHTML = ok
-          ? `シフト生成完了（${currentYear}年${currentMonth + 1}月）: 全週2日休み・サイドバー設定の日別最低出勤人数を保証`
-          : `注意 生成完了（${currentYear}年${currentMonth + 1}月） — 週休不足${violations.length}件 / 出勤者不足${lowDays.length}日 (Console確認)`;
+          ? `シフト生成完了（${currentYear}年${currentMonth + 1}月）: 全週2日休み・サイドバー設定の日別最低出勤人数を保証${noteSummary}`
+          : `注意 生成完了（${currentYear}年${currentMonth + 1}月） — 週休不足${violations.length}件 / 出勤者不足${lowDays.length}日${noteSummary} (Console確認)`;
       }
     }
 
