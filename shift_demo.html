@@ -1984,29 +1984,53 @@
         return day >= 1 && day <= dim ? day : null;
       }
 
+      function actionFromNoteText(text) {
+        if (/必ず出勤|必須出勤|出勤|必/.test(text || '')) return '必';
+        if (/公休|休み|休/.test(text || '')) return '公';
+        return '';
+      }
+
+      function applyNoteAction(staffId, day, action) {
+        if (action === '必') setAutoMust(staffId, day);
+        if (action === '公') setNoteOff(staffId, day);
+      }
+
+      function applyNoteActionToWeekday(staffId, dow, action) {
+        for (let day = 1; day <= dim; day++) {
+          if (new Date(currentYear, currentMonth, day).getDay() === dow) {
+            applyNoteAction(staffId, day, action);
+          }
+        }
+      }
+
       function applyNoteRules(staff) {
         const cfg = liveStaffConfig[staff.id] || {};
         const note = normalizeNoteText(cfg.note);
         if (!note) return;
 
-        const pattern = /([0-9]+(?:[、,・･\/\s]+[0-9]+)*)\s*週目\s*の?\s*(日曜日|月曜日|火曜日|水曜日|木曜日|金曜日|土曜日|日曜|月曜|火曜|水曜|木曜|金曜|土曜)\s*([^0-9]*)/g;
+        let remainingNote = note;
+        const weekdayLabel = '日曜日|月曜日|火曜日|水曜日|木曜日|金曜日|土曜日|日曜|月曜|火曜|水曜|木曜|金曜|土曜';
+        const actionLabel = '必ず出勤|必須出勤|出勤|必|公休|休み|休';
+        const weekPattern = new RegExp(`([0-9]+(?:[、,・･\\/\\s]+[0-9]+)*)\\s*週目\\s*の?\\s*(${weekdayLabel})\\s*(?:は|を|に)?\\s*(${actionLabel})`, 'g');
         let match;
-        while ((match = pattern.exec(note)) !== null) {
+        while ((match = weekPattern.exec(note)) !== null) {
           const weekNumbers = match[1].split(/[、,・･\/\s]+/).map(Number).filter(Boolean);
           const dow = weekdayToDow(match[2]);
-          const tail = match[3] || '';
-          const action = /必ず出勤|必須出勤|出勤|必/.test(tail)
-            ? '必'
-            : /公休|休み|休/.test(tail)
-              ? '公'
-              : '';
+          const action = actionFromNoteText(match[3]);
           if (dow == null || !action) continue;
           weekNumbers.forEach(weekNo => {
             const day = nthWeekdayDay(weekNo, dow);
-            if (!day) return;
-            if (action === '必') setAutoMust(staff.id, day);
-            if (action === '公') setNoteOff(staff.id, day);
+            if (day) applyNoteAction(staff.id, day, action);
           });
+          remainingNote = remainingNote.replace(match[0], ' '.repeat(match[0].length));
+        }
+
+        const weekdayPattern = new RegExp(`(?:毎週\\s*)?(${weekdayLabel})\\s*(?:は|を|に)?\\s*(${actionLabel})`, 'g');
+        while ((match = weekdayPattern.exec(remainingNote)) !== null) {
+          const dow = weekdayToDow(match[1]);
+          const action = actionFromNoteText(match[2]);
+          if (dow == null || !action) continue;
+          applyNoteActionToWeekday(staff.id, dow, action);
         }
       }
 
