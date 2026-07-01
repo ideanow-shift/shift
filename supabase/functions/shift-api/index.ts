@@ -225,7 +225,7 @@ async function saveShift(request: JsonRecord) {
     await supabaseUpsert("shift_schedule_cells", { on_conflict: "schedule_id,employee_id,work_date" }, cellRows);
   }
 
-  await writeAuditLog({
+  const auditLogged = await writeAuditLog({
     store_id: storeId,
     schedule_id: text(schedule.id),
     action: "save_shift",
@@ -240,7 +240,12 @@ async function saveShift(request: JsonRecord) {
     },
   });
 
-  return { ok: true, source: "supabase-edge", updatedAt: text(schedule.updated_at || new Date().toISOString()) };
+  return {
+    ok: true,
+    source: "supabase-edge",
+    updatedAt: text(schedule.updated_at || new Date().toISOString()),
+    auditLogged,
+  };
 }
 
 async function loadShift(params: URLSearchParams) {
@@ -335,7 +340,7 @@ async function saveSettings(request: JsonRecord) {
     await supabaseUpsert("shift_staff_rules", { on_conflict: "employee_id,store_id" }, staffRows);
   }
 
-  await writeAuditLog({
+  const auditLogged = await writeAuditLog({
     store_id: storeId,
     action: "save_settings",
     target_table: "shift_store_settings",
@@ -348,7 +353,12 @@ async function saveSettings(request: JsonRecord) {
     },
   });
 
-  return { ok: true, source: "supabase-edge", updatedAt: text(storeRows[0]?.updated_at || new Date().toISOString()) };
+  return {
+    ok: true,
+    source: "supabase-edge",
+    updatedAt: text(storeRows[0]?.updated_at || new Date().toISOString()),
+    auditLogged,
+  };
 }
 
 async function loadSettings(params: URLSearchParams) {
@@ -514,8 +524,10 @@ async function writeAuditLog(entry: JsonRecord) {
         logged_from: "shift-api",
       },
     }]);
+    return true;
   } catch (err) {
     console.warn("[shift_audit_logs] skipped:", errorMessage(err));
+    return false;
   }
 }
 
