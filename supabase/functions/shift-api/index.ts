@@ -190,6 +190,7 @@ async function saveShift(request: JsonRecord) {
   const year = requireNumber(request.year, "year");
   const month = requireNumber(request.month, "month");
   const cells = asRecord(request.cells);
+  const actorEmployeeId = extractActorEmployeeId(request);
 
   const scheduleRows = await supabaseUpsert("shift_schedules", { on_conflict: "store_id,year,month" }, [{
     store_id: storeId,
@@ -228,6 +229,7 @@ async function saveShift(request: JsonRecord) {
   const auditLogged = await writeAuditLog({
     store_id: storeId,
     schedule_id: text(schedule.id),
+    actor_employee_id: actorEmployeeId,
     action: "save_shift",
     target_table: "shift_schedules",
     target_id: text(schedule.id),
@@ -236,6 +238,7 @@ async function saveShift(request: JsonRecord) {
       month,
       store_name: text(request.storeName),
       cell_count: cellRows.length,
+      hub_context_present: Object.keys(asRecord(request.hubContext)).length > 0,
       saved_from: "supabase_edge_function",
     },
   });
@@ -283,6 +286,7 @@ async function loadShift(params: URLSearchParams) {
 
 async function saveSettings(request: JsonRecord) {
   const storeId = requireText(request.storeId, "storeId");
+  const actorEmployeeId = extractActorEmployeeId(request);
   const minStaff = asRecord(request.minStaff);
   const storeSettings = asRecord(request.storeSettings);
   const extraRules = asRecord(request.extraRules);
@@ -342,6 +346,7 @@ async function saveSettings(request: JsonRecord) {
 
   const auditLogged = await writeAuditLog({
     store_id: storeId,
+    actor_employee_id: actorEmployeeId,
     action: "save_settings",
     target_table: "shift_store_settings",
     target_id: text(storeRows[0]?.id) || null,
@@ -349,6 +354,7 @@ async function saveSettings(request: JsonRecord) {
       store_name: text(request.storeName),
       staff_rule_count: staffRows.length,
       min_staff: minStaff,
+      hub_context_present: Object.keys(asRecord(request.hubContext)).length > 0,
       saved_from: "supabase_edge_function",
     },
   });
@@ -434,6 +440,7 @@ async function loadSettings(params: URLSearchParams) {
 
 async function adjustShiftWithAI(request: JsonRecord) {
   const prompt = requireText(request.prompt, "prompt");
+  const actorEmployeeId = extractActorEmployeeId(request);
   const apiKey = text(request.apiKey || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("GEMINI_API_KEY")).trim();
   if (!apiKey) {
     return { ok: false, error: "AI APIキーが未設定です。画面でAPIキーを入力するか、Edge Function secretsに ANTHROPIC_API_KEY または GEMINI_API_KEY を設定してください。" };
@@ -447,11 +454,13 @@ async function adjustShiftWithAI(request: JsonRecord) {
     year: toInteger(request.year, new Date().getFullYear()),
     month: toInteger(request.month, new Date().getMonth() + 1),
     run_type: "ai_adjust",
+    executed_by: actorEmployeeId,
     input_snapshot: {
       store_name: text(request.storeName),
       request_text: text(request.requestText),
       prompt_chars: prompt.length,
       provider: apiKey.startsWith("sk-ant-") ? "anthropic" : "gemini",
+      hub_context_present: Object.keys(asRecord(request.hubContext)).length > 0,
     },
     result_summary: {
       summary: result.summary,
@@ -752,6 +761,24 @@ function requireNumber(value: unknown, name: string) {
 
 function asRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {};
+}
+
+function extractActorEmployeeId(request: JsonRecord) {
+  const hubContext = asRecord(request.hubContext);
+  const candidates = [
+    request.actorEmployeeId,
+    request.employeeId,
+    hubContext.employeeId,
+    hubContext.employee_id,
+    hubContext.coreEmployeeId,
+    hubContext.core_employee_id,
+  ];
+  const value = candidates.map(text).find(isUuid);
+  return value || null;
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 function text(value: unknown) {

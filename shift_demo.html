@@ -935,6 +935,26 @@
         return source;
     }
 
+    function parseHubContext() {
+        const params = new URLSearchParams(window.location.search);
+        const raw = params.get("hub_context") || params.get("context") || "";
+        if (!raw) return {};
+        try {
+            const base64 = raw.replace(/-/g, "+").replace(/_/g, "/");
+            const padded = base64 + "=".repeat((4 - base64.length % 4) % 4);
+            const json = decodeURIComponent(Array.prototype.map.call(atob(padded), function(ch) {
+                return "%" + ("00" + ch.charCodeAt(0).toString(16)).slice(-2);
+            }).join(""));
+            const parsed = JSON.parse(json);
+            return parsed && typeof parsed === "object" ? parsed : {};
+        } catch (err) {
+            console.warn("[hub_context] parse failed:", err);
+            return {};
+        }
+    }
+
+    const HUB_CONTEXT = parseHubContext();
+
     // ─────────────────────────────────────────────────────────────
     // 2026〜2027年の祝日定義（YYYY-M-D 形式）
     // ─────────────────────────────────────────────────────────────
@@ -3290,6 +3310,7 @@ ${(() => {
                 year: currentYear,
                 month: currentMonth + 1,
                 requestText: request,
+                hubContext: HUB_CONTEXT,
             });
 
             if (!data.ok) throw new Error(data.error || "AI調整に失敗しました");
@@ -3378,7 +3399,8 @@ ${(() => {
                 storeName: currentStore.name,
                 year:      currentYear,
                 month:     currentMonth + 1,
-                cells:     cells
+                cells:     cells,
+                hubContext: HUB_CONTEXT
             });
             if (data.ok) {
                 const source = data.source ? ` / ${formatBackendSourceLabel(data.source)}` : "";
@@ -3430,7 +3452,8 @@ ${(() => {
                 minStaff:      storeMinStaff[currentStore.id] || {},
                 storeSettings: storeSettings[currentStore.id] || {},
                 staffConfig:   liveStaffConfig,
-                extraRules:    extraRules
+                extraRules:    extraRules,
+                hubContext:    HUB_CONTEXT
             });
             if (data.ok) {
                 const source = data.source ? ` / ${formatBackendSourceLabel(data.source)}` : "";
