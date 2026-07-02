@@ -95,7 +95,7 @@ async function loadEmployeesForShift() {
 
 async function loadJobTypesForShift() {
   let lastError: unknown = null;
-  for (const select of ["id,job_type_name", "id,name", "id"]) {
+  for (const select of ["id,job_type_key,job_type_name", "id,job_type_name", "id,name", "id"]) {
     try {
       return await supabaseRequest("job_types", {
         select,
@@ -171,6 +171,7 @@ function toStaffRows(employees: JsonRecord[], storesById: Record<string, JsonRec
     "社員番号",
     "所属会社",
     "所属店舗",
+    "job_type_key",
     "職種",
     "役職",
     "雇用形態",
@@ -196,13 +197,18 @@ function toStaffRows(employees: JsonRecord[], storesById: Record<string, JsonRec
       const store = storesById[text(employee.store_id)] || {};
       const position = positionsById[text(employee.position_id)] || {};
       const jobType = jobTypesById[text(employee.job_type_id)] || {};
+      const jobTypeKey = text(jobType.job_type_key || source.job_type_key);
       const jobTypeName = text(jobType.job_type_name || jobType.name || source.job_type_name || source.job_type || source["職種"]);
-      const normalizedJobType = normalizeClassText(jobTypeName);
-      const defaultLicense = normalizedJobType.includes("レセプション")
-        || normalizedJobType.includes("受付")
-        || normalizedJobType.includes("reception")
-        || normalizedJobType.includes("本部")
-        || normalizedJobType.includes("backoffice")
+      const normalizedJobTypeKey = normalizeClassText(jobTypeKey);
+      const normalizedJobTypeName = normalizeClassText(jobTypeName);
+      const defaultLicense = normalizedJobTypeKey === "reception"
+        || normalizedJobTypeKey === "head_office"
+        || normalizedJobTypeKey === "headoffice"
+        || normalizedJobTypeName.includes("レセプション")
+        || normalizedJobTypeName.includes("受付")
+        || normalizedJobTypeName.includes("reception")
+        || normalizedJobTypeName.includes("本部")
+        || normalizedJobTypeName.includes("backoffice")
         ? "×"
         : "○";
       const licenseSourceValue = source.has_beautician_license ?? source.license;
@@ -213,6 +219,7 @@ function toStaffRows(employees: JsonRecord[], storesById: Record<string, JsonRec
         text(employee.employee_id),
         text(source.company_name || source.corporation_name),
         text(store.store_name || source.assigned_location),
+        jobTypeKey,
         jobTypeName,
         text(position.position_name || source.position_name),
         text(employee.employment_type || source.employment_type),

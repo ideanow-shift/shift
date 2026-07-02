@@ -1400,26 +1400,36 @@
             .toLowerCase();
     }
 
-    function isReceptionJobType(jobType) {
-        const normalized = normalizeStaffClassText(jobType);
+    function buildJobTypeSignal(jobTypeKey, jobTypeName) {
+        return `${jobTypeKey || ""} ${jobTypeName || ""}`;
+    }
+
+    function isReceptionJobType(jobTypeKey, jobTypeName) {
+        const key = normalizeStaffClassText(jobTypeKey);
+        if (key) return key === "reception";
+        const normalized = normalizeStaffClassText(jobTypeName);
         return normalized.includes("レセプション")
             || normalized.includes("受付")
             || normalized.includes("reception");
     }
 
     function isReceptionWorkType(workType) {
-        return isReceptionJobType(workType);
+        return isReceptionJobType("", workType);
     }
 
-    function isHeadOfficeJobType(jobType) {
-        const normalized = normalizeStaffClassText(jobType);
+    function isHeadOfficeJobType(jobTypeKey, jobTypeName) {
+        const key = normalizeStaffClassText(jobTypeKey);
+        if (key) return key === "head_office" || key === "headoffice";
+        const normalized = normalizeStaffClassText(jobTypeName);
         return normalized.includes("本部")
             || normalized.includes("headquarter")
             || normalized.includes("backoffice");
     }
 
-    function isBeautyJobType(jobType) {
-        const normalized = normalizeStaffClassText(jobType);
+    function isBeautyJobType(jobTypeKey, jobTypeName) {
+        const key = normalizeStaffClassText(jobTypeKey);
+        if (key) return key === "hairstylist" || key === "colorist";
+        const normalized = normalizeStaffClassText(jobTypeName);
         return normalized.includes("美容師")
             || normalized.includes("カラーリスト")
             || normalized.includes("stylist")
@@ -1433,8 +1443,8 @@
             || normalized.includes("本部");
     }
 
-    function getJobTypeMissingLabel(jobType, employmentType) {
-        return !String(jobType || "").trim() && hasLegacyJobLabelInEmploymentType(employmentType)
+    function getJobTypeMissingLabel(jobTypeKey, jobTypeName, employmentType) {
+        return !String(buildJobTypeSignal(jobTypeKey, jobTypeName)).trim() && hasLegacyJobLabelInEmploymentType(employmentType)
             ? "職種未設定"
             : "";
     }
@@ -1444,12 +1454,12 @@
         return String(employmentType || "").includes("時短") ? "時短" : "通常";
     }
 
-    function getDisplayRank(rank, jobType, employmentType) {
-        const missingLabel = getJobTypeMissingLabel(jobType, employmentType);
+    function getDisplayRank(rank, jobTypeKey, jobTypeName, employmentType) {
+        const missingLabel = getJobTypeMissingLabel(jobTypeKey, jobTypeName, employmentType);
         if (missingLabel) return missingLabel;
-        if (isReceptionJobType(jobType)) return "レセプション";
-        if (isHeadOfficeJobType(jobType)) return "本部スタッフ";
-        return rank || jobType || "スタッフ";
+        if (isReceptionJobType(jobTypeKey, jobTypeName)) return "レセプション";
+        if (isHeadOfficeJobType(jobTypeKey, jobTypeName)) return "本部スタッフ";
+        return rank || jobTypeName || "スタッフ";
     }
 
     function importStaffFromRows(rows, sourceLabel) {
@@ -1462,6 +1472,7 @@
         // 代表マスタの列名で厳密に取得（固定インデックスにも対応）
         const storeIdx  = findCol(rawHeaders, "所属店舗", "店舗");
         const rankIdx   = findCol(rawHeaders, "役職");
+        const jobTypeKeyIdx = findCol(rawHeaders, "job_type_key", "jobTypeKey");
         const jobTypeIdx = findCol(rawHeaders, "職種", "job_type", "job_type_name", "jobType", "jobTypeName");
         const empTypeIdx= findCol(rawHeaders, "雇用形態");
         const activeIdx = findCol(rawHeaders, "現職");       // ← 在職フィルタ用
@@ -1488,12 +1499,13 @@
             const store  = (row[resolvedStore]  || "").trim();
             const name   = (row[resolvedName]   || "").trim();
             const rank   = (row[resolvedRank]   || "").trim() || "スタッフ";
+            const jobTypeKey = jobTypeKeyIdx !== -1 ? (row[jobTypeKeyIdx] || "").trim() : "";
             const jobType = jobTypeIdx !== -1 ? (row[jobTypeIdx] || "").trim() : "";
             const empType = empTypeIdx !== -1 ? (row[empTypeIdx] || "").trim() : "";
-            const isReceptionJob = isReceptionJobType(jobType);
-            const isHeadOfficeJob = isHeadOfficeJobType(jobType);
+            const isReceptionJob = isReceptionJobType(jobTypeKey, jobType);
+            const isHeadOfficeJob = isHeadOfficeJobType(jobTypeKey, jobType);
             const hasLegacyEmploymentJobLabel = hasLegacyJobLabelInEmploymentType(empType);
-            const displayRank = getDisplayRank(rank, jobType, empType);
+            const displayRank = getDisplayRank(rank, jobTypeKey, jobType, empType);
             const active = (row[resolvedActive] || "").trim();
             const retire = (retireIdx !== -1 ? row[retireIdx] || "" : "").trim();
             const licenseValue = licenseIdx !== -1 ? (row[licenseIdx] || "").trim() : "";
@@ -1530,8 +1542,9 @@
                 name:  name,
                 store: store,
                 rank:  displayRank,
+                jobTypeKey: jobTypeKey,
                 jobType: jobType,
-                jobTypeMissing: !jobType,
+                jobTypeMissing: !buildJobTypeSignal(jobTypeKey, jobType).trim(),
                 legacyEmploymentTypeJobHint: hasLegacyEmploymentJobLabel,
                 joinDate: joinDateStr,
                 yearsGroup: yearsGroup,
@@ -1545,7 +1558,7 @@
                 isReceptionPart: isReceptionJob,
                 isReceptionJob: isReceptionJob,
                 isHeadOfficeJob: isHeadOfficeJob,
-                isBeautyJob: isBeautyJobType(jobType)
+                isBeautyJob: isBeautyJobType(jobTypeKey, jobType)
             });
         });
 
