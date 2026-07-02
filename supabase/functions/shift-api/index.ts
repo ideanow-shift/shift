@@ -57,23 +57,56 @@ async function loadMasters() {
     order: "store_no.asc",
     limit: "500",
   });
-  const employees = await supabaseRequest("employees", {
-    select: "id,employee_id,full_name,email,birth_date,employment_status,employment_type,store_id,position_id,joined_on,retired_on,is_active,source_row",
-    order: "employee_id.asc",
-    limit: "2000",
-  });
+  const employees = await loadEmployeesForShift();
   const positions = await supabaseRequest("positions", {
     select: "id,position_name",
     order: "position_no.asc",
     limit: "500",
   });
+  const jobTypes = await loadJobTypesForShift();
 
   return {
     ok: true,
     source: "supabase-edge",
+    jobTypeSource: jobTypes.length > 0 ? "job_types" : "core-db-pending",
     store: toStoreRows(stores),
-    staff: toStaffRows(employees, indexById(stores), indexById(positions)),
+    staff: toStaffRows(employees, indexById(stores), indexById(positions), indexById(jobTypes)),
   };
+}
+
+async function loadEmployeesForShift() {
+  const common = {
+    order: "employee_id.asc",
+    limit: "2000",
+  };
+  try {
+    return await supabaseRequest("employees", {
+      ...common,
+      select: "id,employee_id,full_name,email,birth_date,employment_status,employment_type,store_id,position_id,job_type_id,joined_on,retired_on,is_active,source_row",
+    });
+  } catch (err) {
+    console.warn("[employees.job_type_id] pending Core DB setup:", errorMessage(err));
+    return await supabaseRequest("employees", {
+      ...common,
+      select: "id,employee_id,full_name,email,birth_date,employment_status,employment_type,store_id,position_id,joined_on,retired_on,is_active,source_row",
+    });
+  }
+}
+
+async function loadJobTypesForShift() {
+  let lastError: unknown = null;
+  for (const select of ["id,job_type_name,name,code", "id,name", "id"]) {
+    try {
+      return await supabaseRequest("job_types", {
+        select,
+        limit: "500",
+      });
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  console.warn("[job_types] pending Core DB setup:", errorMessage(lastError));
+  return [];
 }
 
 function toStoreRows(stores: JsonRecord[]) {
@@ -133,11 +166,12 @@ function toStoreRows(stores: JsonRecord[]) {
   return [header, ...rows];
 }
 
-function toStaffRows(employees: JsonRecord[], storesById: Record<string, JsonRecord>, positionsById: Record<string, JsonRecord>) {
+function toStaffRows(employees: JsonRecord[], storesById: Record<string, JsonRecord>, positionsById: Record<string, JsonRecord>, jobTypesById: Record<string, JsonRecord>) {
   const header = [
     "社員番号",
     "所属会社",
     "所属店舗",
+    "職種",
     "役職",
     "雇用形態",
     "現職",
@@ -161,14 +195,29 @@ function toStaffRows(employees: JsonRecord[], storesById: Record<string, JsonRec
       const source = asRecord(employee.source_row);
       const store = storesById[text(employee.store_id)] || {};
       const position = positionsById[text(employee.position_id)] || {};
+      const jobType = jobTypesById[text(employee.job_type_id)] || {};
+      const jobTypeName = text(jobType.job_type_name || jobType.name || source.job_type_name || source.job_type || source["職種"]);
+      const normalizedJobType = normalizeClassText(jobTypeName);
+      const defaultLicense = normalizedJobType.includes("レセプション")
+        || normalizedJobType.includes("受付")
+        || normalizedJobType.includes("reception")
+        || normalizedJobType.includes("本部")
+        || normalizedJobType.includes("backoffice")
+        ? "×"
+        : "○";
+      const licenseSourceValue = source.has_beautician_license ?? source.license;
+      const licenseText = licenseSourceValue == null || text(licenseSourceValue).trim() === ""
+        ? defaultLicense
+        : text(licenseSourceValue);
       return [
         text(employee.employee_id),
         text(source.company_name || source.corporation_name),
         text(store.store_name || source.assigned_location),
+        jobTypeName,
         text(position.position_name || source.position_name),
         text(employee.employment_type || source.employment_type),
         text(employee.employment_status || source.employment_status || "現職"),
-        text(source.has_beautician_license || source.license || "○"),
+        licenseText,
         text(employee.full_name),
         text(source.kana_last_name),
         text(source.kana_first_name),
@@ -812,14 +861,14 @@ function decodeHolidayType(value: unknown) {
 function encodeWorkType(value: unknown) {
   const valueText = text(value);
   if (valueText.includes("時短")) return "short_time";
-  if (valueText.includes("受付") || valueText.toLowerCase().includes("reception")) return "reception_part";
+  if (valueText.includes("受付") || valueText.includes("レセプション") || valueText.toLowerCase().includes("reception")) return "reception_part";
   if (valueText.includes("通常")) return "regular";
   return valueText ? "custom" : "regular";
 }
 
 function decodeWorkType(value: unknown) {
   if (value === "short_time") return "時短";
-  if (value === "reception_part") return "受付パート";
+  if (value === "reception_part") return "レセプション";
   return "通常";
 }
 
@@ -844,6 +893,10 @@ function parseAIJson(value: string) {
     alerts: Array.isArray(parsed.alerts) ? parsed.alerts : [],
     summary: text(parsed.summary),
   };
+}
+
+function normalizeClassText(value: unknown) {
+  return text(value).replace(/[\s　/／・･_-]/g, "").toLowerCase();
 }
 
 function indexById(rows: JsonRecord[]) {

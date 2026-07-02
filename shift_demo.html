@@ -1394,27 +1394,62 @@
     //   社員番号/所属会社/所属店舗/役職/雇用形態/現職/美容師免許取得者/氏名/フリガナ・姓
     //   /フリガナ・名/性別/生年月日/出身美容学校/入社年月日/中途入社/退職日
     // ─────────────────────────────────────────────────────────────
-    function normalizeStaffRoleText(value) {
+    function normalizeStaffClassText(value) {
         return String(value || "")
             .replace(/[\s　/／・･_-]/g, "")
             .toLowerCase();
     }
 
-    function isReceptionPartStaff(rank, employmentType) {
-        const normalized = normalizeStaffRoleText(`${rank || ""}${employmentType || ""}`);
+    function isReceptionJobType(jobType) {
+        const normalized = normalizeStaffClassText(jobType);
         return normalized.includes("レセプション")
             || normalized.includes("受付")
             || normalized.includes("reception");
     }
 
-    function getInitialWorkType(employmentType, isReceptionPart) {
-        if (isReceptionPart) return "受付パート";
+    function isReceptionWorkType(workType) {
+        return isReceptionJobType(workType);
+    }
+
+    function isHeadOfficeJobType(jobType) {
+        const normalized = normalizeStaffClassText(jobType);
+        return normalized.includes("本部")
+            || normalized.includes("headquarter")
+            || normalized.includes("backoffice");
+    }
+
+    function isBeautyJobType(jobType) {
+        const normalized = normalizeStaffClassText(jobType);
+        return normalized.includes("美容師")
+            || normalized.includes("カラーリスト")
+            || normalized.includes("stylist")
+            || normalized.includes("colorist");
+    }
+
+    function hasLegacyJobLabelInEmploymentType(employmentType) {
+        const normalized = normalizeStaffClassText(employmentType);
+        return normalized.includes("レセプション")
+            || normalized.includes("受付")
+            || normalized.includes("本部");
+    }
+
+    function getJobTypeMissingLabel(jobType, employmentType) {
+        return !String(jobType || "").trim() && hasLegacyJobLabelInEmploymentType(employmentType)
+            ? "職種未設定"
+            : "";
+    }
+
+    function getInitialWorkType(employmentType, isReceptionJob) {
+        if (isReceptionJob) return "レセプション";
         return String(employmentType || "").includes("時短") ? "時短" : "通常";
     }
 
-    function getDisplayRank(rank, employmentType) {
-        if (isReceptionPartStaff(rank, employmentType)) return "レセプション";
-        return rank || "スタッフ";
+    function getDisplayRank(rank, jobType, employmentType) {
+        const missingLabel = getJobTypeMissingLabel(jobType, employmentType);
+        if (missingLabel) return missingLabel;
+        if (isReceptionJobType(jobType)) return "レセプション";
+        if (isHeadOfficeJobType(jobType)) return "本部スタッフ";
+        return rank || jobType || "スタッフ";
     }
 
     function importStaffFromRows(rows, sourceLabel) {
@@ -1427,6 +1462,7 @@
         // 代表マスタの列名で厳密に取得（固定インデックスにも対応）
         const storeIdx  = findCol(rawHeaders, "所属店舗", "店舗");
         const rankIdx   = findCol(rawHeaders, "役職");
+        const jobTypeIdx = findCol(rawHeaders, "職種", "job_type", "job_type_name", "jobType", "jobTypeName");
         const empTypeIdx= findCol(rawHeaders, "雇用形態");
         const activeIdx = findCol(rawHeaders, "現職");       // ← 在職フィルタ用
         const nameIdx   = findCol(rawHeaders, "氏名");
@@ -1452,11 +1488,15 @@
             const store  = (row[resolvedStore]  || "").trim();
             const name   = (row[resolvedName]   || "").trim();
             const rank   = (row[resolvedRank]   || "").trim() || "スタッフ";
+            const jobType = jobTypeIdx !== -1 ? (row[jobTypeIdx] || "").trim() : "";
             const empType = empTypeIdx !== -1 ? (row[empTypeIdx] || "").trim() : "";
-            const isReceptionPart = isReceptionPartStaff(rank, empType);
-            const displayRank = getDisplayRank(rank, empType);
+            const isReceptionJob = isReceptionJobType(jobType);
+            const isHeadOfficeJob = isHeadOfficeJobType(jobType);
+            const hasLegacyEmploymentJobLabel = hasLegacyJobLabelInEmploymentType(empType);
+            const displayRank = getDisplayRank(rank, jobType, empType);
             const active = (row[resolvedActive] || "").trim();
             const retire = (retireIdx !== -1 ? row[retireIdx] || "" : "").trim();
+            const licenseValue = licenseIdx !== -1 ? (row[licenseIdx] || "").trim() : "";
 
             // 除外条件: 空行 / ヘッダー繰り返し / 氏名が数字のみ
             if (!name || name === "氏名" || /^\d+$/.test(name)) return;
@@ -1490,20 +1530,30 @@
                 name:  name,
                 store: store,
                 rank:  displayRank,
+                jobType: jobType,
+                jobTypeMissing: !jobType,
+                legacyEmploymentTypeJobHint: hasLegacyEmploymentJobLabel,
                 joinDate: joinDateStr,
                 yearsGroup: yearsGroup,
                 holidayType: "完全週休2日",
-                workType:    getInitialWorkType(empType, isReceptionPart),
-                hasLicense: licenseIdx !== -1
-                    ? !["×", "x", "X", "なし", "無", "false", "0"].includes((row[licenseIdx] || "").trim())
-                    : true,  // 列がない場合はカウント対象とする
-                isReceptionPart: isReceptionPart
+                workType:    getInitialWorkType(empType, isReceptionJob),
+                hasLicense: isReceptionJob || isHeadOfficeJob
+                    ? false
+                    : (licenseIdx !== -1
+                        ? !["×", "x", "X", "なし", "無", "false", "0"].includes(licenseValue)
+                        : true),  // 列がない場合はカウント対象とする
+                isReceptionPart: isReceptionJob,
+                isReceptionJob: isReceptionJob,
+                isHeadOfficeJob: isHeadOfficeJob,
+                isBeautyJob: isBeautyJobType(jobType)
             });
         });
 
         const status = document.getElementById("staffLoadStatus");
         const tag = "";
-        status.textContent = `${tag}${staffMaster.length}名 読込済`;
+        const missingJobTypeCount = staffMaster.filter(staff => staff.jobTypeMissing).length;
+        const missingJobTypeText = missingJobTypeCount > 0 ? ` / 職種未設定${missingJobTypeCount}名` : "";
+        status.textContent = `${tag}${staffMaster.length}名 読込済${missingJobTypeText}`;
         status.className = "status-badge status-ok";
 
         if (currentStore) changeStore();
@@ -1767,7 +1817,7 @@
                         <select data-field="workType" onchange="updateStaffRule('${staff.id}','workType', this.value)" style="font-size: 11px; padding: 2px 4px; border: 1px solid var(--border-light); border-radius: 8px;">
                             <option value="通常" ${workType.includes("通常")?'selected':''}>通常勤務</option>
                             <option value="時短" ${workType.includes("時短")?'selected':''}>時短スタッフ</option>
-                            <option value="受付パート" ${workType.includes("受付")?'selected':''}>受付パート</option>
+                            <option value="レセプション" ${isReceptionWorkType(workType)?'selected':''}>レセプション</option>
                         </select>
                     </div>
                     <div style="margin-top:6px;">
@@ -2130,7 +2180,7 @@
                             <select class="staff-select" data-staff-field="workType" onchange="updateStaffRule('${staff.id}','workType', this.value)">
                                 <option value="通常" ${config.workType.includes("通常")?'selected':''}>通常勤務</option>
                                 <option value="時短" ${config.workType.includes("時短")?'selected':''}>時短スタッフ</option>
-                                <option value="受付パート" ${config.workType.includes("受付")?'selected':''}>受付パート</option>
+                                <option value="レセプション" ${isReceptionWorkType(config.workType)?'selected':''}>レセプション</option>
                             </select>
                         </div>
                     </td>`;
@@ -2470,7 +2520,7 @@
       // 例: 「1、3週目の月曜公休　2、4週目月曜必ず出勤」
       currentStaffs.forEach(applyNoteRules);
 
-      // レセプションパートは全日公休で埋める
+      // レセプション職種は全日公休で埋める
       currentStaffs.forEach(staff => {
         if (!staff.isReceptionPart) return;
         for (let d = 1; d <= dim; d++) {
@@ -3394,15 +3444,15 @@ ${restrictions.fairness ? "- 希望休・有休の取得はスタッフ間で公
 【スタンプの種類】
 - 出: 出勤 / 時: 時短出勤 / 会: 会議中抜け / 研: 研修中抜け
 - 公: 公休 / 希: 希望休 / 有: 有給
-- レセプション/受付パートはシフト作成・AI調整対象外（原則、公休扱い）`;
+- レセプション職種はシフト作成・AI調整対象外（原則、公休扱い）`;
 
         // スタッフ個別の特記事項 & 時短勤務時間 & イレギュラー設定をプロンプトに追加
         const ruleLines = (currentStaffs || [])
             .flatMap(s => {
                 const cfg = liveStaffConfig[s.id] || {};
                 const lines = [];
-                if ((cfg.workType || "").includes("受付") || s.isReceptionPart) {
-                    lines.push(`- ${s.name}: レセプション/受付パート（シフト作成・AI調整対象外）`);
+                if (isReceptionWorkType(cfg.workType) || s.isReceptionJob || s.isReceptionPart) {
+                    lines.push(`- ${s.name}: レセプション職種（シフト作成・AI調整対象外）`);
                 } else if ((cfg.workType || "").includes("時短")) {
                     lines.push(`- ${s.name}: 時短スタッフ ${cfg.startTime || "8:40"}〜${cfg.endTime || "17:40"}勤務`);
                 }
@@ -3447,8 +3497,8 @@ ${restrictions.fairness ? "- 希望休・有休の取得はスタッフ間で公
             const cfg = liveStaffConfig[s.id] || {};
             const maxH = cfg.maxHoliday != null ? cfg.maxHoliday : restrictions.monthlyKibou;
             const workType = cfg.workType || "通常";
-            const workTypeLabel = workType.includes("受付") || s.isReceptionPart
-                ? `受付パート（シフト作成対象外）`
+            const workTypeLabel = isReceptionWorkType(workType) || s.isReceptionJob || s.isReceptionPart
+                ? `レセプション（シフト作成対象外）`
                 : workType.includes("時短")
                     ? `時短スタッフ(${cfg.startTime || "8:40"}〜${cfg.endTime || "17:40"})`
                     : `通常勤務`;
