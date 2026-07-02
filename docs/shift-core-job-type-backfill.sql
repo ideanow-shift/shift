@@ -97,11 +97,11 @@ select
   e.employment_type,
   e.position_id,
   e.job_type_id,
-  coalesce(jt.job_type_name, jt.name) as job_type_name
+  jt.job_type_name as job_type_name
 from public.employees e
 left join public.job_types jt on jt.id = e.job_type_id
 where coalesce(e.employment_type, '') ~ '(レセプション|受付|本部)'
-   or coalesce(jt.job_type_name, jt.name) in ('レセプション', '受付', '本部スタッフ', '本部')
+   or jt.job_type_name in ('レセプション', '受付', '本部スタッフ', '本部')
 order by e.employee_id;
 
 -- Change this to COMMIT after confirming the result.
