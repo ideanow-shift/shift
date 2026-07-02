@@ -30,6 +30,7 @@ Deno.serve(async (req: Request) => {
       const action = String(body.action || "");
       if (action === "saveShift") return jsonResponse(await saveShift(body));
       if (action === "saveSettings") return jsonResponse(await saveSettings(body));
+      if (action === "updateScheduleStatus") return jsonResponse(await updateScheduleStatus(body));
       if (action === "aiAdjust") return jsonResponse(await adjustShiftWithAI(body));
       return jsonResponse({ ok: false, error: `未対応のactionです: ${action}` }, 400);
     }
@@ -191,12 +192,13 @@ async function saveShift(request: JsonRecord) {
   const month = requireNumber(request.month, "month");
   const cells = asRecord(request.cells);
   const actorEmployeeId = extractActorEmployeeId(request);
+  const requestedStatus = normalizeScheduleStatus(request.status) || "draft";
 
   const scheduleRows = await supabaseUpsert("shift_schedules", { on_conflict: "store_id,year,month" }, [{
     store_id: storeId,
     year,
     month,
-    status: "draft",
+    status: requestedStatus,
     source: "manual",
     metadata: {
       store_name: text(request.storeName),
@@ -246,6 +248,7 @@ async function saveShift(request: JsonRecord) {
   return {
     ok: true,
     source: "supabase-edge",
+    status: text(schedule.status || requestedStatus),
     updatedAt: text(schedule.updated_at || new Date().toISOString()),
     auditLogged,
   };
@@ -257,7 +260,7 @@ async function loadShift(params: URLSearchParams) {
   const month = requireNumber(params.get("month"), "month");
 
   const scheduleRows = await supabaseRequest("shift_schedules", {
-    select: "id,updated_at",
+    select: "id,status,updated_at,confirmed_at,published_at,confirmed_by,published_by",
     store_id: `eq.${storeId}`,
     year: `eq.${year}`,
     month: `eq.${month}`,
@@ -265,7 +268,7 @@ async function loadShift(params: URLSearchParams) {
   });
   const schedule = scheduleRows[0];
   if (!schedule || !schedule.id) {
-    return { ok: true, source: "supabase-edge", cells: {}, updatedAt: "" };
+    return { ok: true, source: "supabase-edge", cells: {}, status: "draft", updatedAt: "" };
   }
 
   const cellRows = await supabaseRequest("shift_schedule_cells", {
@@ -281,7 +284,92 @@ async function loadShift(params: URLSearchParams) {
     cells[`${row.employee_id}-${day}`] = stamp;
   });
 
-  return { ok: true, source: "supabase-edge", cells, updatedAt: text(schedule.updated_at) };
+  return {
+    ok: true,
+    source: "supabase-edge",
+    cells,
+    status: text(schedule.status || "draft"),
+    updatedAt: text(schedule.updated_at),
+    confirmedAt: text(schedule.confirmed_at),
+    publishedAt: text(schedule.published_at),
+    confirmedBy: text(schedule.confirmed_by),
+    publishedBy: text(schedule.published_by),
+  };
+}
+
+function normalizeScheduleStatus(value: unknown) {
+  const status = text(value).trim().toLowerCase();
+  return ["draft", "confirmed", "published", "archived"].includes(status) ? status : "";
+}
+
+async function updateScheduleStatus(request: JsonRecord) {
+  const storeId = requireText(request.storeId, "storeId");
+  const year = requireNumber(request.year, "year");
+  const month = requireNumber(request.month, "month");
+  const status = normalizeScheduleStatus(request.status);
+  if (!status) throw new Error("status must be draft / confirmed / published / archived");
+
+  const scheduleRows = await supabaseRequest("shift_schedules", {
+    select: "id,status,updated_at",
+    store_id: `eq.${storeId}`,
+    year: `eq.${year}`,
+    month: `eq.${month}`,
+    limit: "1",
+  });
+  const schedule = scheduleRows[0];
+  if (!schedule || !schedule.id) {
+    return {
+      ok: false,
+      error: "先にシフトを保存してください。保存後に確定・公開できます。",
+    };
+  }
+
+  const actorEmployeeId = extractActorEmployeeId(request);
+  const now = new Date().toISOString();
+  const patch: JsonRecord = { status };
+  if (status === "confirmed") {
+    patch.confirmed_by = actorEmployeeId;
+    patch.confirmed_at = now;
+  }
+  if (status === "published") {
+    patch.published_by = actorEmployeeId;
+    patch.published_at = now;
+  }
+
+  const updatedRows = await supabasePatch("shift_schedules", { id: `eq.${schedule.id}` }, patch);
+  const updated = updatedRows[0] || {};
+  const actionByStatus: Record<string, string> = {
+    draft: "reopen_shift",
+    confirmed: "confirm_shift",
+    published: "publish_shift",
+    archived: "archive_shift",
+  };
+  const auditLogged = await writeAuditLog({
+    store_id: storeId,
+    schedule_id: text(schedule.id),
+    actor_employee_id: actorEmployeeId,
+    action: actionByStatus[status] || "update_shift_status",
+    target_table: "shift_schedules",
+    target_id: text(schedule.id),
+    metadata: {
+      year,
+      month,
+      previous_status: text(schedule.status),
+      next_status: status,
+      hub_context_present: Object.keys(asRecord(request.hubContext)).length > 0,
+      saved_from: "supabase_edge_function",
+    },
+  });
+
+  return {
+    ok: true,
+    source: "supabase-edge",
+    status,
+    updatedAt: text(updated.updated_at || now),
+    confirmedAt: text(updated.confirmed_at),
+    publishedAt: text(updated.published_at),
+    auditLogged,
+  };
 }
 
 async function saveSettings(request: JsonRecord) {

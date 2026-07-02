@@ -884,6 +884,23 @@
                 class="action-button" style="margin-bottom:6px; font-size:13px;">
                 シフトを保存する
             </button>
+            <div id="scheduleStatusBadge" style="font-size:11px; color:var(--text-secondary); background:var(--surface-muted); border:1px solid var(--border-light); border-radius:8px; padding:8px; margin-bottom:6px; text-align:center;">
+                状態: 下書き
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
+                <button onclick="updateScheduleStatus('confirmed')"
+                    class="action-button secondary" style="min-height:36px; font-size:12px;">
+                    店長確定
+                </button>
+                <button onclick="updateScheduleStatus('published')"
+                    class="action-button secondary" style="min-height:36px; font-size:12px;">
+                    公開
+                </button>
+            </div>
+            <button onclick="updateScheduleStatus('draft')"
+                class="action-button secondary" style="margin-bottom:6px; min-height:34px; font-size:12px;">
+                下書きに戻す
+            </button>
             <button onclick="exportToHTML()"
                 class="action-button secondary" style="margin-bottom:6px; min-height:36px; font-size:12px;">
                 シフト表をHTML出力
@@ -1079,6 +1096,10 @@
     let storeMinStaff = {}; // { storeId: { weekday: 4, saturday: 6, sunday: 5, holiday: 5 } } 店舗ごとの最低出勤人数
     let storeSettings = {}; // { storeId: { maxKibou: 2 } } 店舗ごとの希望休上限など
     let staffFairnessCount = {}; // { staffId: { 希: 0, 有: 0 } } スタッフごとの希望休/有給 取得数
+    let currentScheduleStatus = "draft";
+    let currentScheduleUpdatedAt = "";
+    let currentScheduleConfirmedAt = "";
+    let currentSchedulePublishedAt = "";
 
     // 入社年数グループの表示順と色設定（renderTable / exportToHTML で共用）
     const GROUP_ORDER = ["6年目以上", "3〜5年目", "2年目", "1年目", "不明"];
@@ -1124,6 +1145,7 @@
         refreshMonthCalendar();
         updateMonthDisplay();
         renderTable();
+        setScheduleStatus("draft");
 
         // 月切替時にシフトデータを非同期読込
         if (currentStore) {
@@ -1605,6 +1627,7 @@
 
         // 店舗切替時: 現在月のシフトデータをリセット（他月の allCellStates は保持）
         allCellStates[getCurrentMonthKey()] = {};
+        setScheduleStatus("draft");
 
         // 最低出勤人数の設定値を入力欄に復元（前店舗の値は storeMinStaff に保持されたまま）
         const min = storeMinStaff[currentStore.id] || {};
@@ -3559,6 +3582,47 @@ ${(() => {
         el.style.color = type === "ok" ? "#38a169" : type === "err" ? "#e53e3e" : "#718096";
     }
 
+    function scheduleStatusLabel(status) {
+        const labels = {
+            draft: "下書き",
+            confirmed: "店長確定",
+            published: "公開済み",
+            archived: "アーカイブ",
+        };
+        return labels[status] || "下書き";
+    }
+
+    function scheduleStatusColor(status) {
+        const colors = {
+            draft: { bg: "#F9F9F9", text: "#767676", border: "#E5E5E5" },
+            confirmed: { bg: "#FFF7E6", text: "#8A5A00", border: "#F5D28A" },
+            published: { bg: "#EAF8F0", text: "#1F7A4D", border: "#B9E4CA" },
+            archived: { bg: "#F3F3F3", text: "#767676", border: "#D8D8D8" },
+        };
+        return colors[status] || colors.draft;
+    }
+
+    function renderScheduleStatus() {
+        const badge = document.getElementById("scheduleStatusBadge");
+        if (!badge) return;
+        const color = scheduleStatusColor(currentScheduleStatus);
+        const time = currentScheduleUpdatedAt
+            ? " / 更新 " + new Date(currentScheduleUpdatedAt).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+            : "";
+        badge.textContent = "状態: " + scheduleStatusLabel(currentScheduleStatus) + time;
+        badge.style.background = color.bg;
+        badge.style.color = color.text;
+        badge.style.borderColor = color.border;
+    }
+
+    function setScheduleStatus(status, data = {}) {
+        currentScheduleStatus = status || "draft";
+        currentScheduleUpdatedAt = data.updatedAt || "";
+        currentScheduleConfirmedAt = data.confirmedAt || "";
+        currentSchedulePublishedAt = data.publishedAt || "";
+        renderScheduleStatus();
+    }
+
     function bindStoreSettingsButton() {
         const btn = document.getElementById("saveStoreSettingsBtn");
         if (!btn || btn.dataset.bound === "1") return;
@@ -3592,6 +3656,7 @@ ${(() => {
                 storeName: currentStore.name,
                 year:      currentYear,
                 month:     currentMonth + 1,
+                status:    "draft",
                 cells:     cells,
                 hubContext: HUB_CONTEXT
             });
@@ -3599,6 +3664,7 @@ ${(() => {
                 const source = data.source ? ` / ${formatBackendSourceLabel(data.source)}` : "";
                 const reason = data.fallbackReason ? `（Supabase未保存: ${data.fallbackReason}）` : "";
                 const statusType = data.source === "sheets" && data.fallbackReason ? "err" : "ok";
+                setScheduleStatus(data.status || "draft", data);
                 setSaveStatus(`保存完了${source} ${new Date().toLocaleTimeString("ja-JP")} ${reason}`, statusType);
             } else {
                 setSaveStatus(`保存失敗: ${data.error}`, "err");
@@ -3606,6 +3672,32 @@ ${(() => {
         } catch (err) {
             console.error("[saveShift]", err);
             setSaveStatus("保存失敗: " + err.message, "err");
+        }
+    }
+
+    async function updateScheduleStatus(status) {
+        if (!currentStore) { alert("店舗を選択してください"); return; }
+        const label = scheduleStatusLabel(status);
+        setSaveStatus(label + "に更新中...", "info");
+        try {
+            const data = await callBackend({
+                action: "updateScheduleStatus",
+                storeId: currentStore.id,
+                storeName: currentStore.name,
+                year: currentYear,
+                month: currentMonth + 1,
+                status: status,
+                hubContext: HUB_CONTEXT
+            });
+            if (data.ok) {
+                setScheduleStatus(data.status || status, data);
+                setSaveStatus(label + "に更新しました / " + formatBackendSourceLabel(data.source || "supabase-edge") + " " + new Date().toLocaleTimeString("ja-JP"), "ok");
+            } else {
+                setSaveStatus("状態更新失敗: " + data.error, "err");
+            }
+        } catch (err) {
+            console.error("[updateScheduleStatus]", err);
+            setSaveStatus("状態更新失敗: " + err.message, "err");
         }
     }
 
@@ -3677,6 +3769,7 @@ ${(() => {
             const key = `${year}-${month}`;
             if (!allCellStates[key]) allCellStates[key] = {};
             Object.assign(allCellStates[key], data.cells || {});
+            setScheduleStatus(data.status || "draft", data);
             return true;
         } catch (err) {
             console.error("[loadShift]", err);
@@ -3792,6 +3885,7 @@ ${(() => {
         updateSelectedStampBadge();
         updateMonthDisplay();
         updateApiKeyStatus();
+        renderScheduleStatus();
         loadFromBackend();
     });
 </script>
