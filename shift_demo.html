@@ -1452,8 +1452,28 @@
             || normalized.includes("chairmanspouse");
     }
 
+    function isJobTypeLikePositionLabel(value) {
+        const normalized = normalizeStaffClassText(value);
+        return normalized === "レセプション"
+            || normalized === "受付"
+            || normalized === "アシスタント"
+            || normalized === "スタイリスト"
+            || normalized === "本部スタッフ"
+            || normalized === "美容師"
+            || normalized === "カラーリスト"
+            || normalized === "reception"
+            || normalized === "assistant"
+            || normalized === "stylist"
+            || normalized === "hairstylist"
+            || normalized === "colorist"
+            || normalized === "backoffice"
+            || normalized === "headoffice";
+    }
+
     function sanitizePositionLabel(value) {
-        return isFamilyHonorificLabel(value) ? "" : String(value || "").trim();
+        if (isFamilyHonorificLabel(value)) return "";
+        if (isJobTypeLikePositionLabel(value)) return "一般スタッフ";
+        return String(value || "").trim();
     }
 
     function getJobTypeMissingLabel(jobTypeKey, jobTypeName, employmentType) {
