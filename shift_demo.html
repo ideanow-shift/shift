@@ -1443,6 +1443,19 @@
             || normalized.includes("本部");
     }
 
+    function isFamilyHonorificLabel(value) {
+        const normalized = normalizeStaffClassText(value);
+        return normalized.includes("会長夫人")
+            || normalized.includes("創業者夫人")
+            || normalized === "夫人"
+            || normalized.includes("founderspouse")
+            || normalized.includes("chairmanspouse");
+    }
+
+    function sanitizePositionLabel(value) {
+        return isFamilyHonorificLabel(value) ? "" : String(value || "").trim();
+    }
+
     function getJobTypeMissingLabel(jobTypeKey, jobTypeName, employmentType) {
         return !String(buildJobTypeSignal(jobTypeKey, jobTypeName)).trim() && hasLegacyJobLabelInEmploymentType(employmentType)
             ? "職種未設定"
@@ -1498,7 +1511,7 @@
         rows.slice(1).forEach((row) => {
             const store  = (row[resolvedStore]  || "").trim();
             const name   = (row[resolvedName]   || "").trim();
-            const rank   = (row[resolvedRank]   || "").trim() || "スタッフ";
+            const rank   = sanitizePositionLabel(row[resolvedRank]) || "スタッフ";
             const jobTypeKey = jobTypeKeyIdx !== -1 ? (row[jobTypeKeyIdx] || "").trim() : "";
             const jobType = jobTypeIdx !== -1 ? (row[jobTypeIdx] || "").trim() : "";
             const empType = empTypeIdx !== -1 ? (row[empTypeIdx] || "").trim() : "";
