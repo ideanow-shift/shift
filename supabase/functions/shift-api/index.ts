@@ -95,7 +95,7 @@ async function loadEmployeesForShift() {
 
 async function loadJobTypesForShift() {
   let lastError: unknown = null;
-  for (const select of ["id,job_type_name,name,code", "id,name", "id"]) {
+  for (const select of ["id,job_type_name", "id,name", "id"]) {
     try {
       return await supabaseRequest("job_types", {
         select,
