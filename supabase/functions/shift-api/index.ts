@@ -193,6 +193,20 @@ async function saveShift(request: JsonRecord) {
   const cells = asRecord(request.cells);
   const actorEmployeeId = extractActorEmployeeId(request);
   const requestedStatus = normalizeScheduleStatus(request.status) || "draft";
+  const existingScheduleRows = await supabaseRequest("shift_schedules", {
+    select: "id,status",
+    store_id: `eq.${storeId}`,
+    year: `eq.${year}`,
+    month: `eq.${month}`,
+    limit: "1",
+  });
+  const existingScheduleStatus = normalizeScheduleStatus(existingScheduleRows[0]?.status);
+  if (existingScheduleStatus && existingScheduleStatus !== "draft") {
+    return {
+      ok: false,
+      error: `${scheduleStatusName(existingScheduleStatus)}のため保存できません。先に下書きに戻してください。`,
+    };
+  }
 
   const scheduleRows = await supabaseUpsert("shift_schedules", { on_conflict: "store_id,year,month" }, [{
     store_id: storeId,
@@ -300,6 +314,16 @@ async function loadShift(params: URLSearchParams) {
 function normalizeScheduleStatus(value: unknown) {
   const status = text(value).trim().toLowerCase();
   return ["draft", "confirmed", "published", "archived"].includes(status) ? status : "";
+}
+
+function scheduleStatusName(status: unknown) {
+  const labels: Record<string, string> = {
+    draft: "下書き",
+    confirmed: "店長確定済み",
+    published: "公開済み",
+    archived: "アーカイブ済み",
+  };
+  return labels[text(status)] || "確定済み";
 }
 
 async function updateScheduleStatus(request: JsonRecord) {

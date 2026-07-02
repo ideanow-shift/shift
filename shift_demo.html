@@ -277,6 +277,10 @@
         .cell-clickable:hover {
             box-shadow: inset 0 0 0 2px var(--color-bassa);
         }
+        .cell-readonly {
+            cursor: not-allowed;
+            opacity: 0.72;
+        }
         table { width: 100%; border-collapse: collapse; text-align: center; }
         th, td {
             padding: var(--spacing-sm);
@@ -592,8 +596,8 @@
         <button class="quick-action" type="button" onclick="openManagerStep('step2')">店舗ルール</button>
         <button class="quick-action" type="button" onclick="openManagerStep('step3')">スタッフ設定</button>
         <button class="quick-action" type="button" onclick="openManagerStep('step4')">固定条件</button>
-        <button class="quick-action primary" type="button" onclick="generateShift()">自動生成</button>
-        <button class="quick-action" type="button" onclick="saveShiftToBackend()">保存</button>
+        <button class="quick-action primary" type="button" data-requires-draft="1" onclick="generateShift()">自動生成</button>
+        <button class="quick-action" type="button" data-requires-draft="1" onclick="saveShiftToBackend()">保存</button>
         <button class="quick-action" type="button" onclick="scrollToShiftTable()">表へ移動</button>
     </div>
 </div>
@@ -806,6 +810,7 @@
                 シフト自動生成（毎月）
             </div>
             <button onclick="generateShift()"
+                data-requires-draft="1"
                 class="action-button">
                 シフトを自動生成する
             </button>
@@ -824,6 +829,7 @@
             <textarea id="aiRequestInput" rows="3" placeholder="スタッフの要望・イレギュラーをここに入力してください&#10;例：村山さん12日希望休、19日コンテストで田中・佐藤中抜け"
                 style="width:100%; padding:8px; border:1px solid var(--border-light); border-radius:8px; font-size:12px; resize:vertical; box-sizing:border-box; font-family:inherit; background:white;"></textarea>
             <button id="aiAdjustBtn" onclick="callAIAdjust()"
+                data-requires-draft="1"
                 class="action-button secondary" style="margin-top:8px;">
                 AIでシフトを調整する
             </button>
@@ -881,6 +887,7 @@
                 保存・出力
             </div>
             <button onclick="saveShiftToBackend()"
+                data-requires-draft="1"
                 class="action-button" style="margin-bottom:6px; font-size:13px;">
                 シフトを保存する
             </button>
@@ -2134,6 +2141,7 @@
                     const cellKey = `${staff.id}-${d}`;
                     const cellSundayBorder = (new Date(currentYear, currentMonth, d).getDay() === 0)
                         ? 'border-left: 3px solid #f6ad55;' : '';
+                    const cellClass = isScheduleEditable() ? "cell-clickable" : "cell-readonly";
 
                     if ((currentStore.rule.includes("火曜") || currentStore.rule.includes("火曜日")) && isTuesday) {
                         // 定休日でも手動変更可能にする
@@ -2145,7 +2153,7 @@
                         if (currentVal === "有") cellColorStyle = "background:#fff0f6; color:#eb2f96;";
                         if (currentVal === "研") cellColorStyle = "background:#feffe6; color:#d4b106;";
                         if (currentVal === "必") cellColorStyle = "background:#fff1f0; color:#f5222d; font-weight:bold; border: 2px solid #f5222d;";
-                        bodyHtml += `<td class="cell-clickable" style="${cellColorStyle} ${cellSundayBorder}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
+                        bodyHtml += `<td class="${cellClass}" style="${cellColorStyle} ${cellSundayBorder}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
                     } else {
                         const currentVal = getCurrentCellStates()[cellKey] || "-";
                         let cellColorStyle = "";
@@ -2158,7 +2166,7 @@
                         if (currentVal === "有") cellColorStyle = "background:#fff0f6; color:#eb2f96;";
                         if (currentVal === "必") cellColorStyle = "background:#fff1f0; color:#f5222d; font-weight:bold; border: 2px solid #f5222d;";
 
-                        bodyHtml += `<td class="cell-clickable" style="${cellColorStyle} ${cellSundayBorder}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
+                        bodyHtml += `<td class="${cellClass}" style="${cellColorStyle} ${cellSundayBorder}" onclick="clickCell('${staff.id}', ${d})">${currentVal}</td>`;
                     }
                 }
                 bodyHtml += `</tr>`;
@@ -2168,6 +2176,7 @@
     }
 
     function clickCell(staffId, day) {
+        if (!requireEditableSchedule("セルを編集")) return;
         const cellKey = `${staffId}-${day}`;
         const cs = getCurrentCellStates();
 
@@ -2223,6 +2232,7 @@
     //     Phase 4: 残りを 出/時 で埋める
     // ─────────────────────────────────────────────────────────────
     function generateShift() {
+      if (!requireEditableSchedule("自動生成")) return;
       if (!currentStore || currentStaffs.length === 0) return;
 
       const cs = getCurrentCellStates();
@@ -3476,6 +3486,7 @@ ${(() => {
     }
 
     async function callAIAdjust() {
+        if (!requireEditableSchedule("AI調整")) return;
         const btn = document.getElementById("aiAdjustBtn");
         const alertBox = document.getElementById("aiAlertBox");
         const originalLabel = btn.textContent;
@@ -3613,6 +3624,7 @@ ${(() => {
         badge.style.background = color.bg;
         badge.style.color = color.text;
         badge.style.borderColor = color.border;
+        updateScheduleActionState();
     }
 
     function setScheduleStatus(status, data = {}) {
@@ -3621,6 +3633,28 @@ ${(() => {
         currentScheduleConfirmedAt = data.confirmedAt || "";
         currentSchedulePublishedAt = data.publishedAt || "";
         renderScheduleStatus();
+    }
+
+    function isScheduleEditable() {
+        return currentScheduleStatus === "draft";
+    }
+
+    function updateScheduleActionState() {
+        const editable = isScheduleEditable();
+        document.querySelectorAll("[data-requires-draft=\"1\"]").forEach(btn => {
+            btn.disabled = !editable;
+            btn.style.opacity = editable ? "" : "0.55";
+            btn.title = editable ? "" : "編集するには下書きに戻してください";
+        });
+    }
+
+    function requireEditableSchedule(actionLabel) {
+        if (isScheduleEditable()) return true;
+        const label = scheduleStatusLabel(currentScheduleStatus);
+        const message = `現在の状態は「${label}」です。${actionLabel}するには先に「下書きに戻す」を押してください。`;
+        setSaveStatus(message, "err");
+        alert(message);
+        return false;
     }
 
     function bindStoreSettingsButton() {
@@ -3646,6 +3680,7 @@ ${(() => {
     }
 
     async function saveShiftToBackend() {
+        if (!requireEditableSchedule("保存")) return;
         if (!currentStore) { alert("店舗を選択してください"); return; }
         setSaveStatus("保存中...", "info");
         try {
@@ -3886,6 +3921,7 @@ ${(() => {
         updateMonthDisplay();
         updateApiKeyStatus();
         renderScheduleStatus();
+        updateScheduleActionState();
         loadFromBackend();
     });
 </script>
