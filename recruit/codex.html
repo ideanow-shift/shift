@@ -266,6 +266,46 @@ h1 {
   font-size: 15px;
 }
 
+.hero-insights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.hero-insights span {
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  backdrop-filter: blur(10px);
+}
+
+.hero-ai-note {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px);
+}
+
+.hero-ai-note b {
+  display: block;
+  color: #fff;
+  font-size: 12px;
+}
+
+.hero-ai-note p {
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
 .hero-actions {
   display: grid;
   gap: 9px;
@@ -467,6 +507,28 @@ h1 {
   margin-top: 18px;
 }
 
+.ai-reaction {
+  margin-top: 12px;
+  padding: 12px 13px;
+  border: 1px solid rgba(99, 205, 183, 0.26);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, #f5fffb, #fff4f8);
+  transform: translateY(0);
+}
+
+.ai-reaction b {
+  display: block;
+  color: var(--pink-deep);
+  font-size: 12px;
+}
+
+.ai-reaction p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
 .choice {
   width: 100%;
   min-height: 76px;
@@ -577,6 +639,28 @@ h1 {
   font-size: 14px;
 }
 
+.ai-letter {
+  margin-top: 10px;
+  padding: 15px;
+  border: 1px solid rgba(233, 91, 143, 0.24);
+  border-radius: var(--radius);
+  background: linear-gradient(145deg, #fff, var(--pink-soft));
+}
+
+.ai-letter .letter-label {
+  margin: 0 0 6px;
+  color: var(--pink-deep);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.ai-letter p:last-child {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
 .result-card {
   margin-top: 10px;
   padding: 15px;
@@ -646,6 +730,27 @@ h1 {
   margin: 0 0 12px;
   color: var(--muted);
   font-size: 13px;
+}
+
+.share-card {
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.share-card b {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.share-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
 }
 
 .cta-panel button {
@@ -864,8 +969,18 @@ h1 {
             <p class="eyebrow"><i aria-hidden="true"></i>BASSA RECRUIT AI CHECK</p>
             <h1>サロン選び、ひとりで悩まなくていい。</h1>
             <p class="lead">
-              まだ応募じゃなくて大丈夫。3問で、あなたに合いそうな成長ルートと見学で聞くことを整理します。
+              まだ応募じゃなくて大丈夫。AIがあなたの不安を受け止めながら、合いそうな成長ルートと見学で聞くことを整理します。
             </p>
+            <div class="hero-insights" aria-label="診断で整理できるテーマ">
+              <span>教育</span>
+              <span>人間関係</span>
+              <span>働き方</span>
+              <span>将来</span>
+            </div>
+            <div class="hero-ai-note">
+              <b>AIがすること</b>
+              <p>回答を決めつけずに、不安を相談しやすい言葉へ整えます。結果は見学前のメモとして使えます。</p>
+            </div>
             <div class="hero-actions">
               <button class="main-btn" type="button" id="start-diagnosis">30秒で診断する</button>
               <button class="sub-btn" type="button" data-demo-action="line">先にLINEで相談する</button>
@@ -909,6 +1024,10 @@ h1 {
               <p class="question-lead" id="question-lead"></p>
             </div>
             <div class="choices" id="choice-grid"></div>
+            <div class="ai-reaction" aria-live="polite">
+              <b>AIメモ</b>
+              <p id="ai-reaction-text"></p>
+            </div>
             <div class="diag-actions">
               <button class="back" type="button" id="back-button">戻る</button>
               <button class="next" type="button" id="next-button" disabled>次へ</button>
@@ -923,6 +1042,10 @@ h1 {
                 <h2 id="result-type"></h2>
                 <p id="result-summary"></p>
               </div>
+            </div>
+            <div class="ai-letter">
+              <p class="letter-label">AIからのひとこと</p>
+              <p id="result-letter"></p>
             </div>
             <div class="result-card">
               <h3>向いている成長ルート</h3>
@@ -943,6 +1066,10 @@ h1 {
             <div class="cta-panel">
               <h3>次のおすすめ行動</h3>
               <p id="result-action"></p>
+              <div class="share-card">
+                <b>LINEに送るなら、この一文から。</b>
+                <p id="result-share"></p>
+              </div>
               <button class="line-btn" type="button" data-demo-action="line">LINEで相談する</button>
               <button class="soft-btn" type="button" data-demo-action="tour">サロン見学を申し込む</button>
               <button class="soft-btn" type="button" data-demo-action="education">教育制度を見る</button>
@@ -1120,11 +1247,33 @@ h1 {
     }
   };
 
+  var aiPrompts = [
+    "直感で選んで大丈夫です。ここでは正解探しではなく、見学で聞きたいことを一緒に整理します。",
+    "なりたい姿はまだぼんやりでOKです。近いものを選ぶだけでも、合う環境の方向性が見えてきます。",
+    "最後は職場選びの軸です。ここが見えると、LINEや見学で聞く質問がかなり具体的になります。"
+  ];
+
+  var choiceFeedback = {
+    tech: "技術の不安は、教育カリキュラムやチェックの流れを聞けるとかなり軽くなります。",
+    human: "人間関係の不安は自然な感覚です。見学ではスタッフ同士の距離感を見るのが大事です。",
+    career: "将来像が見えないときは、3年後の先輩例を聞くと判断しやすくなります。",
+    balance: "続けられるかどうかは大切な軸です。条件だけでなく、練習や休日の考え方も確認したいですね。",
+    specialist: "専門性を伸ばしたい気持ちがあるなら、学べる技術領域と入客までの流れを聞くとよさそうです。",
+    trust: "信頼される美容師を目指すなら、接客やカウンセリングをどう学ぶかも見学で聞きたいポイントです。",
+    leader: "育てる側にも興味があるなら、教育に関われるタイミングやチームづくりの考え方を聞けます。",
+    steady: "自分のペースを大切にする視点は、長く続けるためにとても現実的です。",
+    education: "教育制度を重視するなら、カリキュラム表だけでなく、誰がどの頻度で見てくれるかが大事です。",
+    culture: "雰囲気は文章より見学でわかる部分が多いです。気になる店舗の空気感を見てみましょう。",
+    growth: "得意分野を伸ばしたいなら、カラーや髪質改善などの学び方を具体的に聞くと判断しやすいです。",
+    life: "働き方の納得感は、入社後の安心につながります。給与、休日、練習時間は遠慮なく聞いて大丈夫です。"
+  };
+
   var state = { index: 0, selected: null, answers: {} };
   var questionKicker = document.getElementById("question-kicker");
   var questionTitle = document.getElementById("question-title");
   var questionLead = document.getElementById("question-lead");
   var choiceGrid = document.getElementById("choice-grid");
+  var aiReactionText = document.getElementById("ai-reaction-text");
   var stepPill = document.getElementById("step-pill");
   var progressBar = document.getElementById("progress-bar");
   var backButton = document.getElementById("back-button");
@@ -1132,6 +1281,35 @@ h1 {
   var questionView = document.getElementById("question-view");
   var resultView = document.getElementById("result-view");
   var restartButton = document.getElementById("restart-button");
+
+  function updateAiReaction(value) {
+    aiReactionText.textContent = value ? choiceFeedback[value] || aiPrompts[state.index] : aiPrompts[state.index];
+  }
+
+  function getChoiceLabel(questionId, value) {
+    var found = "";
+    questions.forEach(function (q) {
+      if (q.id !== questionId) return;
+      q.choices.forEach(function (choice) {
+        if (choice.value === value) found = choice.label;
+      });
+    });
+    return found;
+  }
+
+  function buildPersonalNote() {
+    var anxiety = getChoiceLabel("anxiety", state.answers.anxiety);
+    var ideal = getChoiceLabel("ideal", state.answers.ideal);
+    var priority = getChoiceLabel("priority", state.answers.priority);
+    return "「" + anxiety + "」が気になっている今は、無理に答えを決めきらなくて大丈夫です。「" + ideal + "」に近づくために、まずは見学で「" + priority + "」を具体的に聞いてみると、自分に合う環境か判断しやすくなります。";
+  }
+
+  function buildShareText() {
+    var anxiety = getChoiceLabel("anxiety", state.answers.anxiety);
+    var ideal = getChoiceLabel("ideal", state.answers.ideal);
+    var priority = getChoiceLabel("priority", state.answers.priority);
+    return "美容師として「" + anxiety + "」が不安です。「" + ideal + "」を目指したいので、見学前に「" + priority + "」について相談したいです。";
+  }
 
   function renderQuestion() {
     var q = questions[state.index];
@@ -1145,6 +1323,7 @@ h1 {
     backButton.disabled = state.index === 0;
     nextButton.disabled = !current;
     nextButton.textContent = state.index === questions.length - 1 ? "診断結果を見る" : "次へ";
+    updateAiReaction(current);
     choiceGrid.innerHTML = "";
 
     q.choices.forEach(function (choice) {
@@ -1159,6 +1338,7 @@ h1 {
         state.selected = choice.value;
         state.answers[q.id] = choice.value;
         nextButton.disabled = false;
+        updateAiReaction(choice.value);
         Array.from(choiceGrid.children).forEach(function (node) {
           node.setAttribute("aria-pressed", "false");
         });
@@ -1190,8 +1370,10 @@ h1 {
     var profile = pickProfile();
     document.getElementById("result-type").textContent = profile.type;
     document.getElementById("result-summary").textContent = profile.summary;
+    document.getElementById("result-letter").textContent = buildPersonalNote();
     document.getElementById("result-route").textContent = profile.route;
     document.getElementById("result-action").textContent = profile.action;
+    document.getElementById("result-share").textContent = buildShareText();
     fillList("result-strengths", profile.strengths);
     fillList("result-questions", profile.questions);
 
@@ -1227,7 +1409,9 @@ h1 {
       state.index += 1;
       renderQuestion();
     } else {
-      showResult();
+      nextButton.disabled = true;
+      nextButton.textContent = "AIが整理中...";
+      setTimeout(showResult, 620);
     }
   });
 
