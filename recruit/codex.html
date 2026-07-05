@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BASSA美容師キャリア診断AI - Mobile LP Preview</title>
-<meta name="description" content="学生向けスマホ閲覧を前提にしたBASSA美容師キャリア診断AIの社内共有用テストページです。">
+<title>BASSA美容師キャリア診断AI - Recruit LP</title>
+<meta name="description" content="美容学生・中途美容師・復職希望者向けに、BASSAでの成長ルートや見学で聞くことを整理できるリクルートLPです。">
 <style>
 :root {
   --bg: #fff7fb;
@@ -40,6 +40,7 @@ body {
   font-family: var(--font);
   line-height: 1.75;
   letter-spacing: 0;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -62,12 +63,14 @@ button {
   z-index: 100;
   display: grid;
   place-items: center;
-  padding: 20px;
+  padding: 16px;
   background: linear-gradient(160deg, #fff, #fff0f7 52%, #effff8);
 }
 
 .gate-card {
-  width: min(100%, 390px);
+  width: 320px;
+  max-width: calc(100% - 32px);
+  min-width: 0;
   padding: 24px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -92,6 +95,7 @@ button {
   margin: 16px 0;
   color: var(--muted);
   font-size: 14px;
+  overflow-wrap: anywhere;
 }
 
 .gate-card input {
@@ -138,6 +142,7 @@ button {
   background: var(--pink-soft);
   color: var(--muted);
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .shell {
@@ -146,6 +151,7 @@ button {
   margin: 0 auto;
   background: var(--paper);
   box-shadow: 0 0 0 1px rgba(238, 225, 232, 0.9);
+  overflow: hidden;
 }
 
 .topbar {
@@ -192,12 +198,12 @@ button {
 }
 
 .hero {
-  padding: 10px 10px 22px;
+  padding: 10px 10px 18px;
 }
 
 .hero-stage {
   position: relative;
-  min-height: 620px;
+  min-height: 650px;
   overflow: hidden;
   border-radius: var(--radius);
   background: var(--pink-soft);
@@ -219,7 +225,7 @@ button {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.12) 46%, rgba(0, 0, 0, 0.76) 100%);
+    linear-gradient(180deg, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.08) 32%, rgba(0, 0, 0, 0.52) 66%, rgba(0, 0, 0, 0.82) 100%);
 }
 
 .hero-copy {
@@ -228,7 +234,7 @@ button {
   bottom: 0;
   left: 0;
   z-index: 1;
-  padding: 22px 18px 20px;
+  padding: 24px 18px 22px;
   color: #fff;
 }
 
@@ -255,7 +261,7 @@ button {
 
 h1 {
   margin: 0;
-  font-size: 36px;
+  font-size: 34px;
   line-height: 1.15;
   letter-spacing: 0;
 }
@@ -263,7 +269,8 @@ h1 {
 .lead {
   margin: 14px 0 0;
   color: rgba(255, 255, 255, 0.88);
-  font-size: 15px;
+  font-size: 14px;
+  line-height: 1.75;
 }
 
 .hero-insights {
@@ -309,7 +316,7 @@ h1 {
 .hero-actions {
   display: grid;
   gap: 9px;
-  margin-top: 18px;
+  margin-top: 14px;
 }
 
 .main-btn,
@@ -333,7 +340,7 @@ h1 {
 }
 
 .section {
-  padding: 26px 16px;
+  padding: 24px 18px;
 }
 
 .intro-strip {
@@ -376,7 +383,7 @@ h1 {
 
 .section h2 {
   margin: 8px 0 0;
-  font-size: 26px;
+  font-size: 24px;
   line-height: 1.4;
 }
 
@@ -384,10 +391,11 @@ h1 {
   margin: 12px 0 0;
   color: var(--muted);
   font-size: 14px;
+  line-height: 1.85;
 }
 
 .diagnosis {
-  margin: 0 10px 26px;
+  margin: 0 12px 28px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: #fff;
@@ -398,7 +406,7 @@ h1 {
 .chat-head {
   display: flex;
   gap: 12px;
-  align-items: center;
+  align-items: flex-start;
   padding: 15px 16px;
   border-bottom: 1px solid var(--line);
   background: linear-gradient(90deg, var(--pink-soft), var(--mint-soft));
@@ -419,7 +427,7 @@ h1 {
 
 .chat-head h2 {
   margin: 0;
-  font-size: 19px;
+  font-size: 18px;
   line-height: 1.35;
 }
 
@@ -460,7 +468,7 @@ h1 {
 }
 
 .diagnosis-body {
-  padding: 16px;
+  padding: 15px;
 }
 
 .question-bubble {
@@ -491,7 +499,7 @@ h1 {
 
 .question-title {
   margin: 0;
-  font-size: 22px;
+  font-size: 21px;
   line-height: 1.42;
 }
 
@@ -531,7 +539,7 @@ h1 {
 
 .choice {
   width: 100%;
-  min-height: 76px;
+  min-height: 78px;
   padding: 13px 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -567,7 +575,7 @@ h1 {
   display: grid;
   grid-template-columns: 0.36fr 0.64fr;
   gap: 9px;
-  margin-top: 15px;
+  margin-top: 14px;
 }
 
 .diag-actions button {
@@ -629,7 +637,7 @@ h1 {
 
 .result-main h2 {
   margin: 0;
-  font-size: 25px;
+  font-size: 23px;
   line-height: 1.35;
 }
 
@@ -663,7 +671,7 @@ h1 {
 
 .result-card {
   margin-top: 10px;
-  padding: 15px;
+  padding: 15px 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: #fff;
@@ -696,7 +704,7 @@ h1 {
 
 .timeline-row {
   display: grid;
-  grid-template-columns: 62px 1fr;
+  grid-template-columns: 58px 1fr;
   gap: 10px;
   padding: 10px;
   border-radius: var(--radius);
@@ -715,7 +723,7 @@ h1 {
 
 .cta-panel {
   margin-top: 10px;
-  padding: 15px;
+  padding: 15px 14px;
   border: 1px solid rgba(6, 199, 85, 0.24);
   border-radius: var(--radius);
   background: #effff6;
@@ -833,7 +841,7 @@ h1 {
 }
 
 .final {
-  margin: 0 10px 26px;
+  margin: 0 12px 26px;
   padding: 22px 16px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -842,7 +850,7 @@ h1 {
 
 .final h2 {
   margin: 8px 0 0;
-  font-size: 26px;
+  font-size: 24px;
   line-height: 1.4;
 }
 
@@ -865,6 +873,13 @@ h1 {
   border-top: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(14px);
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.sticky-cta.is-hidden {
+  transform: translateY(110%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .sticky-inner {
@@ -919,17 +934,25 @@ h1 {
 
 @media (min-width: 760px) {
   h1 {
-    font-size: 40px;
+    font-size: 38px;
   }
 
   .hero-stage {
-    min-height: 660px;
+    min-height: 670px;
   }
 }
 
 @media (max-width: 380px) {
   h1 {
-    font-size: 32px;
+    font-size: 30px;
+  }
+
+  .hero-stage {
+    min-height: 640px;
+  }
+
+  .hero-copy {
+    padding: 20px 14px 18px;
   }
 
   .intro-strip {
@@ -945,60 +968,60 @@ h1 {
 <body>
 <div class="gate" id="gate">
   <div class="gate-card" role="dialog" aria-labelledby="gate-title" aria-describedby="gate-desc">
-    <div class="gate-logo" id="gate-title">BASSA<span>Mobile Career AI Preview</span></div>
-    <p id="gate-desc">このページは社内共有用のテスト版です。合言葉を入力してください。</p>
+    <div class="gate-logo" id="gate-title">BASSA<span>Recruit Career AI</span></div>
+    <p id="gate-desc">BASSAリクルートLPの社内確認ページです。合言葉を入力してください。</p>
     <input id="gate-input" type="password" autocomplete="off" inputmode="text" placeholder="合言葉" aria-label="合言葉">
     <button id="gate-button" type="button">開く</button>
     <div class="gate-error" id="gate-error">合言葉が違います。もう一度入力してください。</div>
-    <div class="gate-note">DB、AI API、個人情報保存には接続していません。診断結果はブラウザ内のテスト表示です。</div>
+    <div class="gate-note">この確認版では、回答・氏名・連絡先は保存されません。診断結果はブラウザ内だけで表示されます。</div>
   </div>
 </div>
 
 <div id="app" hidden>
   <div class="shell">
     <header class="topbar">
-      <a class="brand" href="#top">BASSA<span>美容師キャリア診断AI</span></a>
-      <button type="button" data-demo-action="line">LINE相談</button>
+      <a class="brand" href="#top">BASSA<span>Recruit Career AI</span></a>
+      <button type="button" data-demo-action="line">採用相談</button>
     </header>
 
     <main class="page" id="top">
       <section class="hero">
         <div class="hero-stage">
-          <img src="./codex-collage.jpg" alt="BASSA美容師キャリア診断AIのスマホ向けビジュアル">
+          <img src="./codex-collage.jpg" alt="BASSAの美容師採用とサロン見学のイメージ">
           <div class="hero-copy">
-            <p class="eyebrow"><i aria-hidden="true"></i>BASSA RECRUIT AI CHECK</p>
-            <h1>サロン選び、ひとりで悩まなくていい。</h1>
+            <p class="eyebrow"><i aria-hidden="true"></i>BASSA CAREER AI</p>
+            <h1>美容師としての未来、ひとりで決めなくていい。</h1>
             <p class="lead">
-              まだ応募じゃなくて大丈夫。AIがあなたの不安を受け止めながら、合いそうな成長ルートと見学で聞くことを整理します。
+              まだ応募じゃなくて大丈夫。今の不安や大切にしたいことから、BASSAでの成長ルートと見学で聞くことを30秒で整理します。
             </p>
             <div class="hero-insights" aria-label="診断で整理できるテーマ">
-              <span>教育</span>
-              <span>人間関係</span>
-              <span>働き方</span>
-              <span>将来</span>
+              <span>新卒採用</span>
+              <span>中途美容師</span>
+              <span>アシスタント</span>
+              <span>復職相談</span>
             </div>
             <div class="hero-ai-note">
-              <b>AIがすること</b>
-              <p>回答を決めつけずに、不安を相談しやすい言葉へ整えます。結果は見学前のメモとして使えます。</p>
+              <b>AIが一緒に整理します</b>
+              <p>あなたの迷いを、採用担当やサロン見学で相談しやすい言葉に変えます。結果は見学前のメモとして使えます。</p>
             </div>
             <div class="hero-actions">
-              <button class="main-btn" type="button" id="start-diagnosis">30秒で診断する</button>
-              <button class="sub-btn" type="button" data-demo-action="line">先にLINEで相談する</button>
+              <button class="main-btn" type="button" id="start-diagnosis">キャリア診断をはじめる</button>
+              <button class="sub-btn" type="button" data-demo-action="line">LINEで採用相談する</button>
             </div>
           </div>
         </div>
       </section>
 
       <section class="section">
-        <p class="mini-copy">応募前の、ちょうどいい入口。</p>
-        <h2>不安を選ぶだけで、見学の聞き方が見えてくる。</h2>
+        <p class="mini-copy">応募より前に、まず相談。</p>
+        <h2>あなたに合うサロン選びの軸を、3問で見つける。</h2>
         <p class="section-lead">
-          技術、教育、人間関係、働き方。ぼんやりした不安を、相談しやすい言葉に変える診断です。
+          教育、技術、人間関係、働き方、将来のキャリア。言葉にしづらい不安を、見学で確認できる質問に変えていきます。
         </p>
         <div class="intro-strip" aria-label="診断の特徴">
-          <div><b>01</b><span>名前や連絡先は不要</span></div>
-          <div><b>02</b><span>スマホで3問だけ</span></div>
-          <div><b>03</b><span>結果からLINE相談へ</span></div>
+          <div><b>01</b><span>名前や連絡先なしで診断</span></div>
+          <div><b>02</b><span>新卒・中途どちらも対応</span></div>
+          <div><b>03</b><span>見学やLINE相談につながる</span></div>
         </div>
       </section>
 
@@ -1006,13 +1029,13 @@ h1 {
         <div class="chat-head">
           <div class="ai-mark">AI</div>
           <div>
-            <h2 id="diagnosis-title">キャリア診断をはじめます</h2>
-            <p>回答はこのページ内だけで使います。テスト版では保存されません。</p>
+            <h2 id="diagnosis-title">あなたのキャリア軸を診断します</h2>
+            <p>回答はこのページ内だけで使います。氏名や連絡先の入力は不要です。</p>
           </div>
         </div>
         <div class="progress-wrap">
           <div class="progress-meta">
-            <span id="question-kicker">QUESTION 1</span>
+            <span id="question-kicker">STEP 1</span>
             <span id="step-pill">1 / 3</span>
           </div>
           <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
@@ -1025,12 +1048,12 @@ h1 {
             </div>
             <div class="choices" id="choice-grid"></div>
             <div class="ai-reaction" aria-live="polite">
-              <b>AIメモ</b>
+              <b>AIアドバイス</b>
               <p id="ai-reaction-text"></p>
             </div>
             <div class="diag-actions">
               <button class="back" type="button" id="back-button">戻る</button>
-              <button class="next" type="button" id="next-button" disabled>次へ</button>
+              <button class="next" type="button" id="next-button" disabled>次の質問へ</button>
             </div>
           </div>
 
@@ -1038,95 +1061,95 @@ h1 {
             <div class="result-hero">
               <img src="./codex-training.jpg" alt="先輩が若手美容師に技術を教えるイメージ">
               <div class="result-main">
-                <p>AI診断結果 / シミュレーション</p>
+                <p>BASSAキャリア診断結果</p>
                 <h2 id="result-type"></h2>
                 <p id="result-summary"></p>
               </div>
             </div>
             <div class="ai-letter">
-              <p class="letter-label">AIからのひとこと</p>
+              <p class="letter-label">あなたへのひとこと</p>
               <p id="result-letter"></p>
             </div>
             <div class="result-card">
-              <h3>向いている成長ルート</h3>
+              <h3>合いそうな成長ルート</h3>
               <p id="result-route"></p>
             </div>
             <div class="result-card">
-              <h3>BASSAで伸ばせそうな力</h3>
+              <h3>BASSAで伸ばせる可能性がある力</h3>
               <ul id="result-strengths"></ul>
             </div>
             <div class="result-card">
-              <h3>入社後のイメージ</h3>
+              <h3>入社後の成長イメージ</h3>
               <div class="timeline" id="result-timeline"></div>
             </div>
             <div class="result-card">
-              <h3>見学で聞くとよい質問</h3>
+              <h3>サロン見学で聞いてほしいこと</h3>
               <ul id="result-questions"></ul>
             </div>
             <div class="cta-panel">
-              <h3>次のおすすめ行動</h3>
+              <h3>次の一歩</h3>
               <p id="result-action"></p>
               <div class="share-card">
-                <b>LINEに送るなら、この一文から。</b>
+                <b>LINE相談で送るなら、この一文から。</b>
                 <p id="result-share"></p>
               </div>
-              <button class="line-btn" type="button" data-demo-action="line">LINEで相談する</button>
-              <button class="soft-btn" type="button" data-demo-action="tour">サロン見学を申し込む</button>
-              <button class="soft-btn" type="button" data-demo-action="education">教育制度を見る</button>
+              <button class="line-btn" type="button" data-demo-action="line">LINEで採用相談する</button>
+              <button class="soft-btn" type="button" data-demo-action="tour">サロン見学を予約する</button>
+              <button class="soft-btn" type="button" data-demo-action="education">教育カリキュラムを見る</button>
             </div>
             <p class="notice">
-              この診断は回答内容に基づくシミュレーションです。実際の制度、働き方、募集条件は見学や採用相談で確認してください。
+              この診断は回答内容に基づくシミュレーションです。実際の教育制度、働き方、募集条件は採用相談やサロン見学で確認してください。
             </p>
             <div class="diag-actions">
-              <button class="back" type="button" id="restart-button">もう一度</button>
-              <button class="next" type="button" data-demo-action="question">採用担当に質問</button>
+              <button class="back" type="button" id="restart-button">診断し直す</button>
+              <button class="next" type="button" data-demo-action="question">採用担当に聞く</button>
             </div>
           </div>
         </div>
       </section>
 
       <section class="section">
-        <p class="mini-copy">BASSA RECRUIT WORLD</p>
-        <h2>診断したあと、実際の雰囲気を見に行ける。</h2>
+        <p class="mini-copy">BASSA RECRUIT</p>
+        <h2>写真だけでは分からないことを、見学で確かめられる。</h2>
         <p class="section-lead">
-          スマホで不安を整理して、LINEで質問して、サロン見学へ。応募より前の行動をつくるLPです。
+          BASSAの教育、スタッフの雰囲気、働き方。気になることを整理してから見学できるので、はじめての採用相談でも話しやすくなります。
         </p>
         <div class="story-scroll" aria-label="BASSAの雰囲気">
           <article class="story-card">
             <img src="./codex-training.jpg" alt="教育とカリキュラムのイメージ">
             <div class="story-card-body">
               <b>EDUCATION</b>
-              <h3>技術の不安を、聞ける質問に変える。</h3>
-              <p>デビューまでの流れ、練習、技術チェックを見学前に整理します。</p>
+              <h3>デビューまでの道筋を確認できる。</h3>
+              <p>練習、技術チェック、入客までの流れを、見学前に聞きたい質問へ整理します。</p>
             </div>
           </article>
           <article class="story-card">
             <img src="./codex-collage.jpg" alt="サロン見学とスタッフのイメージ">
             <div class="story-card-body">
               <b>SALON TOUR</b>
-              <h3>まずは雰囲気を見て、話してみる。</h3>
-              <p>人間関係や相談しやすさは、写真と見学導線で自然に伝えます。</p>
+              <h3>自分に合う空気感を見に行ける。</h3>
+              <p>人間関係や相談しやすさは、実際に会って話すことで見えてきます。</p>
             </div>
           </article>
         </div>
       </section>
 
       <section class="final">
-        <p class="mini-copy">LP ENGINE POINT</p>
-        <h2>読ませるより、答えてもらう。</h2>
+        <p class="mini-copy">NEXT STEP</p>
+        <h2>まずは、応募ではなく相談から。</h2>
         <p>
-          求人LPを説明ページではなく、診断体験に変えるためのテストです。
-          今後は質問、AIプロンプト、CTA、計測をLPごとに差し替えられる構成へ広げます。
+          BASSAのこと、教育制度のこと、見学で聞いていいこと。
+          気になることが少しでもあれば、診断結果をもとに採用担当へ相談できます。
         </p>
-        <button class="main-btn" type="button" data-demo-action="line">LINEで相談してみる</button>
+        <button class="main-btn" type="button" data-demo-action="line">LINEで採用相談する</button>
       </section>
     </main>
   </div>
 
   <div class="sticky-cta" aria-label="固定CTA">
     <div class="sticky-inner">
-      <button class="ghost" type="button" id="sticky-diagnosis">診断へ</button>
-      <button class="line" type="button" data-demo-action="line">LINEで相談</button>
+      <button class="ghost" type="button" id="sticky-diagnosis">診断する</button>
+      <button class="line" type="button" data-demo-action="line">採用相談</button>
     </div>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -1172,100 +1195,100 @@ h1 {
   var questions = [
     {
       id: "anxiety",
-      kicker: "QUESTION 1",
-      title: "今、美容師として一番不安なことは？",
-      lead: "いちばん近いものを選んでください。",
+      kicker: "STEP 1",
+      title: "いま就職・転職でいちばん気になることは？",
+      lead: "近いものを選ぶだけで大丈夫です。",
       choices: [
-        { value: "tech", label: "技術がちゃんと身につくか不安", detail: "練習、チェック、デビューまでの流れが気になる" },
-        { value: "human", label: "人間関係になじめるか不安", detail: "相談しやすい先輩や同期の雰囲気を知りたい" },
-        { value: "career", label: "将来のキャリアが見えない", detail: "スタイリスト後の働き方や強みの作り方が気になる" },
-        { value: "balance", label: "続けられる働き方か不安", detail: "給与、休み、練習時間のバランスを確認したい" }
+        { value: "tech", label: "技術やデビューまでの流れ", detail: "練習、チェック、入客までを具体的に知りたい" },
+        { value: "human", label: "人間関係やお店の雰囲気", detail: "先輩や同期と相談しやすい環境か見たい" },
+        { value: "career", label: "将来のキャリアや強みづくり", detail: "スタイリスト後の選択肢や成長例を知りたい" },
+        { value: "balance", label: "給与・休日・続けやすさ", detail: "安心して長く働ける条件やペースを確認したい" }
       ]
     },
     {
       id: "ideal",
-      kicker: "QUESTION 2",
-      title: "どんな美容師になりたいですか？",
-      lead: "まだぼんやりしていても大丈夫です。",
+      kicker: "STEP 2",
+      title: "どんな成長の仕方が合いそうですか？",
+      lead: "今の気持ちに近いものを選んでください。",
       choices: [
-        { value: "specialist", label: "カラーや髪質改善が得意な美容師", detail: "専門性を伸ばして、技術で選ばれたい" },
-        { value: "trust", label: "お客様に長く信頼される美容師", detail: "接客や提案も含めて安心感を届けたい" },
-        { value: "leader", label: "後輩を育てられる美容師", detail: "将来は教育やチームづくりにも関わりたい" },
-        { value: "steady", label: "無理なく長く続けられる美容師", detail: "自分のペースも大切にして成長したい" }
+        { value: "specialist", label: "専門技術をしっかり伸ばしたい", detail: "カラー、髪質改善、カットなど得意分野を作りたい" },
+        { value: "trust", label: "お客様に信頼される美容師になりたい", detail: "接客や提案も含めて安心感を届けたい" },
+        { value: "leader", label: "将来は後輩育成にも関わりたい", detail: "教育やチームづくりにも興味がある" },
+        { value: "steady", label: "自分のペースで長く続けたい", detail: "無理をしすぎず、できることを増やしていきたい" }
       ]
     },
     {
       id: "priority",
-      kicker: "QUESTION 3",
-      title: "職場選びで大切にしたいことは？",
-      lead: "見学時に確認したい軸になります。",
+      kicker: "STEP 3",
+      title: "サロン見学で特に確認したいことは？",
+      lead: "この回答が、そのまま見学時の質問になります。",
       choices: [
-        { value: "education", label: "教育制度とデビューまでの流れ", detail: "カリキュラムや技術チェックを詳しく知りたい" },
-        { value: "culture", label: "雰囲気と相談しやすさ", detail: "人間関係や先輩との距離感を見たい" },
-        { value: "growth", label: "得意分野を伸ばせる環境", detail: "カラー、髪質改善、接客などの強みを作りたい" },
-        { value: "life", label: "給与や働き方の納得感", detail: "安心して続けるための条件を確認したい" }
+        { value: "education", label: "教育カリキュラム", detail: "入社後の練習、チェック、デビューまでを知りたい" },
+        { value: "culture", label: "スタッフの雰囲気", detail: "相談のしやすさや店舗の空気感を見たい" },
+        { value: "growth", label: "得意分野の伸ばし方", detail: "カラー、髪質改善、接客などの学び方を知りたい" },
+        { value: "life", label: "働き方と待遇の納得感", detail: "給与、休日、練習時間の考え方を確認したい" }
       ]
     }
   ];
 
   var profiles = {
     tech: {
-      type: "技術探究型美容師タイプ",
-      summary: "基礎技術を丁寧に固めながら、カラーや髪質改善などの専門性を伸ばしていく環境が合いそうです。",
-      route: "まずは基礎技術を段階的に確認し、カラーや髪質改善など興味のある分野を見つけて深めるルート。",
-      strengths: ["基礎技術を積み上げる力", "得意分野を見つける力", "技術をお客様への提案につなげる力"],
-      timeline: [["3か月", "サロンワークと基礎技術に慣れる。"], ["1年", "興味のある技術を深掘りする。"], ["3年", "得意技術で信頼される美容師を目指す。"]],
-      questions: ["デビューまでの技術チェックはどのように進みますか？", "カラーや髪質改善を学ぶ機会はありますか？", "練習を見てくれる先輩は決まっていますか？"],
-      action: "まずはLINEで、教育カリキュラムとデビューまでの流れを聞いてみるのがおすすめです。"
+      type: "技術を土台から伸ばしたいタイプ",
+      summary: "基礎を丁寧に積み上げながら、カラーや髪質改善などの得意分野を作っていく環境が合いそうです。",
+      route: "入社後は基礎技術のチェックを進めながら、興味のある技術領域を先輩に相談して深めていくルート。",
+      strengths: ["基礎技術を一つずつ積み上げる力", "得意分野を見つけて磨く力", "技術をお客様への提案につなげる力"],
+      timeline: [["3か月", "サロンワークと基本動作に慣れる。"], ["1年", "技術チェックを進め、得意分野の入口を見つける。"], ["3年", "技術で指名や信頼につながる美容師を目指す。"]],
+      questions: ["デビューまでの技術チェックはどのように進みますか？", "カラーや髪質改善を学べる機会はありますか？", "練習を見てくれる先輩や仕組みはありますか？"],
+      action: "LINEでは、教育カリキュラムとデビューまでの流れを聞いてみるのがおすすめです。"
     },
     human: {
-      type: "安心成長型美容師タイプ",
-      summary: "技術だけでなく、相談しやすい人間関係や安心して失敗できる環境があると伸びやすいタイプです。",
-      route: "近い距離で質問できる先輩や、成長段階を確認できる仕組みの中で、少しずつ自信を積み上げるルート。",
-      strengths: ["不安を言葉にする力", "周りと協力して成長する力", "お客様に安心感を届ける力"],
-      timeline: [["3か月", "先輩に相談しながら基本業務に慣れる。"], ["1年", "できることが増え、接客にも自信が出てくる。"], ["3年", "後輩の不安にも気づける美容師を目指す。"]],
-      questions: ["入社後に相談できる先輩はいますか？", "新人がつまずきやすいことは何ですか？", "店舗ごとの雰囲気を見学できますか？"],
-      action: "サロン見学で、スタッフ同士の空気感や相談のしやすさを見てみるのがおすすめです。"
+      type: "雰囲気を大切に成長したいタイプ",
+      summary: "技術だけでなく、質問しやすい先輩や安心して挑戦できる空気感があると伸びやすいタイプです。",
+      route: "相談できる人が近くにいる環境で、できることを少しずつ増やしながら自信を作っていくルート。",
+      strengths: ["分からないことを相談する力", "チームの中で成長する力", "お客様にも安心感を届ける力"],
+      timeline: [["3か月", "先輩に聞きながらサロンワークに慣れる。"], ["1年", "できる技術や接客が増え、自信が出てくる。"], ["3年", "後輩の不安にも気づける美容師を目指す。"]],
+      questions: ["新人が相談しやすい仕組みはありますか？", "入社後につまずきやすいことは何ですか？", "店舗ごとの雰囲気を見学できますか？"],
+      action: "サロン見学では、スタッフ同士の空気感や先輩との距離感を見てみるのがおすすめです。"
     },
     career: {
-      type: "キャリア設計型美容師タイプ",
-      summary: "目の前の技術だけでなく、将来どんな美容師になれるかを見ながら成長したいタイプです。",
-      route: "アシスタント、スタイリスト、その後の専門性や教育への関わりまで、段階ごとの選択肢を確認して進むルート。",
+      type: "未来のキャリアを描きたいタイプ",
+      summary: "目の前の技術だけでなく、スタイリスト後の働き方や自分の強みづくりまで見ながら成長したいタイプです。",
+      route: "アシスタントからスタイリスト、その先の専門性や教育への関わりまで、段階ごとの選択肢を確認して進むルート。",
       strengths: ["長期目線で学ぶ力", "自分の強みを設計する力", "チームや教育に関わる視点"],
-      timeline: [["3か月", "不安と目標を整理し、成長計画を確認する。"], ["1年", "得意分野と課題を明確にする。"], ["3年", "技術、接客、教育など役割を広げる。"]],
+      timeline: [["3か月", "目標と不安を整理し、成長の道筋を確認する。"], ["1年", "得意分野と課題を明確にする。"], ["3年", "技術、接客、教育など役割を広げる。"]],
       questions: ["スタイリストデビュー後のキャリア例はありますか？", "教育や店舗運営に関わる機会はありますか？", "得意分野を伸ばす支援はありますか？"],
-      action: "採用担当に、3年後のキャリア例と教育制度について質問してみるのがおすすめです。"
+      action: "採用担当には、3年後のキャリア例と教育制度について質問してみるのがおすすめです。"
     },
     balance: {
-      type: "長く続けたい美容師タイプ",
-      summary: "成長意欲はありつつ、無理をしすぎず続けられる働き方や納得感を大切にしたいタイプです。",
-      route: "働き方、練習時間、給与、休日の確認をしながら、安心して成長を続けるルート。",
+      type: "安心して長く続けたいタイプ",
+      summary: "成長したい気持ちと同じくらい、無理なく続けられる働き方や納得感を大切にしたいタイプです。",
+      route: "練習時間、休日、給与、生活リズムを確認しながら、自分に合うペースで成長を続けるルート。",
       strengths: ["自分に合う環境を選ぶ力", "生活と成長を両立する力", "無理なく継続する力"],
       timeline: [["3か月", "生活リズムとサロンワークに慣れる。"], ["1年", "練習と仕事のペースをつかむ。"], ["3年", "自分のペースで強みを伸ばす。"]],
       questions: ["練習時間や休日の考え方を教えてください。", "給与や手当はどのように決まりますか？", "長く働いているスタッフの共通点は何ですか？"],
-      action: "見学前に、働き方や条件面で不安なことをLINEで聞いておくのがおすすめです。"
+      action: "見学前に、働き方や条件面で気になることをLINEで聞いておくのがおすすめです。"
     }
   };
 
   var aiPrompts = [
-    "直感で選んで大丈夫です。ここでは正解探しではなく、見学で聞きたいことを一緒に整理します。",
-    "なりたい姿はまだぼんやりでOKです。近いものを選ぶだけでも、合う環境の方向性が見えてきます。",
-    "最後は職場選びの軸です。ここが見えると、LINEや見学で聞く質問がかなり具体的になります。"
+    "まずは気になることを一つ選んでください。選んだ内容から、見学で確認したいポイントを整理します。",
+    "なりたい姿はまだ決まっていなくても大丈夫です。今の気持ちに近いものを選ぶだけで十分です。",
+    "最後は見学で確認したいことです。ここが分かると、採用相談で話しやすくなります。"
   ];
 
   var choiceFeedback = {
-    tech: "技術の不安は、教育カリキュラムやチェックの流れを聞けるとかなり軽くなります。",
-    human: "人間関係の不安は自然な感覚です。見学ではスタッフ同士の距離感を見るのが大事です。",
-    career: "将来像が見えないときは、3年後の先輩例を聞くと判断しやすくなります。",
-    balance: "続けられるかどうかは大切な軸です。条件だけでなく、練習や休日の考え方も確認したいですね。",
-    specialist: "専門性を伸ばしたい気持ちがあるなら、学べる技術領域と入客までの流れを聞くとよさそうです。",
-    trust: "信頼される美容師を目指すなら、接客やカウンセリングをどう学ぶかも見学で聞きたいポイントです。",
-    leader: "育てる側にも興味があるなら、教育に関われるタイミングやチームづくりの考え方を聞けます。",
-    steady: "自分のペースを大切にする視点は、長く続けるためにとても現実的です。",
-    education: "教育制度を重視するなら、カリキュラム表だけでなく、誰がどの頻度で見てくれるかが大事です。",
-    culture: "雰囲気は文章より見学でわかる部分が多いです。気になる店舗の空気感を見てみましょう。",
-    growth: "得意分野を伸ばしたいなら、カラーや髪質改善などの学び方を具体的に聞くと判断しやすいです。",
-    life: "働き方の納得感は、入社後の安心につながります。給与、休日、練習時間は遠慮なく聞いて大丈夫です。"
+    tech: "技術面が気になるなら、教育カリキュラムとデビューまでの流れを見学で確認すると安心です。",
+    human: "雰囲気が気になるのは自然です。見学ではスタッフ同士の距離感や質問しやすさを見てみましょう。",
+    career: "将来像が見えないときは、先輩のキャリア例を聞くと自分の未来を想像しやすくなります。",
+    balance: "続けやすさは大切な判断軸です。給与や休日だけでなく、練習時間の考え方も聞いてみましょう。",
+    specialist: "専門技術を伸ばしたいなら、BASSAで学べる分野や入客までの流れを確認するとよさそうです。",
+    trust: "信頼される美容師を目指すなら、接客やカウンセリングをどう学ぶかも聞きたいポイントです。",
+    leader: "後輩育成に興味があるなら、教育に関われる時期やチームづくりの考え方を聞いてみましょう。",
+    steady: "自分のペースを大切にする視点は、長く働くためにとても現実的です。",
+    education: "教育カリキュラムは、内容だけでなく誰がどの頻度で見てくれるかも確認したいところです。",
+    culture: "雰囲気は文章だけでは分かりにくい部分です。見学でお店の空気感を確かめてみましょう。",
+    growth: "得意分野を伸ばしたいなら、カラーや髪質改善などの学び方を具体的に聞いてみましょう。",
+    life: "働き方の納得感は入社後の安心につながります。条件面も遠慮なく質問して大丈夫です。"
   };
 
   var state = { index: 0, selected: null, answers: {} };
@@ -1301,14 +1324,14 @@ h1 {
     var anxiety = getChoiceLabel("anxiety", state.answers.anxiety);
     var ideal = getChoiceLabel("ideal", state.answers.ideal);
     var priority = getChoiceLabel("priority", state.answers.priority);
-    return "「" + anxiety + "」が気になっている今は、無理に答えを決めきらなくて大丈夫です。「" + ideal + "」に近づくために、まずは見学で「" + priority + "」を具体的に聞いてみると、自分に合う環境か判断しやすくなります。";
+    return "今のあなたは「" + anxiety + "」を大切に見ています。無理に応募を決めきる前に、「" + ideal + "」へ近づける環境かどうかを、見学で「" + priority + "」から確認してみるのがおすすめです。";
   }
 
   function buildShareText() {
     var anxiety = getChoiceLabel("anxiety", state.answers.anxiety);
     var ideal = getChoiceLabel("ideal", state.answers.ideal);
     var priority = getChoiceLabel("priority", state.answers.priority);
-    return "美容師として「" + anxiety + "」が不安です。「" + ideal + "」を目指したいので、見学前に「" + priority + "」について相談したいです。";
+    return "BASSAの採用について相談したいです。「" + anxiety + "」が気になっていて、「" + ideal + "」に近づける環境か、見学前に「" + priority + "」について聞きたいです。";
   }
 
   function renderQuestion() {
@@ -1322,7 +1345,7 @@ h1 {
     progressBar.style.width = String(((state.index + 1) / questions.length) * 100) + "%";
     backButton.disabled = state.index === 0;
     nextButton.disabled = !current;
-    nextButton.textContent = state.index === questions.length - 1 ? "診断結果を見る" : "次へ";
+    nextButton.textContent = state.index === questions.length - 1 ? "診断結果を見る" : "次の質問へ";
     updateAiReaction(current);
     choiceGrid.innerHTML = "";
 
@@ -1390,7 +1413,7 @@ h1 {
 
     questionView.style.display = "none";
     resultView.classList.add("show");
-    questionKicker.textContent = "RESULT";
+    questionKicker.textContent = "CAREER RESULT";
     stepPill.textContent = "診断完了";
     progressBar.style.width = "100%";
     document.getElementById("diagnosis").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1410,7 +1433,7 @@ h1 {
       renderQuestion();
     } else {
       nextButton.disabled = true;
-      nextButton.textContent = "AIが整理中...";
+      nextButton.textContent = "結果を整理中...";
       setTimeout(showResult, 620);
     }
   });
@@ -1434,12 +1457,13 @@ h1 {
 
 (function () {
   var toast = document.getElementById("toast");
+  var stickyCta = document.querySelector(".sticky-cta");
   var timer = null;
   var messages = {
-    line: "テスト版です。本番ではLINE公式アカウントのURLに接続します。",
-    tour: "テスト版です。本番ではサロン見学フォームに接続します。",
-    education: "テスト版です。本番では教育制度ページに接続します。",
-    question: "テスト版です。本番では採用担当への質問フォームに接続します。"
+    line: "公開時はBASSA採用LINEへ接続します。診断結果を送って相談できる導線です。",
+    tour: "公開時はサロン見学予約フォームへ接続します。希望店舗や日程を選べる想定です。",
+    education: "公開時は教育制度・デビューまでの流れを紹介するページへ接続します。",
+    question: "公開時は採用担当への質問フォームへ接続します。見学前の不安を送れる想定です。"
   };
 
   function showToast(message) {
@@ -1453,12 +1477,22 @@ h1 {
 
   document.addEventListener("click", function (event) {
     var action = event.target.closest("[data-demo-action]");
-    if (action) showToast(messages[action.getAttribute("data-demo-action")] || "テスト版です。");
+    if (action) showToast(messages[action.getAttribute("data-demo-action")] || "公開時の導線に接続予定です。");
   });
 
   document.getElementById("sticky-diagnosis").addEventListener("click", function () {
     document.getElementById("diagnosis").scrollIntoView({ behavior: "smooth", block: "start" });
   });
+
+  if ("IntersectionObserver" in window && stickyCta) {
+    var diagnosis = document.getElementById("diagnosis");
+    var stickyObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        stickyCta.classList.toggle("is-hidden", entry.isIntersecting);
+      });
+    }, { threshold: 0.12 });
+    stickyObserver.observe(diagnosis);
+  }
 })();
 </script>
 </body>
