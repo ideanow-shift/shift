@@ -664,13 +664,14 @@ async function callAnthropic(apiKey: string, prompt: string) {
 }
 
 async function callGemini(apiKey: string, prompt: string) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const model = text(Deno.env.get("GEMINI_MODEL") || "gemini-flash-latest").trim();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2 } }),
   });
-  const data = await parseHttpJson(res, "Gemini API");
+  const data = await parseHttpJson(res, `Gemini API (${model})`);
   return text(data.candidates?.[0]?.content?.parts?.[0]?.text);
 }
 

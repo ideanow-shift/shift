@@ -9,8 +9,8 @@ https://ideanow-shift.github.io/shift/shift_demo.html
 ## ✅ 実装済み機能
 
 ### データ連携
-- GoogleスプレッドシートとGAS APIで直接連携
-- 店舗設備情報・社員名簿を自動取得（CSVダウンロード不要）
+- Supabase Edge Function経由でCore DBの店舗・社員・職種情報を自動取得
+- Googleスプレッドシート/GAS連携は旧バックアップ経路として保持
 - 退職者・産休育休スタッフの自動除外
 
 ### シフト自動生成
@@ -28,7 +28,7 @@ https://ideanow-shift.github.io/shift/shift_demo.html
 - イレギュラー設定（本人希望による週休日数・連勤上限・最低出勤人数制約の特例運用）
 
 ### AIシフト調整
-- Anthropic Claude（Sonnet 4）と直接連携
+- Supabase Edge Function経由でAnthropic Claude / Geminiと連携
 - 「村山さん12日希望休、19日コンテストで田中・佐藤中抜け」などの自然言語要望を解釈
 - 禁止事項（6連勤・最低人数・希望休上限・公平性）をシステムプロンプトで遵守
 - スタッフ個別ルール・時短勤務時間・イレギュラー特例も自動でプロンプトに反映
@@ -50,25 +50,32 @@ https://ideanow-shift.github.io/shift/shift_demo.html
 ## 🛠️ 技術スタック
 
 - フロントエンド: 単一HTMLファイル（Vanilla JS / CSS）
-- バックエンド: Google Apps Script Web App（`gas_api.js`）
-- データソース: Googleスプレッドシート2本
-  - 店舗情報マスター
-  - 社員名簿マスター
-- AI連携: Anthropic Messages API（ブラウザ直接 fetch、APIキーは localStorage 保存）
+- バックエンド: Supabase Edge Function（`supabase/functions/shift-api/index.ts`）
+- データソース: Supabase / Core DB
+  - 店舗: `public.stores`
+  - 社員: `public.employees`
+  - 職種: `public.job_types`
+  - シフト保存: `shift_schedules` / `shift_schedule_cells`
+  - 店舗設定: `shift_store_settings` / `shift_staff_rules`
+- AI連携: Supabase Edge Function経由でAnthropic / Gemini APIを利用
+- 退避経路: `gas_api.js` とGoogleスプレッドシート連携を旧バックアップとして保持
 
 ## 🔧 セットアップ
 
-1. `gas_api.js` の中身を Apps Script プロジェクトの `コード.gs` に貼り付け
-2. ウェブアプリとしてデプロイ（アクセス: 全員）
-3. 発行された URL を `shift_demo.html` の `GAS_API_URL` 定数に設定
-4. ブラウザで `shift_demo.html` を開く
-5. AI調整を使う場合は初回のみ Anthropic API キーを入力（localStorage に保存）
+1. `shift_demo.html` の `SHIFT_API_URL` にSupabase Edge Function URLを設定
+2. Supabase Edge Function `shift-api` をデプロイ済みであることを確認
+3. ブラウザで `shift_demo.html` またはGitHub Pages URLを開く
+4. 保存・読込ステータスが `Supabase` になることを確認
+5. AI調整を使う場合はBackend側AIキー、または画面入力キーを利用する
+
+旧GAS URLは `BACKUP_API_URL` として緊急退避用にのみ扱います。
 
 ## 📁 ファイル構成
 
 ```
 idea-nov-system/
 ├── shift_demo.html   # メインダッシュボード（UI + ロジック）
-├── gas_api.js        # GAS Web API（スプレッドシート読み取り）
+├── supabase/functions/shift-api/index.ts  # Supabase Edge Function
+├── gas_api.js        # 旧バックアップ用GAS Web API
 └── README.md         # 本書
 ```

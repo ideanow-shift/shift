@@ -3,11 +3,13 @@
 作成日: 2026-06-30
 対象: `shift_demo.html` / Supabase Edge Functions
 
+2026-07-07時点では、通常運用はSupabase Edge Function経由です。GASは緊急退避用として残しています。
+
 ## 目的
 
 GAS Web APIを緊急退避用に残しながら、通常運用のバックエンドをSupabase Edge Functionへ移す。
 
-現時点では `shift_demo.html` に `SHIFT_API_URL` を設定するとEdge Functionへ接続し、空欄のままなら既存GASへ接続する。
+現在は `shift_demo.html` の `SHIFT_API_URL` にEdge Function URLを設定して運用する。既存GASは緊急退避用の `BACKUP_API_URL` としてのみ扱う。
 
 ## Edge Function
 
@@ -62,7 +64,7 @@ https://nkmxevmioczcmnldreyo.supabase.co/functions/v1/shift-api
 const SHIFT_API_URL = "https://nkmxevmioczcmnldreyo.supabase.co/functions/v1/shift-api";
 ```
 
-空欄の場合は既存GASに接続する。
+通常運用では空欄にしない。GASへ戻す判断は緊急退避時のみ行う。
 
 ```js
 const SHIFT_API_URL = "";
@@ -70,10 +72,10 @@ const SHIFT_API_URL = "";
 
 ## ロールバック
 
-Edge Function側で問題が出た場合は `SHIFT_API_URL` を空欄に戻すだけで、既存GASへ戻せる。
+Edge Function側で問題が出た場合は、Core DB番人/運用判断のうえで旧GAS退避経路へ戻す。通常運用で `SHIFT_API_URL` を空欄にしない。
 
 ## セキュリティメモ
 
-- `SUPABASE_SERVICE_ROLE_KEY` はEdge Function secretsまたはGASスクリプトプロパティにのみ置く。
+- `SUPABASE_SERVICE_ROLE_KEY` はEdge Functionの保護された環境にのみ置く。GASは旧退避経路として扱う。
 - `shift_demo.html`、GitHub Pages、ブラウザには置かない。
 - 公開フロントからSupabaseへ直接service_roleでアクセスしない。

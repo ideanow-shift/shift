@@ -3,6 +3,10 @@
 作成日: 2026-06-28
 対象: シフト自動生成アプリ / NOV HUB / idea-nov-core
 
+## 2026-07-07時点の更新
+
+社員・店舗・職種参照、およびシフト/設定保存はSupabase Edge Function経由へ移行済み。本文中のGAS/Sheets前提は移行初期の履歴として残す。今後はGAS/Sheetsを緊急退避用へ降格し、HUB認証・権限・通知連携を進める。
+
 ## 結論
 
 現行のシフト自動生成システムは止めずに運用しながら、裏側を段階的にSupabaseへ差し替える。
@@ -19,13 +23,14 @@
 ## 現状
 
 - フロントエンド: GitHub Pages `shift_demo.html`
-- Backend API: GAS Webアプリ `gas_api.js`
-- 店舗マスタ / 社員マスタ: 現状はスプレッドシート読み取り
-- シフト保存: GAS経由でスプレッドシート `ShiftData`
-- 設定保存: GAS経由でスプレッドシート `ShiftSettings`
+- Backend API: Supabase Edge Function `shift-api`
+- 店舗マスタ / 社員マスタ / 職種: Core DB / Supabase参照
+- シフト保存: `shift_schedules` / `shift_schedule_cells`
+- 設定保存: `shift_store_settings` / `shift_staff_rules`
+- 旧GAS/Sheets: 緊急退避用
 - NOV HUB連携: ポータルから公開URLへ遷移
 
-現場運用が始まっているため、短期ではGitHub Pages + GASを維持する。
+現場運用を止めないため、GitHub Pagesは継続し、通常バックエンドはSupabase Edge Functionを使う。GASは退避用としてのみ維持する。
 
 ## 目標アーキテクチャ
 
@@ -37,8 +42,8 @@ NOV HUB
   - 長期: NOV HUB配下アプリ
   ↓
 Backend API
-  - Phase 1: GAS + Supabase service_role
-  - Phase 2: Supabase Edge Functions
+  - 現在: Supabase Edge Functions
+  - 退避: 旧GASバックアップ経路
   ↓
 idea-nov-core
   - employees
@@ -143,7 +148,7 @@ GASはしばらく中継役として残す。
 
 これらをSupabase Edge Functionsへ移す。
 
-Phase 5完了後、GASは旧バージョン互換または緊急退避用に降格する。
+2026-07-07時点で、GASは旧バージョン互換または緊急退避用に降格する方針。
 
 ### Phase 6: NOV HUB統合
 
