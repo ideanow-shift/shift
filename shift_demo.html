@@ -597,7 +597,7 @@
         <button class="quick-action" type="button" onclick="openManagerStep('step3')">スタッフ設定</button>
         <button class="quick-action" type="button" onclick="openManagerStep('step4')">固定条件</button>
         <button class="quick-action primary" type="button" data-requires-draft="1" onclick="generateShift()">自動生成</button>
-        <button class="quick-action" type="button" data-requires-draft="1" onclick="saveShiftToBackend()">保存</button>
+        <button class="quick-action" type="button" data-requires-draft="1" data-write-disabled="1" onclick="saveShiftToBackend()" disabled aria-disabled="true">保存</button>
         <button class="quick-action" type="button" onclick="scrollToShiftTable()">表へ移動</button>
     </div>
 </div>
@@ -745,7 +745,7 @@
                     oninput="saveStoreCustomRules()"></textarea>
                 <div style="font-size:10px; color:var(--text-secondary); margin-top:3px;">ここに書いた内容はAI調整時に自動でプロンプトに追加されます</div>
 
-                <button id="saveStoreSettingsBtn" type="button"
+                <button id="saveStoreSettingsBtn" type="button" data-write-disabled="1" disabled aria-disabled="true"
                     style="width:100%; margin-top:12px; padding:8px; background:#F9F9F9; border:1px solid var(--border-light); border-radius:8px; font-size:12px; cursor:pointer;">
                     店舗設定を保存する
                 </button>
@@ -828,7 +828,7 @@
 
             <textarea id="aiRequestInput" rows="3" placeholder="スタッフの要望・イレギュラーをここに入力してください&#10;例：村山さん12日希望休、19日コンテストで田中・佐藤中抜け"
                 style="width:100%; padding:8px; border:1px solid var(--border-light); border-radius:8px; font-size:12px; resize:vertical; box-sizing:border-box; font-family:inherit; background:white;"></textarea>
-            <button id="aiAdjustBtn" onclick="callAIAdjust()"
+            <button id="aiAdjustBtn" data-write-disabled="1" onclick="callAIAdjust()" disabled aria-disabled="true"
                 data-requires-draft="1"
                 class="action-button secondary" style="margin-top:8px;">
                 AIでシフトを調整する
@@ -886,7 +886,7 @@
                 <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">8</span>
                 保存・出力
             </div>
-            <button onclick="saveShiftToBackend()"
+            <button data-write-disabled="1" onclick="saveShiftToBackend()" disabled aria-disabled="true"
                 data-requires-draft="1"
                 class="action-button" style="margin-bottom:6px; font-size:13px;">
                 シフトを保存する
@@ -895,16 +895,16 @@
                 状態: 下書き
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
-                <button onclick="updateScheduleStatus('confirmed')"
+                <button data-write-disabled="1" onclick="updateScheduleStatus('confirmed')" disabled aria-disabled="true"
                     class="action-button secondary" style="min-height:36px; font-size:12px;">
                     店長確定
                 </button>
-                <button onclick="updateScheduleStatus('published')"
+                <button data-write-disabled="1" onclick="updateScheduleStatus('published')" disabled aria-disabled="true"
                     class="action-button secondary" style="min-height:36px; font-size:12px;">
                     公開
                 </button>
             </div>
-            <button onclick="updateScheduleStatus('draft')"
+            <button data-write-disabled="1" onclick="updateScheduleStatus('draft')" disabled aria-disabled="true"
                 class="action-button secondary" style="margin-bottom:6px; min-height:34px; font-size:12px;">
                 下書きに戻す
             </button>
@@ -3738,6 +3738,7 @@ ${(() => {
     }
 
     async function callAIAdjust() {
+        if (SHIFT_WRITE_CONTROLS_DISABLED) { blockShiftWrite("AI adjust"); return; }
         if (!requireEditableSchedule("AI調整")) return;
         const btn = document.getElementById("aiAdjustBtn");
         const alertBox = document.getElementById("aiAlertBox");
@@ -3891,13 +3892,33 @@ ${(() => {
         return currentScheduleStatus === "draft";
     }
 
+    const SHIFT_WRITE_CONTROLS_DISABLED = true;
+
+    function blockShiftWrite(actionLabel) {
+        const message = `${actionLabel || "write"} is disabled until HUB authenticated write is approved.`;
+        setSaveStatus(message, "err");
+        return false;
+    }
+
+    function disableUnauthenticatedWriteControls() {
+        if (!SHIFT_WRITE_CONTROLS_DISABLED) return;
+        document.querySelectorAll("[data-write-disabled=\"1\"]").forEach(btn => {
+            btn.disabled = true;
+            btn.setAttribute("aria-disabled", "true");
+            btn.style.opacity = "0.45";
+            btn.style.cursor = "not-allowed";
+        });
+    }
+
     function updateScheduleActionState() {
         const editable = isScheduleEditable();
         document.querySelectorAll("[data-requires-draft=\"1\"]").forEach(btn => {
+            if (btn.dataset.writeDisabled === "1") return;
             btn.disabled = !editable;
             btn.style.opacity = editable ? "" : "0.55";
             btn.title = editable ? "" : "編集するには下書きに戻してください";
         });
+        disableUnauthenticatedWriteControls();
     }
 
     function requireEditableSchedule(actionLabel) {
@@ -3932,6 +3953,7 @@ ${(() => {
     }
 
     async function saveShiftToBackend() {
+        if (SHIFT_WRITE_CONTROLS_DISABLED) { blockShiftWrite("save shift"); return; }
         if (!requireEditableSchedule("保存")) return;
         if (!currentStore) { alert("店舗を選択してください"); return; }
         setSaveStatus("保存中...", "info");
@@ -3963,6 +3985,7 @@ ${(() => {
     }
 
     async function updateScheduleStatus(status) {
+        if (SHIFT_WRITE_CONTROLS_DISABLED) { blockShiftWrite("schedule status update"); return; }
         if (!currentStore) { alert("店舗を選択してください"); return; }
         const label = scheduleStatusLabel(status);
         setSaveStatus(label + "に更新中...", "info");
@@ -3990,6 +4013,7 @@ ${(() => {
 
     // 店舗設定をBackend APIに保存
     async function saveSettingsToBackend() {
+        if (SHIFT_WRITE_CONTROLS_DISABLED) { blockShiftWrite("save settings"); return; }
         if (!currentStore) {
             setSaveStatus("店舗を選択してください", "err");
             alert("店舗を選択してください");
@@ -4171,6 +4195,7 @@ ${(() => {
         updateApiKeyStatus();
         renderScheduleStatus();
         updateScheduleActionState();
+        disableUnauthenticatedWriteControls();
         loadFromBackend();
     });
 </script>
