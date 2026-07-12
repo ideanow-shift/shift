@@ -1,5 +1,14 @@
+import { applyVerifiedActor, authenticateShiftRequest, authorizeShiftAction, ShiftApiError, type ShiftAuthContext } from "./shift-hub-session-auth.ts";
+import { buildShiftStatusCasFilters, evaluateShiftStatusTransition, isSingleShiftStatusUpdate, type ShiftScheduleStatus } from "./shift-status-transition-policy.ts";
+
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://ideanow-shift.github.io",
+  "https://idea-nov.com",
+  "https://www.idea-nov.com",
+];
+
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": DEFAULT_ALLOWED_ORIGINS[0],
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
@@ -7,48 +16,90 @@ const corsHeaders = {
 type Query = Record<string, string | number | boolean | undefined | null>;
 type JsonRecord = Record<string, unknown>;
 
+const SHIFT_DEFAULT_TIMEZONE = "Asia/Tokyo";
+const WORK_SHIFT_STAMPS = new Set([
+  "work",
+  "required_work",
+  "short_time",
+  "training",
+  "meeting",
+  "half_day",
+  "outside",
+]);
+const SHIFT_SAVE_MAX_CELLS = 2000;
+const SHIFT_SAVE_MAX_JSON_BYTES = 1000000;
+const SHIFT_SAVE_GLOBAL_WRITE_ROLES = new Set(["super_admin", "backoffice"]);
+const SHIFT_SAVE_ASSIGNMENT_WRITE_ROLES = new Set(["store_manager", "area_manager", "fc_owner"]);
+
 Deno.serve(async (req: Request) => {
+  const requestCorsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") {
-    return jsonResponse({ ok: true }, 200);
+    return new Response(null, { status: 204, headers: requestCorsHeaders });
   }
 
   try {
     const url = new URL(req.url);
+    const auth = await authenticateShiftRequest(req, supabaseRequest);
     if (req.method === "GET") {
-      const action = String(url.searchParams.get("action") || "");
+      const action = String(url.searchParams.get("action") || "loadMasters");
+      await authorizeShiftAction(auth, "GET", action, url.searchParams.get("storeId"));
       if (action === "loadShift") {
-        return jsonResponse(await loadShift(url.searchParams));
+        return jsonResponse(await loadShift(url.searchParams), 200, requestCorsHeaders);
       }
       if (action === "loadSettings") {
-        return jsonResponse(await loadSettings(url.searchParams));
+        return jsonResponse(await loadSettings(url.searchParams), 200, requestCorsHeaders);
       }
-      return jsonResponse(await loadMasters());
+      return jsonResponse(await loadMasters(), 200, requestCorsHeaders);
     }
 
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}));
       const action = String(body.action || "");
-      if (action === "saveShift") return jsonResponse(await saveShift(body));
-      if (action === "saveSettings") return jsonResponse(await saveSettings(body));
-      if (action === "updateScheduleStatus") return jsonResponse(await updateScheduleStatus(body));
-      if (action === "aiAdjust") return jsonResponse(await adjustShiftWithAI(body));
+      if (action === "saveShift") {
+        await authorizeSaveShiftByAssignment(auth, body.storeId);
+        applyVerifiedActor(body, auth);
+        return jsonResponse(await saveShiftViaTransactionalRpc(body, auth), 200, requestCorsHeaders);
+      }
+      await authorizeShiftAction(auth, "POST", action, body.storeId);
+      applyVerifiedActor(body, auth);
+      if (action === "saveSettings") return jsonResponse(await saveSettings(body), 200, requestCorsHeaders);
+      if (action === "updateScheduleStatus") return jsonResponse(await updateScheduleStatus(body), 200, requestCorsHeaders);
+      if (action === "aiAdjust") return jsonResponse(await adjustShiftWithAI(body), 200, requestCorsHeaders);
       return jsonResponse({ ok: false, error: `未対応のactionです: ${action}` }, 400);
     }
 
-    return jsonResponse({ ok: false, error: `Unsupported method: ${req.method}` }, 405);
+    return jsonResponse({ ok: false, code: "METHOD_NOT_ALLOWED", error: "Method is not supported." }, 405, requestCorsHeaders);
   } catch (err) {
-    return jsonResponse({ ok: false, error: errorMessage(err) }, 500);
+    if (err instanceof ShiftApiError) {
+      return jsonResponse({ ok: false, code: err.code, error: err.message }, err.status, requestCorsHeaders);
+    }
+    console.warn("[shift-api] request failed: INTERNAL_ERROR");
+    return jsonResponse({ ok: false, code: "INTERNAL_ERROR", error: "Shift API request failed." }, 500, requestCorsHeaders);
   }
 });
 
-function jsonResponse(payload: unknown, status = 200): Response {
+function jsonResponse(payload: unknown, status = 200, headers = corsHeaders): Response {
   return new Response(JSON.stringify(payload), {
     status,
     headers: {
-      ...corsHeaders,
+      ...headers,
       "Content-Type": "application/json; charset=utf-8",
     },
   });
+}
+
+function buildCorsHeaders(req: Request) {
+  const configured = text(Deno.env.get("SHIFT_ALLOWED_ORIGINS"))
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const allowedOrigins = configured.length ? configured : DEFAULT_ALLOWED_ORIGINS;
+  const origin = req.headers.get("Origin") || "";
+  const allowedOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+  return {
+    ...corsHeaders,
+    "Access-Control-Allow-Origin": allowedOrigin,
+  };
 }
 
 async function loadMasters() {
@@ -69,8 +120,8 @@ async function loadMasters() {
     ok: true,
     source: "supabase-edge",
     jobTypeSource: jobTypes.length > 0 ? "job_types" : "core-db-pending",
-    store: toStoreRows(stores),
-    staff: toStaffRows(employees, indexById(stores), indexById(positions), indexById(jobTypes)),
+    store: toShiftStoreRows(stores),
+    staff: toShiftStaffRows(employees, indexById(stores), indexById(positions), indexById(jobTypes)),
   };
 }
 
@@ -82,13 +133,13 @@ async function loadEmployeesForShift() {
   try {
     return await supabaseRequest("employees", {
       ...common,
-      select: "id,employee_id,full_name,email,birth_date,employment_status,employment_type,store_id,position_id,job_type_id,joined_on,retired_on,is_active,source_row",
+      select: "id,employee_id,full_name,employment_status,employment_type,store_id,position_id,job_type_id,is_active,retired_on",
     });
   } catch (err) {
-    console.warn("[employees.job_type_id] pending Core DB setup:", errorMessage(err));
+    console.warn("[employees.job_type_id] pending Core DB setup");
     return await supabaseRequest("employees", {
       ...common,
-      select: "id,employee_id,full_name,email,birth_date,employment_status,employment_type,store_id,position_id,joined_on,retired_on,is_active,source_row",
+      select: "id,employee_id,full_name,employment_status,employment_type,store_id,position_id,is_active,retired_on",
     });
   }
 }
@@ -105,8 +156,126 @@ async function loadJobTypesForShift() {
       lastError = err;
     }
   }
-  console.warn("[job_types] pending Core DB setup:", errorMessage(lastError));
+  console.warn("[job_types] pending Core DB setup");
   return [];
+}
+
+function toShiftStoreRows(stores: JsonRecord[]) {
+  const header = [
+    "\u5e97\u8217\u756a\u53f7",
+    "\u5e97\u8217\u540d",
+    "\u5b9a\u4f11\u65e5\u30eb\u30fc\u30eb",
+    "\u5e73\u65e5\u55b6\u696d\u958b\u59cb\u6642\u9593",
+    "\u571f\u66dc\u65e5\u55b6\u696d\u958b\u59cb\u6642\u9593",
+    "\u65e5\u66dc\u65e5\u55b6\u696d\u958b\u59cb\u6642\u9593",
+    "\u795d\u65e5\u55b6\u696d\u958b\u59cb\u6642\u9593",
+    "\u6240\u5c5e",
+    "\u72b6\u6cc1",
+    "\u7279\u5fb4",
+    "core_store_id",
+    "store_id",
+  ];
+
+  const rows = stores
+    .filter((store) => store && store.is_active !== false)
+    .map((store) => [
+      text(store.store_no || store.store_id || store.id),
+      text(store.store_name),
+      "",
+      "",
+      "",
+      "",
+      "",
+      text(store.area),
+      store.is_active === false ? "inactive" : "active",
+      text(store.store_type),
+      text(store.id),
+      text(store.store_id),
+    ]);
+
+  return [header, ...rows];
+}
+
+function toShiftStaffRows(employees: JsonRecord[], storesById: Record<string, JsonRecord>, positionsById: Record<string, JsonRecord>, jobTypesById: Record<string, JsonRecord>) {
+  const header = [
+    "\u793e\u54e1\u756a\u53f7",
+    "\u6240\u5c5e\u4f1a\u793e",
+    "\u6240\u5c5e\u5e97\u8217",
+    "job_type_key",
+    "\u8077\u7a2e",
+    "\u5f79\u8077",
+    "\u96c7\u7528\u5f62\u614b",
+    "\u73fe\u8077",
+    "\u7f8e\u5bb9\u5e2b\u514d\u8a31\u53d6\u5f97\u8005",
+    "\u6c0f\u540d",
+    "core_employee_id",
+  ];
+
+  const rows = employees
+    .filter((employee) => isShiftStaffMasterActive(employee))
+    .map((employee) => {
+      const store = storesById[text(employee.store_id)] || {};
+      const position = positionsById[text(employee.position_id)] || {};
+      const jobType = jobTypesById[text(employee.job_type_id)] || {};
+      const jobTypeKey = text(jobType.job_type_key);
+      const jobTypeName = text(jobType.job_type_name || jobType.name);
+      const normalizedJobTypeKey = normalizeClassText(jobTypeKey);
+      const normalizedJobTypeName = normalizeClassText(jobTypeName);
+      const defaultLicense = normalizedJobTypeKey === "reception"
+        || normalizedJobTypeKey === "head_office"
+        || normalizedJobTypeKey === "headoffice"
+        || normalizedJobTypeName.includes("reception")
+        || normalizedJobTypeName.includes("backoffice")
+        ? "\u00d7"
+        : "\u25cb";
+      return [
+        text(employee.employee_id),
+        "",
+        text(store.store_name),
+        jobTypeKey,
+        jobTypeName,
+        text(position.position_name),
+        text(employee.employment_type),
+        text(employee.employment_status),
+        defaultLicense,
+        text(employee.full_name),
+        text(employee.id),
+      ];
+    });
+
+  return [header, ...rows];
+}
+
+function isShiftStaffMasterActive(employee: JsonRecord) {
+  if (!employee || employee.is_active !== true) return false;
+  if (isPastOrTodayDate(employee.retired_on)) return false;
+  return !hasInactiveEmploymentStatus(employee.employment_status);
+}
+
+function hasInactiveEmploymentStatus(value: unknown) {
+  const status = normalizeClassText(text(value));
+  const inactiveStatuses = [
+    "retired",
+    "inactive",
+    "leave",
+    "suspended",
+    "\u9000\u8077",
+    "\u4f11\u8077",
+    "\u7523\u4f11",
+    "\u80b2\u4f11",
+    "\u7523\u4f11\u30fb\u80b2\u4f11",
+  ];
+  return inactiveStatuses.some((inactiveStatus) => status.includes(inactiveStatus));
+}
+
+function isPastOrTodayDate(value: unknown) {
+  const dateText = text(value).trim();
+  if (!dateText) return false;
+  const date = new Date(`${dateText.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return true;
+  const now = new Date();
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  return date.getTime() <= today.getTime();
 }
 
 function toStoreRows(stores: JsonRecord[]) {
@@ -242,6 +411,152 @@ function toStaffRows(employees: JsonRecord[], storesById: Record<string, JsonRec
   return [header, ...rows];
 }
 
+async function authorizeSaveShiftByAssignment(auth: ShiftAuthContext, storeIdValue: unknown) {
+  const storeId = requireText(storeIdValue, "storeId");
+  if (auth.roles.some((role) => SHIFT_SAVE_GLOBAL_WRITE_ROLES.has(role.roleKey))) return;
+  if (!auth.roles.some((role) => SHIFT_SAVE_ASSIGNMENT_WRITE_ROLES.has(role.roleKey))) {
+    throw new ShiftApiError("ACCESS_DENIED", "This role cannot save the requested shift.", 403);
+  }
+  const rows = await supabaseRequest("employee_store_assignments", {
+    select: "id",
+    employee_id: `eq.${auth.employeeId}`,
+    store_id: `eq.${storeId}`,
+    is_active: "eq.true",
+    limit: "1",
+  });
+  if (!rows.length) {
+    throw new ShiftApiError("ACCESS_DENIED", "This employee is not assigned to the requested store.", 403);
+  }
+}
+
+async function saveShiftViaTransactionalRpc(request: JsonRecord, auth: ShiftAuthContext) {
+  const storeId = requireText(request.storeId, "storeId");
+  const year = requireNumber(request.year, "year");
+  const month = requireNumber(request.month, "month");
+  const requestId = requireText(request.requestId || request.idempotencyKey, "requestId");
+  const requestedStatus = normalizeScheduleStatus(request.status) || "draft";
+  if (requestedStatus !== "draft") {
+    throw new ShiftApiError("INVALID_REQUEST", "Only draft save is supported by this write gate.", 400);
+  }
+
+  const cells = asRecord(request.cells);
+  const rpcCells = normalizeSaveShiftCellsForRpc(cells, year, month);
+  validateSaveShiftRpcPayload(rpcCells);
+
+  const resultRows = await supabaseRpc("shift_save_draft_transactional", {
+    p_actor_employee_id: auth.employeeId,
+    p_store_id: storeId,
+    p_year: year,
+    p_month: month,
+    p_request_id: requestId,
+    p_cells: rpcCells,
+  });
+  const result = Array.isArray(resultRows) ? asRecord(resultRows[0]) : asRecord(resultRows);
+  return {
+    ok: result.ok === true,
+    source: "supabase-rpc",
+    duplicate: result.duplicate === true,
+    status: text(result.status || "draft"),
+    cellCount: Number(result.cellCount || result.cell_count || rpcCells.length),
+  };
+}
+
+function normalizeSaveShiftCellsForRpc(cells: JsonRecord, year: number, month: number) {
+  const rows: JsonRecord[] = [];
+  const seen = new Set<string>();
+  for (const key of Object.keys(cells)) {
+    const parsed = parseShiftCellKey(key);
+    if (!parsed) continue;
+    const stamp = encodeShiftStamp(cells[key]);
+    if (!stamp) continue;
+    const workDate = formatShiftDate(year, month, parsed.day);
+    const dedupeKey = `${parsed.employeeId}:${workDate}`;
+    if (seen.has(dedupeKey)) {
+      throw new ShiftApiError("DUPLICATE_CELL_PAIR", "Duplicate employee/date shift cell.", 400);
+    }
+    seen.add(dedupeKey);
+    rows.push({
+      employee_id: parsed.employeeId,
+      work_date: workDate,
+      stamp,
+      start_time: null,
+      end_time: null,
+    });
+  }
+  return rows;
+}
+
+function validateSaveShiftRpcPayload(rpcCells: JsonRecord[]) {
+  if (!rpcCells.length || rpcCells.length > SHIFT_SAVE_MAX_CELLS) {
+    throw new ShiftApiError("CELL_COUNT_OUT_OF_RANGE", "Shift cell count is outside the allowed range.", 400);
+  }
+  const encoded = JSON.stringify(rpcCells);
+  if (new TextEncoder().encode(encoded).length > SHIFT_SAVE_MAX_JSON_BYTES) {
+    throw new ShiftApiError("CELLS_JSON_TOO_LARGE", "Shift cell payload is too large.", 400);
+  }
+}
+
+async function supabaseRpc(functionName: string, payload: JsonRecord) {
+  const baseUrl = text(Deno.env.get("SUPABASE_URL")).replace(/\/+$/, "");
+  const serviceRoleKey = text(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
+  if (!baseUrl || !serviceRoleKey) throw new ShiftApiError("SETUP_MISSING", "Supabase service is not configured.", 500);
+  const res = await fetch(`${baseUrl}/rest/v1/rpc/${encodeURIComponent(functionName)}`, {
+    method: "POST",
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    throw mapSupabaseRpcError(res.status, await parseSupabaseRpcSafeErrorCode(res));
+  }
+  return await res.json().catch(() => []);
+}
+
+async function parseSupabaseRpcSafeErrorCode(res: Response) {
+  try {
+    const data = await res.json();
+    const message = text(asRecord(data).message).trim();
+    return message && /^[A-Z0-9_]+$/.test(message) ? message : "";
+  } catch (_err) {
+    return "";
+  }
+}
+
+function mapSupabaseRpcError(status: number, code: string) {
+  const safeCode = code || (status >= 500 ? "SHIFT_SAVE_RPC_UNAVAILABLE" : "SHIFT_SAVE_RPC_REJECTED");
+  const rejectCodes = new Set([
+    "ACTOR_REQUIRED",
+    "STORE_REQUIRED",
+    "INVALID_YEAR",
+    "INVALID_MONTH",
+    "INVALID_REQUEST_ID",
+    "CELLS_ARRAY_REQUIRED",
+    "CELLS_JSON_TOO_LARGE",
+    "CELL_COUNT_OUT_OF_RANGE",
+    "STORE_NOT_AVAILABLE",
+    "ACTOR_INACTIVE",
+    "LOGIN_DISABLED",
+    "STORE_WRITE_DENIED",
+    "SCHEDULE_NOT_DRAFT",
+    "CELL_OBJECT_REQUIRED",
+    "INVALID_CELL_EMPLOYEE",
+    "INVALID_CELL_DATE",
+    "INVALID_CELL_STAMP",
+    "CELL_DATE_OUT_OF_MONTH",
+    "INVALID_START_TIME",
+    "INVALID_END_TIME",
+    "INVALID_TIME_RANGE",
+    "DUPLICATE_CELL_PAIR",
+    "CELL_EMPLOYEE_NOT_ASSIGNED",
+  ]);
+  const httpStatus = rejectCodes.has(safeCode) ? 400 : status >= 500 ? 503 : 400;
+  return new ShiftApiError(safeCode, "Shift save was rejected.", httpStatus);
+}
+
 async function saveShift(request: JsonRecord) {
   const storeId = requireText(request.storeId, "storeId");
   const year = requireNumber(request.year, "year");
@@ -249,6 +564,7 @@ async function saveShift(request: JsonRecord) {
   const cells = asRecord(request.cells);
   const actorEmployeeId = extractActorEmployeeId(request);
   const requestedStatus = normalizeScheduleStatus(request.status) || "draft";
+  const staffRulesByEmployee = await loadActiveStaffRulesByEmployee(storeId);
   const existingScheduleRows = await supabaseRequest("shift_schedules", {
     select: "id,status",
     store_id: `eq.${storeId}`,
@@ -273,6 +589,7 @@ async function saveShift(request: JsonRecord) {
     metadata: {
       store_name: text(request.storeName),
       saved_from: "supabase_edge_function",
+      timezone: SHIFT_DEFAULT_TIMEZONE,
     },
   }]);
   const schedule = scheduleRows[0];
@@ -284,13 +601,16 @@ async function saveShift(request: JsonRecord) {
     const parsed = parseShiftCellKey(key);
     const stamp = encodeShiftStamp(cells[key]);
     if (!parsed || !stamp) return null;
+    const timeFields = resolveShiftCellTimes(stamp, parsed.employeeId, staffRulesByEmployee);
     return {
       schedule_id: schedule.id,
       employee_id: parsed.employeeId,
       work_date: formatShiftDate(year, month, parsed.day),
       stamp,
+      start_time: timeFields.start_time,
+      end_time: timeFields.end_time,
       source: "manual",
-      metadata: { ui_key: key, ui_stamp: text(cells[key]) },
+      metadata: { ui_key: key, ui_stamp: text(cells[key]), timezone: SHIFT_DEFAULT_TIMEZONE },
     };
   }).filter(Boolean);
 
@@ -347,7 +667,7 @@ async function loadShift(params: URLSearchParams) {
     limit: "5000",
   });
   const cells: Record<string, string> = {};
-  cellRows.forEach((row) => {
+  cellRows.forEach((row: JsonRecord) => {
     const day = dayFromDateString(row.work_date);
     const stamp = decodeShiftStamp(row.stamp);
     if (!row.employee_id || !day || !stamp) return;
@@ -390,7 +710,7 @@ async function updateScheduleStatus(request: JsonRecord) {
   if (!status) throw new Error("status must be draft / confirmed / published / archived");
 
   const scheduleRows = await supabaseRequest("shift_schedules", {
-    select: "id,status,updated_at",
+    select: "id,status,updated_at,confirmed_at,published_at",
     store_id: `eq.${storeId}`,
     year: `eq.${year}`,
     month: `eq.${month}`,
@@ -405,18 +725,59 @@ async function updateScheduleStatus(request: JsonRecord) {
   }
 
   const actorEmployeeId = extractActorEmployeeId(request);
+  const currentStatus = (normalizeScheduleStatus(schedule.status) || "draft") as ShiftScheduleStatus;
+  const transition = evaluateShiftStatusTransition(currentStatus, status as ShiftScheduleStatus);
+  if (transition.kind === "reject") {
+    throw new ShiftApiError(
+      transition.code || "INVALID_STATUS_TRANSITION",
+      transition.message || "The requested shift status transition is not allowed.",
+      transition.status || 409,
+    );
+  }
+  if (transition.kind === "noop") {
+    return {
+      ok: true,
+      source: "supabase-edge",
+      status: currentStatus,
+      unchanged: true,
+      updatedAt: text(schedule.updated_at),
+      confirmedAt: text(schedule.confirmed_at),
+      publishedAt: text(schedule.published_at),
+      auditLogged: false,
+    };
+  }
+  if (status === "published" && !text(schedule.confirmed_at)) {
+    throw new ShiftApiError("CONFIRMATION_REQUIRED", "Shift confirmation is required before publication.", 409);
+  }
+
   const now = new Date().toISOString();
   const patch: JsonRecord = { status };
+  if (status === "draft") {
+    patch.confirmed_by = null;
+    patch.confirmed_at = null;
+    patch.published_by = null;
+    patch.published_at = null;
+  }
   if (status === "confirmed") {
     patch.confirmed_by = actorEmployeeId;
     patch.confirmed_at = now;
+    patch.published_by = null;
+    patch.published_at = null;
   }
   if (status === "published") {
+    await assertScheduleCellTimesReadyForPublish(text(schedule.id));
     patch.published_by = actorEmployeeId;
     patch.published_at = now;
   }
 
-  const updatedRows = await supabasePatch("shift_schedules", { id: `eq.${schedule.id}` }, patch);
+  const casFilters = buildShiftStatusCasFilters(text(schedule.id), currentStatus, text(schedule.updated_at));
+  if (!casFilters) {
+    throw new ShiftApiError("CONCURRENT_STATUS_CHANGE", "Shift status changed. Reload and try again.", 409);
+  }
+  const updatedRows = await supabasePatch("shift_schedules", casFilters, patch);
+  if (!isSingleShiftStatusUpdate(updatedRows)) {
+    throw new ShiftApiError("CONCURRENT_STATUS_CHANGE", "Shift status changed. Reload and try again.", 409);
+  }
   const updated = updatedRows[0] || {};
   const actionByStatus: Record<string, string> = {
     draft: "reopen_shift",
@@ -556,7 +917,7 @@ async function loadSettings(params: URLSearchParams) {
   const row = storeRows[0] || {};
   const extraStamps = asRecord(row.enabled_extra_stamps);
   const staffConfig: Record<string, unknown> = {};
-  staffRows.forEach((rule) => {
+  staffRows.forEach((rule: JsonRecord) => {
     staffConfig[text(rule.employee_id)] = {
       holidayType: decodeHolidayType(rule.holiday_type),
       workType: decodeWorkType(rule.work_type),
@@ -682,7 +1043,7 @@ async function listEmployeeIdsForStore(storeId: string) {
     is_active: "eq.true",
     limit: "2000",
   });
-  return new Set(rows.map((employee) => text(employee.id)).filter(Boolean));
+  return new Set(rows.map((employee: JsonRecord) => text(employee.id)).filter(Boolean));
 }
 
 async function supabaseRequest(resource: string, query: Query = {}) {
@@ -880,9 +1241,83 @@ function decodeWorkType(value: unknown) {
   return "通常";
 }
 
+async function loadActiveStaffRulesByEmployee(storeId: string) {
+  const rows = await supabaseRequest("shift_staff_rules", {
+    select: "employee_id,start_time,end_time",
+    store_id: `eq.${storeId}`,
+    is_active: "eq.true",
+    limit: "2000",
+  });
+  const index = new Map<string, JsonRecord>();
+  for (const row of rows as JsonRecord[]) {
+    const employeeId = text(row.employee_id);
+    if (employeeId) index.set(employeeId, row);
+  }
+  return index;
+}
+
+function isWorkShiftStamp(stamp: unknown) {
+  return WORK_SHIFT_STAMPS.has(text(stamp));
+}
+
+function resolveShiftCellTimes(stamp: string, employeeId: string, staffRulesByEmployee: Map<string, JsonRecord>) {
+  if (!isWorkShiftStamp(stamp)) {
+    return { start_time: null, end_time: null };
+  }
+  const rule = staffRulesByEmployee.get(employeeId);
+  const startTime = normalizeTimeValue(rule?.start_time);
+  const endTime = normalizeTimeValue(rule?.end_time);
+  if (!startTime || !endTime) {
+    throw new Error(`勤務時刻が未設定です。店舗設定を保存してからシフトを保存してください。employee_id=${employeeId}`);
+  }
+  if (!isValidTimeRange(startTime, endTime)) {
+    throw new Error(`勤務終了時刻は勤務開始時刻より後にしてください。employee_id=${employeeId}`);
+  }
+  return { start_time: startTime, end_time: endTime };
+}
+
+async function assertScheduleCellTimesReadyForPublish(scheduleId: string) {
+  const rows = await supabaseRequest("shift_schedule_cells", {
+    select: "employee_id,work_date,stamp,start_time,end_time",
+    schedule_id: `eq.${scheduleId}`,
+    limit: "5000",
+  });
+  for (const row of rows as JsonRecord[]) {
+    const stamp = text(row.stamp);
+    const startTime = normalizeTimeValue(row.start_time);
+    const endTime = normalizeTimeValue(row.end_time);
+    if (isWorkShiftStamp(stamp)) {
+      if (!startTime || !endTime || !isValidTimeRange(startTime, endTime)) {
+        throw new Error("勤務時刻が未設定または不正なセルがあるため公開できません。シフトを再保存してください。");
+      }
+    } else if (startTime || endTime) {
+      throw new Error("休み系セルに勤務時刻が残っているため公開できません。シフトを再保存してください。");
+    }
+  }
+}
+
 function normalizeTimeValue(value: unknown) {
-  const match = text(value).trim().match(/^(\d{1,2}):(\d{2})/);
-  return match ? `${String(Number(match[1])).padStart(2, "0")}:${match[2]}:00` : null;
+  const match = text(value).trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const second = match[3] == null ? 0 : Number(match[3]);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute) || !Number.isInteger(second)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) return null;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}`;
+}
+
+function isValidTimeRange(startTime: unknown, endTime: unknown) {
+  const start = timeToMinutes(startTime);
+  const end = timeToMinutes(endTime);
+  return Number.isFinite(start) && Number.isFinite(end) && end > start;
+}
+
+function timeToMinutes(value: unknown) {
+  const normalized = normalizeTimeValue(value);
+  if (!normalized) return NaN;
+  const [hour, minute] = normalized.split(":").map(Number);
+  return hour * 60 + minute;
 }
 
 function stripSeconds(value: unknown) {
