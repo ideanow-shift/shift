@@ -597,7 +597,7 @@
         <button class="quick-action" type="button" onclick="openManagerStep('step3')">スタッフ設定</button>
         <button class="quick-action" type="button" onclick="openManagerStep('step4')">固定条件</button>
         <button class="quick-action primary" type="button" data-requires-draft="1" onclick="generateShift()">自動生成</button>
-        <button class="quick-action" type="button" data-requires-draft="1" data-write-disabled="1" onclick="saveShiftToBackend()" disabled aria-disabled="true">保存</button>
+        <button class="quick-action" type="button" data-requires-draft="1" data-save-write="1" onclick="saveShiftToBackend()" disabled aria-disabled="true">保存</button>
         <button class="quick-action" type="button" onclick="scrollToShiftTable()">表へ移動</button>
     </div>
 </div>
@@ -886,7 +886,7 @@
                 <span style="background:var(--color-bassa); color:white; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">8</span>
                 保存・出力
             </div>
-            <button data-write-disabled="1" onclick="saveShiftToBackend()" disabled aria-disabled="true"
+            <button data-save-write="1" onclick="saveShiftToBackend()" disabled aria-disabled="true"
                 data-requires-draft="1"
                 class="action-button" style="margin-bottom:6px; font-size:13px;">
                 シフトを保存する
@@ -3738,7 +3738,7 @@ ${(() => {
     }
 
     async function callAIAdjust() {
-        if (SHIFT_WRITE_CONTROLS_DISABLED) { blockShiftWrite("AI adjust"); return; }
+        if (SHIFT_OTHER_WRITE_CONTROLS_DISABLED) { blockShiftWrite("AI adjust"); return; }
         if (!requireEditableSchedule("AI調整")) return;
         const btn = document.getElementById("aiAdjustBtn");
         const alertBox = document.getElementById("aiAlertBox");
@@ -3892,7 +3892,9 @@ ${(() => {
         return currentScheduleStatus === "draft";
     }
 
-    const SHIFT_WRITE_CONTROLS_DISABLED = true;
+    const SHIFT_SAVE_WRITE_ENABLED = true;
+    const SHIFT_OTHER_WRITE_CONTROLS_DISABLED = true;
+    let shiftSaveAuthReady = false;
 
     function blockShiftWrite(actionLabel) {
         const message = `${actionLabel || "write"} is disabled until HUB authenticated write is approved.`;
@@ -3900,20 +3902,44 @@ ${(() => {
         return false;
     }
 
-    function disableUnauthenticatedWriteControls() {
-        if (!SHIFT_WRITE_CONTROLS_DISABLED) return;
+    function setShiftButtonDisabled(btn, disabled) {
+        btn.disabled = disabled;
+        btn.setAttribute("aria-disabled", disabled ? "true" : "false");
+        btn.style.opacity = disabled ? "0.45" : "";
+        btn.style.cursor = disabled ? "not-allowed" : "";
+    }
+
+    function refreshShiftWriteControls() {
         document.querySelectorAll("[data-write-disabled=\"1\"]").forEach(btn => {
-            btn.disabled = true;
-            btn.setAttribute("aria-disabled", "true");
-            btn.style.opacity = "0.45";
-            btn.style.cursor = "not-allowed";
+            setShiftButtonDisabled(btn, true);
         });
+        const saveEnabled = SHIFT_SAVE_WRITE_ENABLED && shiftSaveAuthReady && isScheduleEditable();
+        document.querySelectorAll("[data-save-write=\"1\"]").forEach(btn => {
+            setShiftButtonDisabled(btn, !saveEnabled);
+        });
+    }
+
+    async function refreshShiftSaveAuthState() {
+        try {
+            const token = await getHubSessionBearerToken();
+            shiftSaveAuthReady = isLikelyHubSessionToken(token);
+        } catch (err) {
+            shiftSaveAuthReady = false;
+        }
+        refreshShiftWriteControls();
+        return shiftSaveAuthReady;
+    }
+
+    function disableUnauthenticatedWriteControls() {
+        refreshShiftWriteControls();
+        refreshShiftSaveAuthState();
     }
 
     function updateScheduleActionState() {
         const editable = isScheduleEditable();
         document.querySelectorAll("[data-requires-draft=\"1\"]").forEach(btn => {
             if (btn.dataset.writeDisabled === "1") return;
+            if (btn.dataset.saveWrite === "1") return;
             btn.disabled = !editable;
             btn.style.opacity = editable ? "" : "0.55";
             btn.title = editable ? "" : "編集するには下書きに戻してください";
@@ -3930,6 +3956,18 @@ ${(() => {
         return false;
     }
 
+    async function requireAuthenticatedDraftSave() {
+        if (!requireEditableSchedule("保存")) return false;
+        const token = await getHubSessionBearerToken();
+        shiftSaveAuthReady = isLikelyHubSessionToken(token);
+        refreshShiftWriteControls();
+        if (!shiftSaveAuthReady) {
+            showHubSessionRequiredStatus("HUB認証またはAPI設定が見つかりません。NOV HUBから開き直してください。");
+            return false;
+        }
+        return true;
+    }
+
     function bindStoreSettingsButton() {
         const btn = document.getElementById("saveStoreSettingsBtn");
         if (!btn || btn.dataset.bound === "1") return;
@@ -3940,8 +3978,7 @@ ${(() => {
         });
     }
 
-    // シフトデータをBackend APIに保存
-    // ─── fetch POST方式でBackend APIを呼び出す ───
+    // Legacy unauthenticated write path remains defined for older code but must not be used by new Shift writes.
     async function callBackend(payload) {
         const res  = await fetch(getBackendApiUrl(), {
             method:   "POST",
@@ -3952,22 +3989,166 @@ ${(() => {
         return await res.json();
     }
 
+    let pendingSaveShiftRequest = null;
+    let activeSaveShiftPromise = null;
+
+    function randomHex(bytesLength) {
+        const bytes = new Uint8Array(bytesLength);
+        crypto.getRandomValues(bytes);
+        return Array.from(bytes).map(byte => byte.toString(16).padStart(2, "0")).join("");
+    }
+
+    function buildFreshSaveShiftRequestId(payload) {
+        return "shift-save:" + payload.storeId + ":" + payload.year + ":" + payload.month + ":" + randomHex(16);
+    }
+
+    function canonicalJson(value) {
+        if (Array.isArray(value)) return "[" + value.map(canonicalJson).join(",") + "]";
+        if (value && typeof value === "object") {
+            return "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + canonicalJson(value[key])).join(",") + "}";
+        }
+        return JSON.stringify(value);
+    }
+
+    async function sha256Hex(value) {
+        const bytes = new TextEncoder().encode(value);
+        const digest = await crypto.subtle.digest("SHA-256", bytes);
+        return Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function buildSaveShiftPayloadFingerprint(payload) {
+        return await sha256Hex(canonicalJson({
+            action: "saveShift",
+            storeId: payload.storeId,
+            year: payload.year,
+            month: payload.month,
+            status: payload.status,
+            cells: payload.cells,
+        }));
+    }
+
+    function isDefiniteSaveRejection(data) {
+        const code = String(data && data.code || "");
+        return [
+            "SHIFT_API_CONFIG_REQUIRED",
+            "HUB_SESSION_REQUIRED",
+            "AUTH_REQUIRED",
+            "ACCESS_DENIED",
+            "INVALID_REQUEST",
+            "VALIDATION_FAILED",
+            "SCHEDULE_NOT_DRAFT",
+            "CELLS_ARRAY_REQUIRED",
+            "CELLS_JSON_TOO_LARGE",
+            "CELL_COUNT_OUT_OF_RANGE",
+            "DUPLICATE_CELL_PAIR",
+            "CELL_EMPLOYEE_NOT_ASSIGNED",
+        ].includes(code);
+    }
+
+    async function parseShiftApiSafeJson(res) {
+        try {
+            const data = await res.json();
+            if (data && typeof data === "object") {
+                const code = typeof data.code === "string" ? data.code : "";
+                const ok = data.ok === true;
+                return { ok, code, status: data.status, duplicate: data.duplicate === true, cellCount: data.cellCount };
+            }
+        } catch (err) {
+            // Keep raw response details out of the UI and logs.
+        }
+        return { ok: false, code: "" };
+    }
+
+    function callShiftAuthenticatedWrite(payload) {
+        const isSaveShift = payload.action === "saveShift";
+        if (isSaveShift && activeSaveShiftPromise) {
+            return activeSaveShiftPromise;
+        }
+        const operationPromise = Promise.resolve().then(() => runShiftAuthenticatedWrite(payload));
+        if (isSaveShift) {
+            activeSaveShiftPromise = operationPromise.finally(() => {
+                activeSaveShiftPromise = null;
+            });
+            return activeSaveShiftPromise;
+        }
+        return operationPromise;
+    }
+
+    async function runShiftAuthenticatedWrite(payload) {
+        const isSaveShift = payload.action === "saveShift";
+        let requestId = "";
+        let payloadFingerprint = "";
+        try {
+        payloadFingerprint = isSaveShift ? await buildSaveShiftPayloadFingerprint(payload) : "";
+        if (isSaveShift && pendingSaveShiftRequest && pendingSaveShiftRequest.payloadFingerprint !== payloadFingerprint) {
+            pendingSaveShiftRequest = null;
+        }
+        const retainedRequestId = isSaveShift && pendingSaveShiftRequest
+            ? pendingSaveShiftRequest.requestId
+            : "";
+        requestId = payload.requestId || retainedRequestId || buildFreshSaveShiftRequestId(payload);
+        const body = { ...payload, requestId, idempotencyKey: requestId };
+        const apiUrl = await getShiftReadApiUrl();
+        if (!apiUrl) {
+            showHubSessionRequiredStatus("Shift API設定が見つかりません。NOV HUBから開き直してください。");
+            return { ok: false, stopped: true, code: "SHIFT_API_CONFIG_REQUIRED" };
+        }
+        const token = await getHubSessionBearerToken();
+        if (!isLikelyHubSessionToken(token)) {
+            showHubSessionRequiredStatus("HUB認証またはAPI設定が見つかりません。NOV HUBから開き直してください。");
+            return { ok: false, stopped: true, code: "HUB_SESSION_REQUIRED" };
+        }
+        const res = await fetch(apiUrl, {
+            method: "POST",
+            mode: "cors",
+            redirect: "follow",
+            headers: {
+                "Authorization": "Bearer " + token,
+                "Content-Type": "application/json",
+                "X-Request-Id": requestId,
+            },
+            body: JSON.stringify(body),
+        });
+        if (res.status === 401 || res.status === 403) {
+            const data = await parseShiftApiSafeJson(res);
+            showHubSessionRequiredStatus("認証の有効期限が切れました。NOV HUBから開き直してください。");
+            return { ok: false, stopped: true, code: data.code || (res.status === 401 ? "AUTH_REQUIRED" : "ACCESS_DENIED") };
+        }
+        const data = await parseShiftApiSafeJson(res);
+        if (!res.ok) {
+            const definiteRejection = res.status >= 400 && res.status < 500;
+            const code = data.code || (definiteRejection ? "SHIFT_WRITE_FAILED" : "SHIFT_WRITE_TRANSPORT_UNKNOWN");
+            return { ok: false, error: "Shift API write failed.", code, definiteRejection };
+        }
+        const result = data;
+            if (result && (result.ok || result.definiteRejection || isDefiniteSaveRejection(result))) {
+                pendingSaveShiftRequest = null;
+            } else if (result && !result.ok) {
+                pendingSaveShiftRequest = { requestId, payloadFingerprint };
+            }
+            return result;
+        } catch (err) {
+            if (isSaveShift && requestId && payloadFingerprint) {
+                pendingSaveShiftRequest = { requestId, payloadFingerprint };
+            }
+            return { ok: false, error: "Shift API write failed.", code: "SHIFT_WRITE_TRANSPORT_UNKNOWN" };
+        }
+    }
+
     async function saveShiftToBackend() {
-        if (SHIFT_WRITE_CONTROLS_DISABLED) { blockShiftWrite("save shift"); return; }
-        if (!requireEditableSchedule("保存")) return;
+        if (!(await requireAuthenticatedDraftSave())) return;
         if (!currentStore) { alert("店舗を選択してください"); return; }
         setSaveStatus("保存中...", "info");
         try {
             const cells = getCurrentCellStates();
-            const data  = await callBackend({
+            const data  = await callShiftAuthenticatedWrite({
                 action:    "saveShift",
                 storeId:   currentStore.id,
                 storeName: currentStore.name,
                 year:      currentYear,
                 month:     currentMonth + 1,
                 status:    "draft",
-                cells:     cells,
-                hubContext: HUB_CONTEXT
+                cells:     cells
             });
             if (data.ok) {
                 const source = data.source ? ` / ${formatBackendSourceLabel(data.source)}` : "";
@@ -3985,7 +4166,7 @@ ${(() => {
     }
 
     async function updateScheduleStatus(status) {
-        if (SHIFT_WRITE_CONTROLS_DISABLED) { blockShiftWrite("schedule status update"); return; }
+        if (SHIFT_OTHER_WRITE_CONTROLS_DISABLED) { blockShiftWrite("schedule status update"); return; }
         if (!currentStore) { alert("店舗を選択してください"); return; }
         const label = scheduleStatusLabel(status);
         setSaveStatus(label + "に更新中...", "info");
@@ -4013,7 +4194,7 @@ ${(() => {
 
     // 店舗設定をBackend APIに保存
     async function saveSettingsToBackend() {
-        if (SHIFT_WRITE_CONTROLS_DISABLED) { blockShiftWrite("save settings"); return; }
+        if (SHIFT_OTHER_WRITE_CONTROLS_DISABLED) { blockShiftWrite("save settings"); return; }
         if (!currentStore) {
             setSaveStatus("店舗を選択してください", "err");
             alert("店舗を選択してください");
