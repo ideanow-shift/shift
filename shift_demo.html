@@ -950,6 +950,167 @@
         return getBackendApiUrl() === SHIFT_API_URL ? "Supabase" : "Backup API";
     }
 
+    const NOV_HUB_CONFIG_MODULE_URL = "https://ideanow-shift.github.io/idea-nov-hub/js/firebase-config.js?v=shift-session-contract-20260712-1";
+    const NOV_HUB_SESSION_HELPER_URL = "https://ideanow-shift.github.io/idea-nov-hub/js/nov-hub-session-candidate.js?v=20260712-1";
+    const NOV_HUB_FALLBACK_URL = "https://ideanow-shift.github.io/idea-nov-hub/";
+
+    let portalConfigLoadPromise = null;
+
+    async function importPortalConfigModule() {
+        if (window.__shiftImportPortalConfigForTest) {
+            return await window.__shiftImportPortalConfigForTest(NOV_HUB_CONFIG_MODULE_URL);
+        }
+        return await import(NOV_HUB_CONFIG_MODULE_URL);
+    }
+
+    async function getPortalConfig() {
+        if (window.PORTAL_CONFIG && typeof window.PORTAL_CONFIG === "object") return window.PORTAL_CONFIG;
+        if (!portalConfigLoadPromise) {
+            portalConfigLoadPromise = importPortalConfigModule().then((mod) => {
+                const config = (mod && (mod.PORTAL_CONFIG || (mod.default && mod.default.PORTAL_CONFIG) || mod.default)) || null;
+                if (config && typeof config === "object") {
+                    window.PORTAL_CONFIG = config;
+                    return config;
+                }
+                return null;
+            }).catch(() => null);
+        }
+        return await portalConfigLoadPromise;
+    }
+
+    async function getPortalConfigValue(...keys) {
+        const config = await getPortalConfig();
+        if (!config || typeof config !== "object") return "";
+        for (const key of keys) {
+            if (!key) continue;
+            const parts = String(key).split(".");
+            let value = config;
+            for (const part of parts) {
+                value = value && typeof value === "object" ? value[part] : undefined;
+            }
+            if (value != null && String(value).trim()) return String(value).trim();
+        }
+        return "";
+    }
+
+    async function getShiftReadApiUrl() {
+        return await getPortalConfigValue("shiftApiUrl");
+    }
+
+    function getNovHubSessionHelperUrl() {
+        return NOV_HUB_SESSION_HELPER_URL;
+    }
+
+    async function getHubReturnUrl() {
+        return (await getPortalConfigValue("hubUrl")) || NOV_HUB_FALLBACK_URL;
+    }
+
+    let novHubSessionHelperLoadPromise = null;
+
+    function hasNovHubSessionHelper() {
+        const helper = window.NovHubSession;
+        return !!(helper && typeof helper.getSessionToken === "function");
+    }
+
+    async function ensureNovHubSessionHelper() {
+        if (hasNovHubSessionHelper()) return true;
+        const helperUrl = getNovHubSessionHelperUrl();
+        if (!helperUrl) return false;
+        if (!novHubSessionHelperLoadPromise) {
+            novHubSessionHelperLoadPromise = new Promise((resolve) => {
+                const script = document.createElement("script");
+                script.src = helperUrl;
+                script.type = "module";
+                script.async = true;
+                script.onload = () => resolve(hasNovHubSessionHelper());
+                script.onerror = () => resolve(false);
+                const parent = document.head || document.documentElement;
+                if (!parent || typeof parent.appendChild !== "function") {
+                    resolve(false);
+                    return;
+                }
+                parent.appendChild(script);
+            });
+        }
+        return await novHubSessionHelperLoadPromise;
+    }
+
+    async function getHubSessionBearerToken() {
+        const ready = await ensureNovHubSessionHelper();
+        if (!ready) return "";
+        const helper = window.NovHubSession;
+        const token = await helper.getSessionToken();
+        return typeof token === "string" ? token.trim() : "";
+    }
+
+    function isLikelyHubSessionToken(token) {
+        if (!token || typeof token !== "string") return false;
+        if (token.length > 4096) return false;
+        return token.split(".").length === 3;
+    }
+
+    function showHubSessionRequiredStatus(message) {
+        const safeMessage = message || "HUB認証が必要です。NOV HUBから開き直してください。";
+        const storeStatus = document.getElementById("storeLoadStatus");
+        const staffStatus = document.getElementById("staffLoadStatus");
+        if (storeStatus) {
+            storeStatus.textContent = "HUB認証待ち";
+            storeStatus.className = "status-badge status-none";
+        }
+        if (staffStatus) {
+            staffStatus.textContent = "HUB認証待ち";
+            staffStatus.className = "status-badge status-none";
+        }
+        const alertBox = document.getElementById("alertBox");
+        if (alertBox) {
+            alertBox.style.display = "block";
+            alertBox.innerHTML = `${safeMessage}<br><button type="button" class="btn btn-secondary" id="hubReturnButton">NOV HUBへ戻る</button>`;
+            const hubReturnButton = document.getElementById("hubReturnButton");
+            if (hubReturnButton) {
+                hubReturnButton.addEventListener("click", () => {
+                    getHubReturnUrl().then((url) => {
+                        window.location.href = url;
+                    });
+                }, { once: true });
+            }
+        }
+        setSaveStatus(safeMessage, "err");
+    }
+
+    async function fetchShiftReadOnly(action, params = {}) {
+        const apiUrl = await getShiftReadApiUrl();
+        if (!apiUrl) {
+            showHubSessionRequiredStatus("Shift API設定が見つかりません。NOV HUBから開き直してください。");
+            return { ok: false, stopped: true, code: "SHIFT_API_CONFIG_REQUIRED" };
+        }
+        const token = await getHubSessionBearerToken();
+        if (!isLikelyHubSessionToken(token)) {
+            showHubSessionRequiredStatus("HUB認証またはAPI設定が見つかりません。NOV HUBから開き直してください。");
+            return { ok: false, stopped: true, code: "HUB_SESSION_REQUIRED" };
+        }
+
+        const url = new URL(apiUrl);
+        url.searchParams.set("action", action);
+        Object.entries(params).forEach(([key, value]) => {
+            if (value != null && value !== "") url.searchParams.set(key, String(value));
+        });
+
+        const res = await fetch(url.toString(), {
+            method: "GET",
+            mode: "cors",
+            redirect: "follow",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+            },
+        });
+        if (res.status === 401 || res.status === 403) {
+            showHubSessionRequiredStatus("認証の有効期限が切れました。NOV HUBから開き直してください。");
+            return { ok: false, stopped: true, code: "HUB_SESSION_EXPIRED" };
+        }
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return await res.json();
+    }
+
     function formatBackendSourceLabel(source) {
         const value = String(source || "").trim().toLowerCase();
         if (!value) return "";
@@ -1157,10 +1318,8 @@
         // 月切替時にシフトデータを非同期読込
         if (currentStore) {
             (async () => {
-                setSaveStatus("読込中...", "info");
-                await loadShiftFromBackend(currentStore.id, currentYear, currentMonth + 1);
                 renderTable();
-                setSaveStatus("読込完了", "ok");
+                setSaveStatus("保存済みシフト読込は次ゲートで接続予定です", "info");
             })();
         }
     }
@@ -1749,12 +1908,9 @@
 
         // Backend APIから設定・シフトデータを非同期読込
         (async () => {
-            setSaveStatus("読込中...", "info");
-            await loadSettingsFromBackend(currentStore.id);
-            await loadShiftFromBackend(currentStore.id, currentYear, currentMonth + 1);
             renderStaffRulesPanel();
             renderTable();
-            setSaveStatus("読込完了", "ok");
+            setSaveStatus("店舗設定・保存済みシフト読込は次ゲートで接続予定です", "info");
         })();
     }
 
@@ -3959,10 +4115,11 @@ ${(() => {
         const storeStatus = document.getElementById("storeLoadStatus");
         const staffStatus = document.getElementById("staffLoadStatus");
 
-        const backendApiUrl = getBackendApiUrl();
-        const backendLabel = getBackendLabel();
+        const backendApiUrl = await getShiftReadApiUrl();
+        const backendLabel = "Supabase";
         if (!backendApiUrl || backendApiUrl.indexOf("<<") !== -1 || backendApiUrl.indexOf("PASTE") !== -1) {
-            console.info("[API] Backend API URL 未設定。CSV手動インポートを使用してください。");
+            console.info("[API] Shift API URL 未設定。NOV HUBから開き直してください。");
+            showHubSessionRequiredStatus("Shift API設定が見つかりません。NOV HUBから開き直してください。");
             return;
         }
 
@@ -3970,9 +4127,8 @@ ${(() => {
         staffStatus.textContent = `${backendLabel}から取得中...`;
 
         try {
-            const res = await fetch(getBackendApiUrl(), { method: "GET", redirect: "follow" });
-            if (!res.ok) throw new Error("HTTP " + res.status);
-            const data = await res.json();
+            const data = await fetchShiftReadOnly("loadMasters");
+            if (data && data.stopped) return;
             if (!data || data.ok === false) {
                 throw new Error((data && data.error) ? data.error : "Backend API error");
             }
@@ -3989,25 +4145,22 @@ ${(() => {
                 alertBox.style.display = "block";
                 alertBox.innerHTML = `${sourceLabel} から自動取得しました（店舗:${storeMaster.length} / 社員:${staffMaster.length}名）`;
 
-                // 店舗選択後に設定・シフトデータを自動読込
+                // 店舗設定・保存済みシフトの認証付き読込は次ゲートで接続する。
                 if (currentStore) {
-                    setSaveStatus("設定を読込中...", "info");
-                    await loadSettingsFromBackend(currentStore.id);
-                    await loadShiftFromBackend(currentStore.id, currentYear, currentMonth + 1);
                     renderStaffRulesPanel();
                     renderTable();
                     setSaveStatus(`データ読込完了 / ${sourceLabel}`, "ok");
                 }
             }
         } catch (err) {
-            console.error("[API] 取得失敗", err);
+            console.error("[API] 取得失敗");
             storeStatus.textContent = `${backendLabel}取得失敗`;
             storeStatus.className = "status-badge status-none";
             staffStatus.textContent = `${backendLabel}取得失敗`;
             staffStatus.className = "status-badge status-none";
             const alertBox = document.getElementById("alertBox");
             alertBox.style.display = "block";
-            alertBox.innerHTML = `注意 ${backendLabel} からの取得に失敗しました：${err.message}<br>CSV手動インポートに切り替えてください。`;
+            alertBox.innerHTML = `注意 ${backendLabel} からの取得に失敗しました。NOV HUBから開き直してください。`;
         }
     }
 
